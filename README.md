@@ -9,17 +9,19 @@ in their personal timeline of songs.
 1. **Setup:** add the players, choose the number of points needed to win, connect
    Spotify, pick a playlist and choose the device the music plays on.
 2. Every player starts with one random song card (the year is shown).
-3. On your turn, tap **Play mystery song**. Without seeing anything, decide
-   where it belongs in your timeline:
-   - **Before** your earliest card,
-   - **Between** two of your cards (e.g. between 1970 and 1980 means 1971–1979),
-   - **After** your latest card, or
-   - **In** the same year as one of your cards (tap the card).
-4. Optionally guess the **title** and the **artist**.
-5. Lock in. If the placement is right, the card goes into your timeline.
-   A correct title or artist gives **+1 bonus point** each, whether or not the
-   placement was right. Guesses are checked automatically, tolerating small
-   typos and suffixes like "Remastered". Tap a guess to correct the check.
+3. On your turn, tap **Play mystery song** and pass the phone around. Nothing
+   about the song is shown. Enter the **year** you think it's from with the big
+   number field or the −10/−1/+1/+10 buttons. Your cards stay visible below it,
+   and the spot where your guess lands is highlighted:
+   - **before** your earliest card,
+   - **between** two of your cards (e.g. between 1970 and 1980 means 1971–1979),
+   - **after** your latest card, or
+   - **in** the same year as one of your cards.
+4. Lock in. If the real year falls in the same spot as your guess, you win the
+   card, even if you didn't hit the exact year.
+5. After the reveal, tick whether you named the **title** and/or the
+   **artist** out loud. Each one is worth **+1 bonus point**, whether or not
+   you won the card.
 6. Your score is the number of cards in your timeline plus your bonus points.
    The first player to reach the target wins. If the deck runs out first, the
    highest score wins.

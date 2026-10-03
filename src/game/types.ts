@@ -33,9 +33,9 @@ export interface TurnResult {
 export interface Turn {
   song: Song
   phase: 'guess' | 'reveal'
+  yearGuess?: number
+  /** Where the guessed year falls in the timeline; set on reveal. */
   slot?: Slot
-  titleGuess: string
-  artistGuess: string
   result?: TurnResult
 }
 

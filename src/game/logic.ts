@@ -1,4 +1,4 @@
-import type { GameSettings, GameState, Player, Slot, Song, TurnResult } from './types'
+import type { GameSettings, GameState, Player, Slot, Song } from './types'
 
 export function score(player: Player): number {
   return player.timeline.length + player.bonus
@@ -73,71 +73,22 @@ export function insertSorted(timeline: Song[], song: Song): Song[] {
   return [...timeline.slice(0, index), song, ...timeline.slice(index)]
 }
 
-// ---------- Fuzzy matching for title / artist guesses ----------
+export const MIN_YEAR = 1900
+export const MAX_YEAR = new Date().getFullYear()
 
-export function normalizeTitle(input: string): string {
-  return normalizeBase(
-    input
-      // "Song - Remastered 2011", "Song - Live at ..."
-      .replace(/\s+-\s+.*$/, '')
-      // "(feat. X)", "[Remix]"
-      .replace(/[([{].*?[)\]}]/g, ''),
-  )
+export function isValidYear(year: number | undefined): year is number {
+  return year !== undefined && year >= MIN_YEAR && year <= MAX_YEAR
 }
 
-export function normalizeArtist(input: string): string {
-  return normalizeBase(input.replace(/^the\s+/i, '').replace(/\s+(feat\.?|ft\.?|featuring)\s+.*$/i, ''))
-}
-
-function normalizeBase(input: string): string {
-  return input
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/&/g, 'and')
-    .replace(/[^a-z0-9]/g, '')
-}
-
-export function levenshtein(a: string, b: string): number {
-  if (a === b) return 0
-  if (!a.length) return b.length
-  if (!b.length) return a.length
-  let prev = Array.from({ length: b.length + 1 }, (_, i) => i)
-  for (let i = 1; i <= a.length; i++) {
-    const curr = [i]
-    for (let j = 1; j <= b.length; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1
-      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost)
-    }
-    prev = curr
-  }
-  return prev[b.length]
-}
-
-function similar(guess: string, answer: string): boolean {
-  if (!guess || !answer) return false
-  if (guess === answer) return true
-  const maxLen = Math.max(guess.length, answer.length)
-  // Allow roughly one typo per five characters.
-  return levenshtein(guess, answer) <= Math.floor(maxLen / 5)
-}
-
-export function titleMatches(guess: string, title: string): boolean {
-  const g = normalizeTitle(guess)
-  return similar(g, normalizeTitle(title)) || similar(g, normalizeBase(title))
-}
-
-export function artistMatches(guess: string, artists: string[]): boolean {
-  const g = normalizeArtist(guess)
-  return artists.some((a) => similar(g, normalizeArtist(a)))
-}
-
-export function evaluateTurn(slot: Slot, song: Song, titleGuess: string, artistGuess: string): TurnResult {
-  return {
-    placementCorrect: isPlacementCorrect(slot, song.year),
-    titleCorrect: titleMatches(titleGuess, song.title),
-    artistCorrect: artistMatches(artistGuess, song.artists),
-  }
+/** The slot a guessed year falls into, given the player's timeline. */
+export function slotForYear(timeline: Song[], year: number): Slot {
+  const years = distinctYears(timeline)
+  if (years.includes(year)) return { kind: 'on', year }
+  if (year < years[0]) return { kind: 'before', year: years[0] }
+  if (year > years[years.length - 1]) return { kind: 'after', year: years[years.length - 1] }
+  const high = years.find((y) => y > year)!
+  const low = [...years].reverse().find((y) => y < year)!
+  return { kind: 'between', low, high }
 }
 
 // ---------- Game lifecycle ----------
@@ -178,7 +129,7 @@ export function drawSong(state: GameState): GameState {
   if (state.deck.length === 0) return finish(state)
   const deck = state.deck.slice(0, -1)
   const song = state.deck[state.deck.length - 1]
-  return { ...state, deck, turn: { song, phase: 'guess', titleGuess: '', artistGuess: '' } }
+  return { ...state, deck, turn: { song, phase: 'guess' } }
 }
 
 /** Throw away the current song (e.g. wrong release year) and draw another. */
@@ -188,10 +139,16 @@ export function skipSong(state: GameState): GameState {
 
 export function reveal(state: GameState): GameState {
   const turn = state.turn
-  if (!turn || !turn.slot) return state
+  if (!turn || turn.yearGuess === undefined) return state
+  const slot = slotForYear(state.players[state.currentPlayer].timeline, turn.yearGuess)
   return {
     ...state,
-    turn: { ...turn, phase: 'reveal', result: evaluateTurn(turn.slot, turn.song, turn.titleGuess, turn.artistGuess) },
+    turn: {
+      ...turn,
+      phase: 'reveal',
+      slot,
+      result: { placementCorrect: isPlacementCorrect(slot, turn.song.year), titleCorrect: false, artistCorrect: false },
+    },
   }
 }
 

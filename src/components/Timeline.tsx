@@ -3,52 +3,45 @@ import { slotKey, slotLabel, slotsFor } from '../game/logic'
 
 interface Props {
   timeline: Song[]
-  /** When set, slots are tappable. */
-  onSelect?: (slot: Slot) => void
+  /** Highlights where a guess lands. */
   selected?: Slot
+  /** Text shown in the highlighted gap (defaults to the slot label). */
+  selectedLabel?: string
   /** Colours the selected slot after the reveal. */
   verdict?: 'correct' | 'wrong'
 }
 
-export function Timeline({ timeline, onSelect, selected, verdict }: Props) {
+export function Timeline({ timeline, selected, selectedLabel, verdict }: Props) {
   const selectedKey = selected ? slotKey(selected) : null
-  const stateClass = (slot: Slot) =>
-    slotKey(slot) === selectedKey ? `selected ${verdict ?? ''}` : ''
 
   return (
-    <ol className={`timeline ${onSelect ? 'interactive' : ''}`}>
+    <ol className="timeline">
       {slotsFor(timeline).map((slot) => {
         const key = slotKey(slot)
+        const isSelected = key === selectedKey
+        const stateClass = isSelected ? `selected ${verdict ?? ''}` : ''
         if (slot.kind === 'on') {
-          const cards = timeline.filter((s) => s.year === slot.year)
           return (
-            <li key={key}>
-              <button
-                className={`year-group ${stateClass(slot)}`}
-                disabled={!onSelect}
-                onClick={() => onSelect?.(slot)}
-                aria-label={slotLabel(slot)}
-              >
-                <span className="year">{slot.year}</span>
-                <span className="songs">
-                  {cards.map((s) => (
+            <li key={key} className={`year-group ${stateClass}`}>
+              <span className="year">{slot.year}</span>
+              <span className="songs">
+                {timeline
+                  .filter((s) => s.year === slot.year)
+                  .map((s) => (
                     <span key={s.id} className="song-line">
                       <span className="song-title">{s.title}</span>
                       <span className="muted small">{s.artists.join(', ')}</span>
                     </span>
                   ))}
-                </span>
-                {onSelect && <span className="on-hint">same year</span>}
-              </button>
+              </span>
+              {isSelected && selectedLabel && <span className="on-hint">{selectedLabel}</span>}
             </li>
           )
         }
-        if (!onSelect && key !== selectedKey) return null
+        if (!isSelected) return null
         return (
-          <li key={key}>
-            <button className={`gap ${stateClass(slot)}`} disabled={!onSelect} onClick={() => onSelect?.(slot)}>
-              {slotLabel(slot)}
-            </button>
+          <li key={key} className={`gap ${stateClass}`}>
+            {selectedLabel ?? slotLabel(slot)}
           </li>
         )
       })}

@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import type { GameState, TurnResult } from '../game/types'
-import { drawSong, endTurn, finish, reveal, score, skipSong, slotLabel } from '../game/logic'
+import type { GameState, Song, TurnResult } from '../game/types'
+import { drawSong, endTurn, finish, isValidYear, reveal, score, skipSong, slotForYear, slotLabel } from '../game/logic'
 import { describePlaybackError, pause, playSong, resume, SpotifyError } from '../spotify/api'
 import { Timeline } from '../components/Timeline'
 import { DevicePicker } from '../components/DevicePicker'
+import { YearInput } from '../components/YearInput'
 import { KEYS, load, save } from '../storage'
 
 interface Props {
@@ -62,13 +63,23 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
   }
 
   function lockIn() {
+    window.scrollTo(0, 0)
     onChange(reveal(game))
   }
 
   function nextTurn() {
     if (playing) pause(deviceId ?? undefined).catch(() => {})
     setPlaying(false)
+    window.scrollTo(0, 0)
     onChange(endTurn(game))
+  }
+
+  const guessSlot = turn?.phase === 'guess' && isValidYear(turn.yearGuess)
+    ? slotForYear(player.timeline, turn.yearGuess)
+    : undefined
+
+  function setYearGuess(yearGuess: number | undefined) {
+    if (turn) onChange({ ...game, turn: { ...turn, yearGuess } })
   }
 
   function updateResult(patch: Partial<TurnResult>) {
@@ -136,39 +147,25 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
           </section>
 
           <section className="card stack-sm">
-            <h2>When was it released?</h2>
-            <p className="muted small">Tap a gap, or tap a year if you think it's the same year.</p>
-            <Timeline
-              timeline={player.timeline}
-              selected={turn.slot}
-              onSelect={(slot) => onChange({ ...game, turn: { ...turn, slot } })}
-            />
+            <h2>What year is this song?</h2>
+            <YearInput value={turn.yearGuess} startYear={medianYear(player.timeline)} onChange={setYearGuess} />
+            <p className="guess-slot">
+              {guessSlot ? slotLabel(guessSlot) : 'Type a year or use the buttons'}
+            </p>
           </section>
 
           <section className="card stack-sm">
-            <h2>Bonus guesses</h2>
-            <p className="muted small">Optional — one extra point each if right.</p>
-            <input
-              className="input"
-              placeholder="Song title"
-              value={turn.titleGuess}
-              autoComplete="off"
-              autoCorrect="off"
-              onChange={(e) => onChange({ ...game, turn: { ...turn, titleGuess: e.target.value } })}
-            />
-            <input
-              className="input"
-              placeholder="Artist"
-              value={turn.artistGuess}
-              autoComplete="off"
-              autoCorrect="off"
-              onChange={(e) => onChange({ ...game, turn: { ...turn, artistGuess: e.target.value } })}
+            <h2>{player.name}'s cards</h2>
+            <Timeline
+              timeline={player.timeline}
+              selected={guessSlot}
+              selectedLabel={guessSlot ? `🎵 ${turn.yearGuess}` : undefined}
             />
           </section>
 
           <div className="bottom-bar">
-            <button className="btn primary block" disabled={!turn.slot} onClick={lockIn}>
-              {turn.slot ? `Lock in: ${slotLabel(turn.slot)}` : 'Pick a spot in your timeline'}
+            <button className="btn primary block" disabled={!guessSlot} onClick={lockIn}>
+              {guessSlot ? `Lock in ${turn.yearGuess}` : 'Enter a year'}
             </button>
           </div>
         </>
@@ -187,23 +184,23 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
             <div className="muted">{turn.song.artists.join(', ')}</div>
             <div className="verdict">
               {turn.result.placementCorrect
-                ? `✓ ${slotLabel(turn.slot!)} — the card is yours!`
-                : `✗ ${slotLabel(turn.slot!)} — no card this time`}
+                ? `✓ You said ${turn.yearGuess} — the card is yours!`
+                : `✗ You said ${turn.yearGuess} — no card this time`}
             </div>
           </section>
 
           <section className="card stack-sm">
             <h2>Bonus points</h2>
-            <p className="muted small">Auto-checked — tap to correct if needed.</p>
+            <p className="muted small">Did {player.name} name it? +1 point each.</p>
             <BonusToggle
               label="Title"
-              guess={turn.titleGuess}
+              answer={turn.song.title}
               value={turn.result.titleCorrect}
               onChange={(titleCorrect) => updateResult({ titleCorrect })}
             />
             <BonusToggle
               label="Artist"
-              guess={turn.artistGuess}
+              answer={turn.song.artists.join(', ')}
               value={turn.result.artistCorrect}
               onChange={(artistCorrect) => updateResult({ artistCorrect })}
             />
@@ -214,6 +211,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
             <Timeline
               timeline={player.timeline}
               selected={turn.slot}
+              selectedLabel={`🎵 ${turn.yearGuess}`}
               verdict={turn.result.placementCorrect ? 'correct' : 'wrong'}
             />
           </section>
@@ -291,24 +289,30 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
   )
 }
 
+function medianYear(timeline: Song[]): number {
+  const years = timeline.map((s) => s.year).sort((a, b) => a - b)
+  return years[Math.floor(years.length / 2)] ?? 2000
+}
+
 function BonusToggle({
   label,
-  guess,
+  answer,
   value,
   onChange,
 }: {
   label: string
-  guess: string
+  answer: string
   value: boolean
   onChange: (v: boolean) => void
 }) {
   return (
-    <button className={`bonus-toggle ${value ? 'on' : ''}`} onClick={() => onChange(!value)}>
-      <span className="grow">
-        <span className="option-title">{label}</span>
-        <span className="muted small"> {guess ? `“${guess}”` : '(no guess)'}</span>
+    <button className={`bonus-toggle ${value ? 'on' : ''}`} aria-pressed={value} onClick={() => onChange(!value)}>
+      <span className="bonus-check">{value ? '✓' : ''}</span>
+      <span className="grow stack-xs">
+        <span className="muted small">{label}</span>
+        <span className="option-title">{answer}</span>
       </span>
-      <span className="bonus-mark">{value ? '+1' : '0'}</span>
+      <span className="bonus-mark">{value ? '+1' : '+0'}</span>
     </button>
   )
 }

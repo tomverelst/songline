@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  artistMatches,
   endTurn,
   insertSorted,
   isPlacementCorrect,
@@ -8,8 +7,8 @@ import {
   reveal,
   score,
   slotLabel,
+  slotForYear,
   slotsFor,
-  titleMatches,
   drawSong,
 } from './logic'
 import type { Song } from './types'
@@ -52,18 +51,18 @@ describe('insertSorted', () => {
   })
 })
 
-describe('guess matching', () => {
-  it('ignores remaster suffixes, punctuation and small typos', () => {
-    expect(titleMatches("dont stop me now", "Don't Stop Me Now - Remastered 2011")).toBe(true)
-    expect(titleMatches('bohemian rapsody', 'Bohemian Rhapsody')).toBe(true)
-    expect(titleMatches('yesterday', 'Let It Be')).toBe(false)
-    expect(titleMatches('', 'Let It Be')).toBe(false)
+describe('slotForYear', () => {
+  const timeline = [song(1970), song(1980)]
+  it('maps a guessed year onto the timeline', () => {
+    expect(slotLabel(slotForYear(timeline, 1965))).toBe('Before 1970')
+    expect(slotLabel(slotForYear(timeline, 1970))).toBe('In 1970')
+    expect(slotLabel(slotForYear(timeline, 1975))).toBe('Between 1970 and 1980')
+    expect(slotLabel(slotForYear(timeline, 1999))).toBe('After 1980')
   })
 
-  it('matches any credited artist', () => {
-    expect(artistMatches('beatles', ['The Beatles'])).toBe(true)
-    expect(artistMatches('Beyonce', ['Jay-Z', 'Beyoncé'])).toBe(true)
-    expect(artistMatches('Queen', ['ABBA'])).toBe(false)
+  it('wins the card for any year in the right gap, not only the exact year', () => {
+    expect(isPlacementCorrect(slotForYear(timeline, 1972), 1978)).toBe(true)
+    expect(isPlacementCorrect(slotForYear(timeline, 1972), 1980)).toBe(false)
   })
 })
 
@@ -79,11 +78,9 @@ describe('game flow', () => {
 
   it('awards the card and bonus points, then passes the turn', () => {
     let g = drawSong(newGame(['Ann', 'Bob'], settings, songs, () => 0.5))
-    const mystery = g.turn!.song
-    const start = g.players[0].timeline[0].year
-    const slot = mystery.year < start ? { kind: 'before', year: start } as const : { kind: 'after', year: start } as const
-    g = { ...g, turn: { ...g.turn!, slot, titleGuess: mystery.title, artistGuess: '' } }
-    g = endTurn(reveal(g))
+    g = { ...g, turn: { ...g.turn!, yearGuess: g.turn!.song.year } }
+    g = reveal(g)
+    g = endTurn({ ...g, turn: { ...g.turn!, result: { ...g.turn!.result!, titleCorrect: true } } })
     expect(g.players[0].timeline).toHaveLength(2)
     expect(g.players[0].bonus).toBe(1)
     expect(score(g.players[0])).toBe(3)
@@ -93,7 +90,7 @@ describe('game flow', () => {
 
   it('does not award the card for a wrong placement', () => {
     let g = drawSong(newGame(['Ann', 'Bob'], settings, songs, () => 0.5))
-    g = { ...g, turn: { ...g.turn!, slot: { kind: 'on', year: 1 } } }
+    g = { ...g, turn: { ...g.turn!, yearGuess: 1 } }
     g = endTurn(reveal(g))
     expect(g.players[0].timeline).toHaveLength(1)
     expect(g.currentPlayer).toBe(1)

@@ -542,8 +542,9 @@ button:disabled {
   font-size: 0.9rem;
 }
 
-.timeline:not(.interactive) .gap {
-  min-height: 36px;
+li.gap {
+  display: grid;
+  place-items: center;
 }
 
 .gap.selected,
@@ -564,6 +565,67 @@ button:disabled {
 .year-group.selected.wrong {
   border-color: var(--bad);
   background: rgb(255 92 92 / 0.15);
+}
+
+/* ---------- Year input ---------- */
+
+.year-input {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.year-field {
+  width: 100%;
+  padding: 4px 0;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  text-align: center;
+  font-size: clamp(4rem, 26vw, 6.5rem);
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  caret-color: var(--accent);
+}
+
+.year-field::placeholder {
+  color: var(--border);
+}
+
+.year-field:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.year-steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.year-step {
+  min-height: 56px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 1.25rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  touch-action: manipulation;
+}
+
+.year-step:active {
+  background: var(--border);
+}
+
+.guess-slot {
+  text-align: center;
+  color: var(--accent-2);
+  font-weight: 700;
+  min-height: 1.5em;
 }
 
 /* ---------- Reveal ---------- */
@@ -637,14 +699,69 @@ button:disabled {
   background: rgb(61 220 151 / 0.12);
 }
 
+.bonus-toggle {
+  min-height: 64px;
+}
+
+.stack-xs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bonus-check {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 2px solid var(--border);
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+}
+
+.bonus-toggle.on .bonus-check {
+  border-color: var(--good);
+  background: var(--good);
+  color: #04130a;
+}
+
 .bonus-mark {
   flex: none;
+  color: var(--muted);
   font-weight: 800;
   min-width: 3ch;
   text-align: right;
 }
 
-.bonus-toggle.on .bonus-mark {
+.bonus-toggle.on .bonus-toggle {
+  min-height: 64px;
+}
+
+.stack-xs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bonus-check {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 2px solid var(--border);
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+}
+
+.bonus-toggle.on .bonus-check {
+  border-color: var(--good);
+  background: var(--good);
+  color: #04130a;
+}
+
+.bonus-mark {
   color: var(--good);
 }
 
