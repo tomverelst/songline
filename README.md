@@ -83,7 +83,17 @@ npm run build        # static site in dist/
 ```
 
 The build is a static site that uses relative paths, so it can be hosted under
-any path: GitHub Pages, Netlify, Vercel, or any static file server.
+any path.
+
+## Deployment
+
+Every push to `main` is tested, built and published to GitHub Pages at
+<https://tomverelst.github.io/songline/> by `.github/workflows/deploy.yml`.
+
+- **Enable Pages once:** under Settings → Pages, set Source to **GitHub Actions**.
+- **Register the redirect URI:** add `https://tomverelst.github.io/songline/` to your Spotify app.
+- **Optional client ID:** add a repository variable `SPOTIFY_CLIENT_ID` (Settings → Secrets and
+  variables → Actions → Variables) to bake in the client ID, so players never have to enter it.
 
 ## Project layout
 
