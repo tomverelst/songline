@@ -3,7 +3,13 @@ export interface Song {
   uri: string
   title: string
   artists: string[]
+  /** The year used in the game: the original release year when known. */
   year: number
+  /** Release date of the album the track is on, according to Spotify. */
+  spotifyYear: number
+  /** Unset until the original release year has been looked up. */
+  yearSource?: 'spotify' | 'musicbrainz'
+  isrc?: string
   albumArt?: string
 }
 

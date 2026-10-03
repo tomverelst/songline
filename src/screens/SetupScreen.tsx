@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { GameState } from '../game/types'
-import { newGame } from '../game/logic'
+import { newGame, withOriginalYear } from '../game/logic'
+import { originalYear } from '../musicbrainz'
 import { getClientId, isLoggedIn, login, logout, redirectUri, setClientId } from '../spotify/auth'
 import { getMyPlaylists, getPlaylist, getPlaylistSongs, parsePlaylistId, type PlaylistSummary } from '../spotify/api'
 import { DevicePicker } from '../components/DevicePicker'
@@ -24,7 +25,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
   const [deviceId, setDeviceId] = useState<string | null>(() => load(KEYS.device, null))
   const [loggedIn, setLoggedIn] = useState(isLoggedIn)
   const [error, setError] = useState<string | null>(initialError)
-  const [starting, setStarting] = useState(false)
+  const [starting, setStarting] = useState<false | 'songs' | 'years'>(false)
 
   useEffect(() => save(KEYS.setup, draft), [draft])
   useEffect(() => save(KEYS.device, deviceId), [deviceId])
@@ -35,16 +36,20 @@ export function SetupScreen({ onStart, initialError }: Props) {
 
   async function start() {
     if (!draft.playlist) return
-    setStarting(true)
+    setStarting('songs')
     setError(null)
     try {
       const songs = await getPlaylistSongs(draft.playlist.id)
       if (songs.length < names.length + 1) {
         throw new Error(`This playlist only has ${songs.length} usable songs — pick a bigger one.`)
       }
-      onStart(
-        newGame(names, { targetPoints: draft.targetPoints, playlistId: draft.playlist.id, playlistName: draft.playlist.name }, songs),
+      const game = newGame(
+        names,
+        { targetPoints: draft.targetPoints, playlistId: draft.playlist.id, playlistName: draft.playlist.name },
+        songs,
       )
+      setStarting('years')
+      onStart(await withOriginalStartingYears(game))
     } catch (e) {
       setError((e as Error).message)
       setStarting(false)
@@ -129,11 +134,29 @@ export function SetupScreen({ onStart, initialError }: Props) {
 
       <div className="bottom-bar">
         <button className="btn primary block" disabled={!canStart} onClick={start}>
-          {starting ? 'Shuffling songs…' : 'Start game'}
+          {starting === 'songs' ? 'Shuffling songs…' : starting === 'years' ? 'Checking release years…' : 'Start game'}
         </button>
       </div>
     </div>
   )
+}
+
+const STARTING_YEARS_DEADLINE_MS = 10_000
+
+/**
+ * Looks up the original year of every starting card. Cards that MusicBrainz
+ * can't answer for in time keep their Spotify year.
+ */
+async function withOriginalStartingYears(game: GameState): Promise<GameState> {
+  const deadline = new Promise<null>((resolve) => setTimeout(() => resolve(null), STARTING_YEARS_DEADLINE_MS))
+  const players = await Promise.all(
+    game.players.map(async (p) => {
+      const [card] = p.timeline
+      const year = await Promise.race([originalYear(card), deadline])
+      return { ...p, timeline: [withOriginalYear(card, year)] }
+    }),
+  )
+  return { ...game, players }
 }
 
 function SpotifyLogin({ onError }: { onError: (e: string) => void }) {

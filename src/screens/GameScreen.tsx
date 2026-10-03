@@ -1,6 +1,18 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { GameState, Song, TurnResult } from '../game/types'
-import { drawSong, endTurn, finish, isValidYear, reveal, score, skipSong, slotForYear, slotLabel } from '../game/logic'
+import {
+  drawSong,
+  endTurn,
+  finish,
+  isValidYear,
+  reveal,
+  score,
+  setTurnSongYear,
+  skipSong,
+  slotForYear,
+  slotLabel,
+} from '../game/logic'
+import { originalYear } from '../musicbrainz'
 import { describePlaybackError, pause, playSong, resume, SpotifyError } from '../spotify/api'
 import { Timeline } from '../components/Timeline'
 import { DevicePicker } from '../components/DevicePicker'
@@ -9,7 +21,7 @@ import { KEYS, load, save } from '../storage'
 
 interface Props {
   game: GameState
-  onChange: (game: GameState) => void
+  onChange: (update: GameState | ((game: GameState) => GameState)) => void
   onQuit: () => void
 }
 
@@ -18,9 +30,22 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
   const [playing, setPlaying] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [checkingYear, setCheckingYear] = useState(false)
+  const yearLookups = useRef(new Map<string, Promise<void>>())
 
   const player = game.players[game.currentPlayer]
   const turn = game.turn
+
+  // Look up the original release year while the song is playing.
+  const songToCheck = turn?.phase === 'guess' && !turn.song.yearSource ? turn.song : null
+  useEffect(() => {
+    if (!songToCheck || yearLookups.current.has(songToCheck.id)) return
+    const id = songToCheck.id
+    yearLookups.current.set(
+      id,
+      originalYear(songToCheck).then((year) => onChange((g) => setTurnSongYear(g, id, year))),
+    )
+  }, [songToCheck, onChange])
 
   async function play(uri: string) {
     setError(null)
@@ -62,9 +87,20 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
     if (next.turn) play(next.turn.song.uri)
   }
 
-  function lockIn() {
+  async function lockIn() {
+    const pending = turn && !turn.song.yearSource ? yearLookups.current.get(turn.song.id) : undefined
+    if (pending && turn) {
+      setCheckingYear(true)
+      const timedOut = await Promise.race([
+        pending.then(() => false),
+        new Promise<boolean>((r) => setTimeout(() => r(true), YEAR_CHECK_WAIT_MS)),
+      ])
+      // Too slow: settle on the Spotify year rather than keep the table waiting.
+      if (timedOut) onChange((g) => setTurnSongYear(g, turn.song.id, null))
+      setCheckingYear(false)
+    }
     window.scrollTo(0, 0)
-    onChange(reveal(game))
+    onChange(reveal)
   }
 
   function nextTurn() {
@@ -164,8 +200,8 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
           </section>
 
           <div className="bottom-bar">
-            <button className="btn primary block" disabled={!guessSlot} onClick={lockIn}>
-              {guessSlot ? `Lock in ${turn.yearGuess}` : 'Enter a year'}
+            <button className="btn primary block" disabled={!guessSlot || checkingYear} onClick={lockIn}>
+              {checkingYear ? 'Checking the year…' : guessSlot ? `Lock in ${turn.yearGuess}` : 'Enter a year'}
             </button>
           </div>
         </>
@@ -180,6 +216,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
               <div className="album-art placeholder-art">♪</div>
             )}
             <div className="reveal-year">{turn.song.year}</div>
+            <YearSource song={turn.song} />
             <div className="reveal-title">{turn.song.title}</div>
             <div className="muted">{turn.song.artists.join(', ')}</div>
             <div className="verdict">
@@ -190,8 +227,14 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
           </section>
 
           <section className="card stack-sm">
-            <h2>Bonus points</h2>
-            <p className="muted small">+1 point each. Tap to change.</p>
+            <h2>Points</h2>
+            <p className="muted small">+1 point each. Tap to change, e.g. if the year looks wrong.</p>
+            <BonusToggle
+              label={`Card (guessed ${turn.yearGuess})`}
+              answer={turn.result.placementCorrect ? 'Goes in the timeline' : 'Wrong spot'}
+              value={turn.result.placementCorrect}
+              onChange={(placementCorrect) => updateResult({ placementCorrect })}
+            />
             <BonusToggle
               label={`Exact year (guessed ${turn.yearGuess})`}
               answer={String(turn.song.year)}
@@ -293,6 +336,20 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
       )}
     </div>
   )
+}
+
+const YEAR_CHECK_WAIT_MS = 4000
+
+function YearSource({ song }: { song: Song }) {
+  if (song.yearSource === 'musicbrainz') {
+    return (
+      <div className="muted small">
+        Original release (MusicBrainz)
+        {song.spotifyYear !== song.year && ` · Spotify album says ${song.spotifyYear}`}
+      </div>
+    )
+  }
+  return <div className="muted small">Album release date (Spotify) · could be a later reissue</div>
 }
 
 function medianYear(timeline: Song[]): number {

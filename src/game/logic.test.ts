@@ -19,6 +19,7 @@ const song = (year: number, title = `Song ${year}`, artists = ['Artist']): Song 
   title,
   artists,
   year,
+  spotifyYear: year,
 })
 
 describe('slotsFor', () => {

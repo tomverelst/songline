@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { GameState } from './game/types'
 import { handleRedirect } from './spotify/auth'
 import { KEYS, load, save } from './storage'
@@ -20,9 +20,19 @@ export default function App() {
 
   useEffect(() => save(KEYS.game, game), [game])
 
+  const updateGame = useCallback((update: GameState | ((g: GameState) => GameState)) => {
+    setGame((g) => (typeof update === 'function' ? (g ? update(g) : g) : update))
+  }, [])
+
   if (!authReady) return <div className="screen center muted">Loading…</div>
 
   if (!game) return <SetupScreen onStart={setGame} initialError={authError} />
   if (game.status === 'finished') return <FinishedScreen game={game} onNewGame={() => setGame(null)} />
-  return <GameScreen game={game} onChange={setGame} onQuit={() => setGame(null)} />
+  return (
+    <GameScreen
+      game={game}
+      onChange={updateGame}
+      onQuit={() => setGame(null)}
+    />
+  )
 }

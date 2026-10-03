@@ -112,6 +112,7 @@ interface ApiTrack {
   name: string
   type?: string
   is_local?: boolean
+  external_ids?: { isrc?: string }
   artists: { name: string }[]
   album: { release_date?: string; images?: { url: string }[] }
 }
@@ -147,6 +148,8 @@ export async function getPlaylistSongs(id: string): Promise<Song[]> {
       title: t.name,
       artists,
       year,
+      spotifyYear: year,
+      isrc: t.external_ids?.isrc,
       albumArt: t.album.images?.[0]?.url,
     })
   }

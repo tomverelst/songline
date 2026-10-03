@@ -132,6 +132,23 @@ export function drawSong(state: GameState): GameState {
   return { ...state, deck, turn: { song, phase: 'guess' } }
 }
 
+/**
+ * Records the outcome of the original-year lookup for a song. `year` is null
+ * when the lookup found nothing, in which case the Spotify year stays.
+ */
+export function withOriginalYear(song: Song, year: number | null): Song {
+  return year === null
+    ? { ...song, year: song.spotifyYear ?? song.year, yearSource: 'spotify' }
+    : { ...song, year, yearSource: 'musicbrainz' }
+}
+
+/** Applies a looked-up year to the song being guessed, if it is still in play. */
+export function setTurnSongYear(state: GameState, songId: string, year: number | null): GameState {
+  const turn = state.turn
+  if (!turn || turn.phase !== 'guess' || turn.song.id !== songId) return state
+  return { ...state, turn: { ...turn, song: withOriginalYear(turn.song, year) } }
+}
+
 /** Throw away the current song (e.g. wrong release year) and draw another. */
 export function skipSong(state: GameState): GameState {
   return drawSong({ ...state, turn: undefined })

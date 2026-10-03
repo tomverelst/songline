@@ -23,6 +23,9 @@ in their personal timeline of songs.
    - **Exact year**: ticked automatically when your guess matches the year exactly.
    - **Title** and **Artist**: after the reveal, tick the ones you named out loud.
 
+   Everything on the reveal screen, including whether you won the card, can be
+   tapped to correct it. That's useful when the table agrees the year is wrong.
+
    That's at most **4 points per turn**: the card plus three bonus points.
 6. Your score is the number of cards in your timeline plus your bonus points.
    The first player to reach the target wins. If the deck runs out first, the
@@ -57,9 +60,14 @@ Requirements and limitations:
   TV, laptop, or the Spotify app on a phone. Spotify must have been opened on that
   device recently for it to appear. Use a device that nobody is staring at,
   because the Spotify app shows the song title.
-- The year is the album's release date on Spotify. Compilations and
-  remasters can show a later year. Use playlists of original releases where
-  you can, and use **Skip** when a year is clearly wrong.
+- **Release years.** Spotify only knows the release date of the *album* a track is
+  on, which is wrong for remasters and compilations. While a song plays, the
+  game looks up its original release year in [MusicBrainz](https://musicbrainz.org),
+  first by ISRC and then by title and artist. If MusicBrainz is slow (4 s at
+  lock-in), unreachable, or has no answer, the Spotify year is used. The reveal
+  card shows which source the year came from. MusicBrainz data is mostly but not
+  always right, so every point on the reveal screen (card, exact year, title,
+  artist) can be toggled by hand, and **Skip** in the menu throws a song away.
 - Spotify blocks third-party apps from reading the tracks of its own editorial
   and algorithmic playlists. Use your own playlists, or copy one into your
   library first.
@@ -81,5 +89,6 @@ any path: GitHub Pages, Netlify, Vercel, or any static file server.
 
 - `src/game/`: pure game rules (slots, placement, scoring, guess matching), with tests
 - `src/spotify/`: PKCE login, playlists and Connect playback
+- `src/musicbrainz.ts`: original release year lookup, with fallback
 - `src/screens/`: the setup, game and results screens
 - `src/components/`: the timeline and the device picker
