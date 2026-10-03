@@ -825,3 +825,7 @@ li.gap {
 .list-note {
   padding: 8px 2px 2px;
 }
+
+.now-playing .row {
+  flex-wrap: wrap;
+}

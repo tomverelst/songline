@@ -178,16 +178,16 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
                 <button className="btn small ghost" onClick={() => play(turn.song.uri)}>
                   ↺ Restart
                 </button>
+                <button className="btn small ghost" onClick={skip}>
+                  ⏭ Skip
+                </button>
               </div>
             </div>
           </section>
 
           <section className="card stack-sm">
-            <h2>What year is this song?</h2>
             <YearInput value={turn.yearGuess} startYear={medianYear(player.timeline)} onChange={setYearGuess} />
-            <p className="guess-slot">
-              {guessSlot ? slotLabel(guessSlot) : 'Type a year or use the buttons'}
-            </p>
+            <p className="guess-slot">{guessSlot && slotLabel(guessSlot)}</p>
           </section>
 
           <section className="card stack-sm">
@@ -298,17 +298,6 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
                 save(KEYS.device, id)
               }}
             />
-            {turn?.phase === 'guess' && (
-              <button
-                className="btn"
-                onClick={() => {
-                  setMenuOpen(false)
-                  skip()
-                }}
-              >
-                ⏭ Skip this song (wrong year / unplayable)
-              </button>
-            )}
             <button
               className="btn"
               onClick={() => {
