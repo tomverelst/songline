@@ -817,3 +817,11 @@ li.gap {
     animation: none !important;
   }
 }
+
+.playlist-item:disabled {
+  opacity: 0.45;
+}
+
+.list-note {
+  padding: 8px 2px 2px;
+}

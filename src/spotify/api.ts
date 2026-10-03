@@ -68,6 +68,11 @@ export interface PlaylistSummary {
   image?: string
   trackCount?: number
   owner?: string
+  /**
+   * Spotify only shares the songs of playlists you own or collaborate on with
+   * apps in development mode; any other playlist answers 403.
+   */
+  readable: boolean
 }
 
 interface ApiPlaylist {
@@ -76,27 +81,50 @@ interface ApiPlaylist {
   images?: { url: string }[] | null
   tracks?: { total: number }
   items?: { total: number }
-  owner?: { display_name?: string }
+  owner?: { id?: string; display_name?: string }
+  collaborative?: boolean
 }
 
-function toSummary(p: ApiPlaylist): PlaylistSummary {
+function toSummary(p: ApiPlaylist, myId: string): PlaylistSummary {
   return {
     id: p.id,
     name: p.name,
     image: p.images?.[0]?.url,
     trackCount: p.items?.total ?? p.tracks?.total,
     owner: p.owner?.display_name,
+    readable: p.owner?.id === myId || !!p.collaborative,
   }
 }
 
+let myIdPromise: Promise<string> | null = null
+
+function myUserId(): Promise<string> {
+  myIdPromise ??= request<{ id: string }>('/me')
+    .then((me) => me.id)
+    .catch((e) => {
+      myIdPromise = null
+      throw e
+    })
+  return myIdPromise
+}
+
+/** The user's playlists, the ones the game can read first. */
 export async function getMyPlaylists(): Promise<PlaylistSummary[]> {
-  const playlists = await allPages<ApiPlaylist | null>('/me/playlists?limit=50')
-  return playlists.filter((p): p is ApiPlaylist => !!p).map(toSummary)
+  const [myId, playlists] = await Promise.all([myUserId(), allPages<ApiPlaylist | null>('/me/playlists?limit=50')])
+  const summaries = playlists.filter((p): p is ApiPlaylist => !!p).map((p) => toSummary(p, myId))
+  return [...summaries.filter((p) => p.readable), ...summaries.filter((p) => !p.readable)]
 }
 
 export async function getPlaylist(id: string): Promise<PlaylistSummary> {
-  return toSummary(await request<ApiPlaylist>(`/playlists/${id}?fields=id,name,images,owner(display_name)`))
+  const [myId, playlist] = await Promise.all([
+    myUserId(),
+    request<ApiPlaylist>(`/playlists/${id}?fields=id,name,images,collaborative,owner(id,display_name)`),
+  ])
+  return toSummary(playlist, myId)
 }
+
+export const NOT_YOUR_PLAYLIST =
+  "Spotify only lets this game read playlists you created (or collaborate on). Copy the songs into a playlist of your own: in Spotify, open the playlist, select all songs and add them to a new playlist, then pick that one."
 
 /** Accepts a playlist URL, URI or bare ID. */
 export function parsePlaylistId(input: string): string | null {
@@ -128,8 +156,8 @@ export async function getPlaylistSongs(id: string): Promise<Song[]> {
   try {
     items = await allPages<ApiPlaylistItem>(`/playlists/${id}/items?limit=50&additional_types=track`)
   } catch (e) {
-    if (!(e instanceof SpotifyError) || e.status !== 404) throw e
-    items = await allPages<ApiPlaylistItem>(`/playlists/${id}/tracks?limit=50&additional_types=track`)
+    if (e instanceof SpotifyError && (e.status === 403 || e.status === 404)) throw new Error(NOT_YOUR_PLAYLIST)
+    throw e
   }
   const seen = new Set<string>()
   const songs: Song[] = []

@@ -1,9 +1,16 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import type { GameState } from '../game/types'
 import { newGame, withOriginalYear } from '../game/logic'
 import { originalYear } from '../musicbrainz'
 import { getClientId, isLoggedIn, login, logout, redirectUri, setClientId } from '../spotify/auth'
-import { getMyPlaylists, getPlaylist, getPlaylistSongs, parsePlaylistId, type PlaylistSummary } from '../spotify/api'
+import {
+  getMyPlaylists,
+  getPlaylist,
+  getPlaylistSongs,
+  NOT_YOUR_PLAYLIST,
+  parsePlaylistId,
+  type PlaylistSummary,
+} from '../spotify/api'
 import { DevicePicker } from '../components/DevicePicker'
 import { KEYS, load, save } from '../storage'
 
@@ -236,7 +243,9 @@ function PlaylistPicker({
     const id = parsePlaylistId(link)
     if (!id) return onError('That does not look like a Spotify playlist link.')
     try {
-      onSelect(await getPlaylist(id))
+      const playlist = await getPlaylist(id)
+      if (!playlist.readable) return onError(NOT_YOUR_PLAYLIST)
+      onSelect(playlist)
       setLink('')
     } catch (e) {
       onError((e as Error).message)
@@ -273,18 +282,28 @@ function PlaylistPicker({
             <input className="input" placeholder="Search your playlists" value={filter} onChange={(e) => setFilter(e.target.value)} />
           )}
           <div className="playlist-list">
-            {visible.map((p) => (
-              <button
-                key={p.id}
-                className={`playlist-item ${selected?.id === p.id ? 'selected' : ''}`}
-                onClick={() => onSelect(p)}
-              >
-                {p.image ? <img src={p.image} alt="" loading="lazy" /> : <div className="placeholder-art">♪</div>}
-                <span className="grow">
-                  <span className="option-title">{p.name}</span>
-                  {p.trackCount !== undefined && <span className="muted small"> · {p.trackCount} songs</span>}
-                </span>
-              </button>
+            {visible.map((p, i) => (
+              <Fragment key={p.id}>
+                {!p.readable && (i === 0 || visible[i - 1].readable) && (
+                  <p className="muted small list-note">
+                    Playlists made by others can't be used — Spotify doesn't share their songs with this game. Copy
+                    the songs into a playlist of your own to play them.
+                  </p>
+                )}
+                <button
+                  className={`playlist-item ${selected?.id === p.id ? 'selected' : ''}`}
+                  disabled={!p.readable}
+                  onClick={() => onSelect(p)}
+                >
+                  {p.image ? <img src={p.image} alt="" loading="lazy" /> : <div className="placeholder-art">♪</div>}
+                  <span className="grow">
+                    <span className="option-title">{p.name}</span>
+                    {p.readable
+                      ? p.trackCount !== undefined && <span className="muted small"> · {p.trackCount} songs</span>
+                      : p.owner && <span className="muted small"> · by {p.owner}</span>}
+                  </span>
+                </button>
+              </Fragment>
             ))}
           </div>
         </>
