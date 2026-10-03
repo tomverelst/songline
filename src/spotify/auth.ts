@@ -8,6 +8,9 @@ const SCOPES = [
   'user-modify-playback-state',
 ]
 
+// Songline's own Spotify app. Client IDs are public (PKCE needs no secret).
+const DEFAULT_CLIENT_ID = '1227717aec704551937e3094a5405b57'
+
 const CLIENT_ID_KEY = 'songline.clientId'
 const TOKEN_KEY = 'songline.token'
 const VERIFIER_KEY = 'songline.pkceVerifier'
@@ -19,7 +22,7 @@ interface StoredToken {
 }
 
 export function getClientId(): string {
-  return localStorage.getItem(CLIENT_ID_KEY) || import.meta.env.VITE_SPOTIFY_CLIENT_ID || ''
+  return localStorage.getItem(CLIENT_ID_KEY) || import.meta.env.VITE_SPOTIFY_CLIENT_ID || DEFAULT_CLIENT_ID
 }
 
 export function setClientId(id: string) {

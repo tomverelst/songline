@@ -48,8 +48,9 @@ so there is no backend and no client secret.
    shows the exact URL to use, for example `https://you.github.io/songline/` or
    `http://127.0.0.1:5173/`.
    Spotify only accepts `http` for loopback addresses. Everything else must use `https`.
-3. Paste the app's **client ID** on the setup screen, or bake it in at build time
-   with `VITE_SPOTIFY_CLIENT_ID=...`.
+3. The client ID of Songline's own Spotify app is built in (`src/spotify/auth.ts`).
+   To use your own app instead, paste its client ID on the setup screen
+   ("Change client ID"), or set `VITE_SPOTIFY_CLIENT_ID=...` at build time.
 4. While the Spotify app is in *development mode*, add every account that will
    log in under **User Management**.
 
@@ -92,8 +93,8 @@ Every push to `main` is tested, built and published to GitHub Pages at
 
 - **Enable Pages once:** under Settings → Pages, set Source to **GitHub Actions**.
 - **Register the redirect URI:** add `https://tomverelst.github.io/songline/` to your Spotify app.
-- **Optional client ID:** add a repository variable `SPOTIFY_CLIENT_ID` (Settings → Secrets and
-  variables → Actions → Variables) to bake in the client ID, so players never have to enter it.
+- **Optional client ID override:** add a repository variable `SPOTIFY_CLIENT_ID` (Settings → Secrets and
+  variables → Actions → Variables) to build with a different Spotify app.
 
 ## Project layout
 
