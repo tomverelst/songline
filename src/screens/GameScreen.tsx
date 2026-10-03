@@ -13,7 +13,7 @@ import {
   slotLabel,
 } from '../game/logic'
 import { originalYear } from '../musicbrainz'
-import { describePlaybackError, pause, playSong, resume, SpotifyError } from '../spotify/api'
+import { describePlaybackError, pause, resume, startSong } from '../spotify/api'
 import { Timeline } from '../components/Timeline'
 import { DevicePicker } from '../components/DevicePicker'
 import { YearInput } from '../components/YearInput'
@@ -50,12 +50,11 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
   async function play(uri: string) {
     setError(null)
     try {
-      try {
-        await playSong(uri, deviceId ?? undefined)
-      } catch (e) {
-        // The saved device may have gone to sleep — fall back to the active one.
-        if (deviceId && e instanceof SpotifyError && e.status === 404) await playSong(uri)
-        else throw e
+      const used = await startSong(uri, deviceId ?? undefined)
+      // Remember the device that worked so pause/resume go to the same place.
+      if (used && used !== deviceId) {
+        setDeviceId(used)
+        save(KEYS.device, used)
       }
       setPlaying(true)
     } catch (e) {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { getDevices, type Device } from '../spotify/api'
+import { getAccountName, getDevices, type Device } from '../spotify/api'
 
 interface Props {
   deviceId: string | null
@@ -10,6 +10,13 @@ export function DevicePicker({ deviceId, onChange }: Props) {
   const [devices, setDevices] = useState<Device[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [account, setAccount] = useState<string | null>(null)
+
+  useEffect(() => {
+    getAccountName()
+      .then(setAccount)
+      .catch(() => {})
+  }, [])
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -35,6 +42,7 @@ export function DevicePicker({ deviceId, onChange }: Props) {
           {loading ? 'Refreshing…' : '↻ Refresh'}
         </button>
       </div>
+      {account && <p className="muted small">Signed in to Spotify as <strong>{account}</strong></p>}
       {error && <p className="error">{error}</p>}
       <div className="options">
         <button className={`option ${deviceId === null ? 'selected' : ''}`} onClick={() => onChange(null)}>
@@ -57,7 +65,8 @@ export function DevicePicker({ deviceId, onChange }: Props) {
       </div>
       {devices?.length === 0 && (
         <p className="muted small">
-          No devices found. Open the Spotify app on a phone, computer or speaker and press play once, then refresh.
+          No devices found for this account. Open Spotify on a laptop, phone or speaker with the same account, press
+          play once, then refresh.
         </p>
       )}
     </div>

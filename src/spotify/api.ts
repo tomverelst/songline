@@ -213,6 +213,36 @@ function loopTrack(deviceId?: string) {
   request(`/me/player/repeat?state=track${deviceQuery(deviceId, '&')}`, { method: 'PUT' }).catch(() => {})
 }
 
+/**
+ * Starts a song on the preferred device. If Spotify says there is no active
+ * device (or the saved one is gone), picks a device Spotify can see, wakes it
+ * up and plays there instead. Returns the device that was used.
+ */
+export async function startSong(uri: string, preferredDeviceId?: string): Promise<string | undefined> {
+  try {
+    await playSong(uri, preferredDeviceId)
+    return preferredDeviceId
+  } catch (e) {
+    if (!(e instanceof SpotifyError) || e.status !== 404) throw e
+    const devices = await getDevices()
+    const target =
+      devices.find((d) => d.id === preferredDeviceId) ??
+      devices.find((d) => d.is_active) ??
+      devices.find((d) => d.type === 'Computer') ??
+      devices[0]
+    if (!target) throw new SpotifyError(404, 'No devices', 'NO_DEVICES')
+    await transferPlayback(target.id).catch(() => {})
+    await sleep(500)
+    await playSong(uri, target.id)
+    return target.id
+  }
+}
+
+export async function getAccountName(): Promise<string> {
+  const me = await request<{ display_name?: string | null; id: string }>('/me')
+  return me.display_name || me.id
+}
+
 export async function pause(deviceId?: string) {
   const query = deviceId ? `?device_id=${encodeURIComponent(deviceId)}` : ''
   await request(`/me/player/pause${query}`, { method: 'PUT' })
@@ -225,13 +255,15 @@ export async function resume(deviceId?: string) {
 
 export function describePlaybackError(e: unknown): string {
   if (e instanceof SpotifyError) {
+    if (e.reason === 'NO_DEVICES')
+      return "Spotify doesn't see any device for this account. Check that Spotify on your laptop or phone is logged in to the same account shown in the ☰ menu, then try ↺ Restart."
     if (e.reason === 'NO_ACTIVE_DEVICE' || e.status === 404)
-      return 'No active Spotify device. Open Spotify on your phone or speaker, play anything for a second, then pick the device in settings.'
+      return 'No active Spotify device. Open Spotify on your laptop, phone or speaker, play anything for a second, then pick the device in the ☰ menu.'
     if (e.reason === 'PREMIUM_REQUIRED' || e.status === 403)
       return 'Spotify Premium is required to control playback.'
     if (e.status >= 500)
       return "Spotify couldn't reach the playback device. Open Spotify on it (on a phone, keep the app in the foreground), then tap ↺ Restart, or pick another device in the ☰ menu."
-    return e.message
+    return `Spotify error ${e.status}: ${e.message}`
   }
   return (e as Error).message
 }
