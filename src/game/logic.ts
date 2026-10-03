@@ -147,7 +147,12 @@ export function reveal(state: GameState): GameState {
       ...turn,
       phase: 'reveal',
       slot,
-      result: { placementCorrect: isPlacementCorrect(slot, turn.song.year), titleCorrect: false, artistCorrect: false },
+      result: {
+        placementCorrect: isPlacementCorrect(slot, turn.song.year),
+        exactYear: turn.yearGuess === turn.song.year,
+        titleCorrect: false,
+        artistCorrect: false,
+      },
     },
   }
 }
@@ -155,13 +160,13 @@ export function reveal(state: GameState): GameState {
 export function endTurn(state: GameState): GameState {
   const turn = state.turn
   if (!turn?.result) return state
-  const { placementCorrect, titleCorrect, artistCorrect } = turn.result
+  const { placementCorrect, exactYear, titleCorrect, artistCorrect } = turn.result
   const players = state.players.map((p, i) => {
     if (i !== state.currentPlayer) return p
     return {
       ...p,
       timeline: placementCorrect ? insertSorted(p.timeline, turn.song) : p.timeline,
-      bonus: p.bonus + (titleCorrect ? 1 : 0) + (artistCorrect ? 1 : 0),
+      bonus: p.bonus + [exactYear, titleCorrect, artistCorrect].filter(Boolean).length,
     }
   })
   const next = { ...state, players, turn: undefined }

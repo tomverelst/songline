@@ -26,6 +26,8 @@ export type Slot =
 
 export interface TurnResult {
   placementCorrect: boolean
+  /** Guessed the exact release year — worth a bonus point. */
+  exactYear: boolean
   titleCorrect: boolean
   artistCorrect: boolean
 }

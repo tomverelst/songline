@@ -191,7 +191,13 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
 
           <section className="card stack-sm">
             <h2>Bonus points</h2>
-            <p className="muted small">Did {player.name} name it? +1 point each.</p>
+            <p className="muted small">+1 point each. Tap to change.</p>
+            <BonusToggle
+              label={`Exact year (guessed ${turn.yearGuess})`}
+              answer={String(turn.song.year)}
+              value={turn.result.exactYear}
+              onChange={(exactYear) => updateResult({ exactYear })}
+            />
             <BonusToggle
               label="Title"
               answer={turn.song.title}

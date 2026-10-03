@@ -19,9 +19,11 @@ in their personal timeline of songs.
    - **in** the same year as one of your cards.
 4. Lock in. If the real year falls in the same spot as your guess, you win the
    card, even if you didn't hit the exact year.
-5. After the reveal, tick whether you named the **title** and/or the
-   **artist** out loud. Each one is worth **+1 bonus point**, whether or not
-   you won the card.
+5. Bonus points, **+1 each**, whether or not you won the card:
+   - **Exact year**: ticked automatically when your guess matches the year exactly.
+   - **Title** and **Artist**: after the reveal, tick the ones you named out loud.
+
+   That's at most **4 points per turn**: the card plus three bonus points.
 6. Your score is the number of cards in your timeline plus your bonus points.
    The first player to reach the target wins. If the deck runs out first, the
    highest score wins.

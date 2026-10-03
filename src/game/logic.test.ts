@@ -76,13 +76,30 @@ describe('game flow', () => {
     expect(g.deck).toHaveLength(4)
   })
 
-  it('awards the card and bonus points, then passes the turn', () => {
-    let g = drawSong(newGame(['Ann', 'Bob'], settings, songs, () => 0.5))
-    g = { ...g, turn: { ...g.turn!, yearGuess: g.turn!.song.year } }
-    g = reveal(g)
-    g = endTurn({ ...g, turn: { ...g.turn!, result: { ...g.turn!.result!, titleCorrect: true } } })
+  it('awards up to 4 points in one turn: card, exact year, title and artist', () => {
+    let g = drawSong(newGame(['Ann', 'Bob'], { ...settings, targetPoints: 10 }, songs, () => 0.5))
+    g = reveal({ ...g, turn: { ...g.turn!, yearGuess: g.turn!.song.year } })
+    expect(g.turn!.result!.exactYear).toBe(true)
+    g = endTurn({ ...g, turn: { ...g.turn!, result: { ...g.turn!.result!, titleCorrect: true, artistCorrect: true } } })
     expect(g.players[0].timeline).toHaveLength(2)
-    expect(g.players[0].bonus).toBe(1)
+    expect(g.players[0].bonus).toBe(3)
+    expect(score(g.players[0])).toBe(5)
+    expect(g.currentPlayer).toBe(1)
+  })
+
+  it('gives the card but no exact bonus for a year in the right gap', () => {
+    let g = drawSong(newGame(['Ann', 'Bob'], settings, songs, () => 0.5))
+    const { song } = g.turn!
+    const start = g.players[0].timeline[0].year
+    const guess = song.year < start ? start - 50 : start + 50
+    g = reveal({ ...g, turn: { ...g.turn!, yearGuess: guess } })
+    expect(g.turn!.result).toMatchObject({ placementCorrect: true, exactYear: false })
+  })
+
+  it('ends the game once a player reaches the target', () => {
+    let g = drawSong(newGame(['Ann', 'Bob'], settings, songs, () => 0.5))
+    g = reveal({ ...g, turn: { ...g.turn!, yearGuess: g.turn!.song.year } })
+    g = endTurn(g)
     expect(score(g.players[0])).toBe(3)
     expect(g.status).toBe('finished')
     expect(g.winnerIds).toEqual(['p0'])

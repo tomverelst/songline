@@ -761,7 +761,7 @@ li.gap {
   color: #04130a;
 }
 
-.bonus-mark {
+.bonus-toggle.on .bonus-mark {
   color: var(--good);
 }
 

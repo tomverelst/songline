@@ -99,8 +99,8 @@ export function SetupScreen({ onStart, initialError }: Props) {
           </button>
         </div>
         <p className="muted small">
-          Every card in your timeline is 1 point (you start with one). Naming the title or artist correctly earns 1 bonus
-          point each.
+          Every card in your timeline is 1 point (you start with one). The exact year, the title and the artist
+          each earn 1 bonus point — up to 4 points per turn.
         </p>
       </section>
 
