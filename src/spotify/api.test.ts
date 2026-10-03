@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('./auth', () => ({ getAccessToken: () => Promise.resolve('token') }))
 
-const { playSong } = await import('./api')
+const { pause, playSong } = await import('./api')
 
 const empty = (status = 204) => Promise.resolve(new Response(null, { status }))
 const json = (body: unknown, status = 200) => Promise.resolve(new Response(JSON.stringify(body), { status }))
@@ -48,5 +48,12 @@ describe('playSong', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true, advanceTimeDelta: 100 })
     stubFetch(badGateway, () => empty(204), () => empty(204), badGateway)
     await expect(playSong('spotify:track:x', 'dev1')).rejects.toMatchObject({ status: 502 })
+  })
+})
+
+describe('player commands', () => {
+  it('ignores a non-JSON success body', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response('MTc2...', { status: 200 }))))
+    await expect(pause('dev1')).resolves.toBeUndefined()
   })
 })

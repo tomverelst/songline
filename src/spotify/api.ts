@@ -41,7 +41,13 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
     throw new SpotifyError(res.status, message, reason)
   }
   const text = await res.text()
-  return (text ? JSON.parse(text) : undefined) as T
+  // Player commands (play, pause, repeat) sometimes answer 200 with a
+  // non-JSON body; they carry no data, so treat anything unparsable as empty.
+  try {
+    return (text ? JSON.parse(text) : undefined) as T
+  } catch {
+    return undefined as T
+  }
 }
 
 interface Page<T> {
