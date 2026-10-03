@@ -170,16 +170,47 @@ export async function getDevices(): Promise<Device[]> {
   return res.devices.filter((d): d is Device => !!d.id)
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+function deviceQuery(deviceId?: string, prefix = '?') {
+  return deviceId ? `${prefix}device_id=${encodeURIComponent(deviceId)}` : ''
+}
+
+async function isPlaying(uri: string): Promise<boolean> {
+  const state = await request<{ is_playing?: boolean; item?: { uri?: string } } | undefined>('/me/player')
+  return !!state?.is_playing && state.item?.uri === uri
+}
+
+/** Wakes a device up by making it the active Spotify Connect device. */
+export async function transferPlayback(deviceId: string) {
+  await request('/me/player', { method: 'PUT', body: JSON.stringify({ device_ids: [deviceId], play: false }) })
+}
+
 export async function playSong(uri: string, deviceId?: string) {
-  const query = deviceId ? `?device_id=${encodeURIComponent(deviceId)}` : ''
-  await request(`/me/player/play${query}`, {
-    method: 'PUT',
-    body: JSON.stringify({ uris: [uri], position_ms: 0 }),
-  })
+  const start = () =>
+    request(`/me/player/play${deviceQuery(deviceId)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ uris: [uri], position_ms: 0 }),
+    })
+  try {
+    await start()
+  } catch (e) {
+    // Spotify answers 5xx when it can't reach the device in time (e.g. a phone
+    // app in the background). Sometimes the song starts anyway; otherwise wake
+    // the device by transferring playback to it and try once more.
+    if (!(e instanceof SpotifyError) || e.status < 500) throw e
+    await sleep(1000)
+    if (await isPlaying(uri).catch(() => false)) return loopTrack(deviceId)
+    if (deviceId) await transferPlayback(deviceId).catch(() => {})
+    await sleep(1000)
+    await start()
+  }
+  loopTrack(deviceId)
+}
+
+function loopTrack(deviceId?: string) {
   // Loop the song while players are thinking; ignore failures (not critical).
-  request(`/me/player/repeat?state=track${deviceId ? `&device_id=${encodeURIComponent(deviceId)}` : ''}`, {
-    method: 'PUT',
-  }).catch(() => {})
+  request(`/me/player/repeat?state=track${deviceQuery(deviceId, '&')}`, { method: 'PUT' }).catch(() => {})
 }
 
 export async function pause(deviceId?: string) {
@@ -198,6 +229,8 @@ export function describePlaybackError(e: unknown): string {
       return 'No active Spotify device. Open Spotify on your phone or speaker, play anything for a second, then pick the device in settings.'
     if (e.reason === 'PREMIUM_REQUIRED' || e.status === 403)
       return 'Spotify Premium is required to control playback.'
+    if (e.status >= 500)
+      return "Spotify couldn't reach the playback device. Open Spotify on it (on a phone, keep the app in the foreground), then tap ↺ Restart, or pick another device in the ☰ menu."
     return e.message
   }
   return (e as Error).message
