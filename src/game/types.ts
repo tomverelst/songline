@@ -17,6 +17,7 @@ export interface Player {
   id: string
   name: string
   timeline: Song[]
+  /** Bonus coins: exact year, title and artist. */
   bonus: number
 }
 
@@ -32,7 +33,7 @@ export type Slot =
 
 export interface TurnResult {
   placementCorrect: boolean
-  /** Guessed the exact release year — worth a bonus point. */
+  /** Guessed the exact release year — worth a bonus coin. */
   exactYear: boolean
   titleCorrect: boolean
   artistCorrect: boolean
@@ -47,8 +48,14 @@ export interface Turn {
   result?: TurnResult
 }
 
+export type GameMode = 'standard'
+
 export interface GameSettings {
+  mode: GameMode
+  /** Points needed to win. A point is a card in your timeline. */
   targetPoints: number
+  /** Advanced: bonus coins also count as points towards the target. */
+  bonusCountsTowardsGoal: boolean
   playlistId: string
   playlistName: string
 }

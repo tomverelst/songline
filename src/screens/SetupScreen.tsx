@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
-import type { GameState } from '../game/types'
+import type { GameMode, GameState } from '../game/types'
 import { newGame, withOriginalYear } from '../game/logic'
 import { originalYear } from '../musicbrainz'
 import { getClientId, isLoggedIn, login, logout, redirectUri, setClientId } from '../spotify/auth'
@@ -13,14 +13,24 @@ import {
 } from '../spotify/api'
 import { DevicePicker } from '../components/DevicePicker'
 import { KEYS, load, save } from '../storage'
+import { GAME_MODES } from '../game/modes'
+import { Coin } from '../components/Coins'
 
 interface SetupDraft {
   names: string[]
+  mode: GameMode
   targetPoints: number
+  bonusCountsTowardsGoal: boolean
   playlist: PlaylistSummary | null
 }
 
-const DEFAULT_DRAFT: SetupDraft = { names: ['', ''], targetPoints: 10, playlist: null }
+const DEFAULT_DRAFT: SetupDraft = {
+  names: ['', ''],
+  mode: 'standard',
+  targetPoints: 10,
+  bonusCountsTowardsGoal: false,
+  playlist: null,
+}
 
 interface Props {
   onStart: (game: GameState) => void
@@ -52,7 +62,13 @@ export function SetupScreen({ onStart, initialError }: Props) {
       }
       const game = newGame(
         names,
-        { targetPoints: draft.targetPoints, playlistId: draft.playlist.id, playlistName: draft.playlist.name },
+        {
+          mode: draft.mode,
+          targetPoints: draft.targetPoints,
+          bonusCountsTowardsGoal: draft.bonusCountsTowardsGoal,
+          playlistId: draft.playlist.id,
+          playlistName: draft.playlist.name,
+        },
         songs,
       )
       setStarting('years')
@@ -100,7 +116,21 @@ export function SetupScreen({ onStart, initialError }: Props) {
       </section>
 
       <section className="card stack">
-        <h2>Points to win</h2>
+        <h2>Game mode</h2>
+        <div className="options">
+          {GAME_MODES.map((m) => (
+            <button
+              key={m.id}
+              className={`option ${draft.mode === m.id ? 'selected' : ''}`}
+              onClick={() => update({ mode: m.id })}
+            >
+              <span className="option-title">{m.name}</span>
+              <span className="muted small">{m.description}</span>
+            </button>
+          ))}
+        </div>
+
+        <h3>Points to win</h3>
         <div className="stepper">
           <button className="icon-btn big" onClick={() => update({ targetPoints: Math.max(2, draft.targetPoints - 1) })}>
             −
@@ -111,9 +141,29 @@ export function SetupScreen({ onStart, initialError }: Props) {
           </button>
         </div>
         <p className="muted small">
-          Every card in your timeline is 1 point (you start with one). The exact year, the title and the artist
-          each earn 1 bonus point — up to 4 points per turn.
+          Every card in your timeline is 1 point; you start with one. The exact year, the title and the artist each
+          earn a bonus coin <Coin />
+          {draft.bonusCountsTowardsGoal
+            ? ', and coins count as points too.'
+            : '. Coins don’t count towards winning, but break a tie if the songs run out.'}
         </p>
+
+        <details className="advanced">
+          <summary>Advanced options</summary>
+          <label className="switch-row">
+            <span className="grow stack-xs">
+              <span className="option-title">Coins count as points</span>
+              <span className="muted small">Bonus coins also count towards the points to win.</span>
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              className="switch"
+              checked={draft.bonusCountsTowardsGoal}
+              onChange={(e) => update({ bonusCountsTowardsGoal: e.target.checked })}
+            />
+          </label>
+        </details>
       </section>
 
       <section className="card stack">

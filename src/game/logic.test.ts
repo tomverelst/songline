@@ -10,8 +10,10 @@ import {
   slotForYear,
   slotsFor,
   drawSong,
+  finish,
+  ranking,
 } from './logic'
-import type { Song } from './types'
+import type { GameSettings, Song } from './types'
 
 const song = (year: number, title = `Song ${year}`, artists = ['Artist']): Song => ({
   id: `${title}-${year}`,
@@ -68,8 +70,19 @@ describe('slotForYear', () => {
 })
 
 describe('game flow', () => {
-  const settings = { targetPoints: 3, playlistId: 'x', playlistName: 'x' }
+  const settings: GameSettings = {
+    mode: 'standard',
+    targetPoints: 3,
+    bonusCountsTowardsGoal: false,
+    playlistId: 'x',
+    playlistName: 'x',
+  }
   const songs = [1960, 1970, 1980, 1990, 2000, 2010].map((y) => song(y))
+  const perfectTurn = (s: GameSettings) => {
+    let g = drawSong(newGame(['Ann', 'Bob'], s, songs, () => 0.5))
+    g = reveal({ ...g, turn: { ...g.turn!, yearGuess: g.turn!.song.year } })
+    return endTurn({ ...g, turn: { ...g.turn!, result: { ...g.turn!.result!, titleCorrect: true, artistCorrect: true } } })
+  }
 
   it('deals a starting card to every player', () => {
     const g = newGame(['Ann', 'Bob'], settings, songs)
@@ -77,15 +90,20 @@ describe('game flow', () => {
     expect(g.deck).toHaveLength(4)
   })
 
-  it('awards up to 4 points in one turn: card, exact year, title and artist', () => {
-    let g = drawSong(newGame(['Ann', 'Bob'], { ...settings, targetPoints: 10 }, songs, () => 0.5))
-    g = reveal({ ...g, turn: { ...g.turn!, yearGuess: g.turn!.song.year } })
-    expect(g.turn!.result!.exactYear).toBe(true)
-    g = endTurn({ ...g, turn: { ...g.turn!, result: { ...g.turn!.result!, titleCorrect: true, artistCorrect: true } } })
+  it('gives a card plus up to 3 bonus coins that do not count towards the target', () => {
+    const g = perfectTurn(settings)
     expect(g.players[0].timeline).toHaveLength(2)
     expect(g.players[0].bonus).toBe(3)
-    expect(score(g.players[0])).toBe(5)
+    expect(score(g.players[0], g.settings)).toBe(2)
+    expect(g.status).toBe('playing')
     expect(g.currentPlayer).toBe(1)
+  })
+
+  it('counts coins towards the target when that advanced option is on', () => {
+    const g = perfectTurn({ ...settings, bonusCountsTowardsGoal: true })
+    expect(score(g.players[0], g.settings)).toBe(5)
+    expect(g.status).toBe('finished')
+    expect(g.winnerIds).toEqual(['p0'])
   })
 
   it('gives the card but no exact bonus for a year in the right gap', () => {
@@ -97,11 +115,9 @@ describe('game flow', () => {
     expect(g.turn!.result).toMatchObject({ placementCorrect: true, exactYear: false })
   })
 
-  it('ends the game once a player reaches the target', () => {
-    let g = drawSong(newGame(['Ann', 'Bob'], settings, songs, () => 0.5))
-    g = reveal({ ...g, turn: { ...g.turn!, yearGuess: g.turn!.song.year } })
-    g = endTurn(g)
-    expect(score(g.players[0])).toBe(3)
+  it('ends the game once a player has enough cards', () => {
+    let g = drawSong(newGame(['Ann', 'Bob'], { ...settings, targetPoints: 2 }, songs, () => 0.5))
+    g = endTurn(reveal({ ...g, turn: { ...g.turn!, yearGuess: g.turn!.song.year } }))
     expect(g.status).toBe('finished')
     expect(g.winnerIds).toEqual(['p0'])
   })
@@ -112,5 +128,12 @@ describe('game flow', () => {
     g = endTurn(reveal(g))
     expect(g.players[0].timeline).toHaveLength(1)
     expect(g.currentPlayer).toBe(1)
+  })
+
+  it('breaks a tie on points with bonus coins when the game ends early', () => {
+    const g = newGame(['Ann', 'Bob', 'Cas'], settings, songs)
+    const players = g.players.map((p, i) => ({ ...p, bonus: [1, 2, 0][i] }))
+    expect(finish({ ...g, players }).winnerIds).toEqual(['p1'])
+    expect(ranking({ ...g, players }).map((p) => p.name)).toEqual(['Bob', 'Ann', 'Cas'])
   })
 })

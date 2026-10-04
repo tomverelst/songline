@@ -6,8 +6,9 @@ in their personal timeline of songs.
 
 ## How to play
 
-1. **Setup:** add the players, choose the number of points needed to win, connect
-   Spotify, pick a playlist and choose the device the music plays on.
+1. **Setup:** add the players, pick a **game mode** and the number of points
+   needed to win, connect Spotify, pick a playlist and choose the device the
+   music plays on.
 2. Every player starts with one random song card (the year is shown).
 3. On your turn, tap **Play mystery song** and pass the phone around. Nothing
    about the song is shown. Enter the **year** you think it's from with the big
@@ -19,21 +20,26 @@ in their personal timeline of songs.
    - **in** the same year as one of your cards.
 4. Lock in. If the real year falls in the same spot as your guess, you win the
    card, even if you didn't hit the exact year.
-5. Bonus points, **+1 each**, whether or not you won the card:
+5. Bonus **coins**, one each, whether or not you won the card:
    - **Exact year**: ticked automatically when your guess matches the year exactly.
    - **Title** and **Artist**: after the reveal, tick the ones you named out loud.
 
    Everything on the reveal screen, including whether you won the card, can be
    tapped to correct it. That's useful when the table agrees the year is wrong.
 
-   That's at most **4 points per turn**: the card plus three bonus points.
-6. Your score is the number of cards in your timeline plus your bonus points.
-   The first player to reach the target wins. If the deck runs out first, the
-   highest score wins.
+### Game mode: Standard
 
-The ☰ menu lets you switch the playback device, skip a song (for example
-when Spotify only has a remaster with the wrong year), end the game early,
-or quit.
+- **Points:** every card in your timeline is a point. The first player to reach
+  the points to win takes the game.
+- **Coins:** bonus coins are shown next to the points. They don't count towards
+  winning, but if the deck runs out (or the game is ended early) they break a
+  tie on points.
+- **Advanced options** → **Coins count as points**: makes coins count towards
+  the target as well, so a perfect turn is worth 4 points.
+
+**Skip** next to Pause and Restart throws away a song with a wrong year or one
+that won't play. The ☰ menu lets you switch the playback device, end the game
+early, or quit.
 
 The game state is saved in the browser, so a refresh or an accidental tab
 close doesn't lose the game.

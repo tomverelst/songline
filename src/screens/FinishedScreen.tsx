@@ -1,10 +1,11 @@
 import type { GameState } from '../game/types'
-import { score } from '../game/logic'
+import { ranking, score } from '../game/logic'
 import { Timeline } from '../components/Timeline'
+import { Coins } from '../components/Coins'
 
 export function FinishedScreen({ game, onNewGame }: { game: GameState; onNewGame: () => void }) {
   const winners = game.players.filter((p) => game.winnerIds?.includes(p.id))
-  const ranked = [...game.players].sort((a, b) => score(b) - score(a))
+  const ranked = ranking(game)
 
   return (
     <div className="screen">
@@ -20,11 +21,11 @@ export function FinishedScreen({ game, onNewGame }: { game: GameState; onNewGame
             <h2>
               {i + 1}. {p.name}
             </h2>
-            <span className="chip-score">{score(p)} pts</span>
+            <span className="chip-score">
+              {score(p, game.settings)} pts
+              <Coins count={p.bonus} />
+            </span>
           </div>
-          <p className="muted small">
-            {p.timeline.length} cards · {p.bonus} bonus
-          </p>
           <Timeline timeline={p.timeline} />
         </section>
       ))}

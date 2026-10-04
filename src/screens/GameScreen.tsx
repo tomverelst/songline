@@ -17,6 +17,7 @@ import { describePlaybackError, pause, playSong, resume, SpotifyError } from '..
 import { Timeline } from '../components/Timeline'
 import { DevicePicker } from '../components/DevicePicker'
 import { YearInput } from '../components/YearInput'
+import { Coin, Coins } from '../components/Coins'
 import { KEYS, load, save } from '../storage'
 
 interface Props {
@@ -131,8 +132,8 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
             <div key={p.id} className={`chip ${i === game.currentPlayer ? 'active' : ''}`}>
               <span className="chip-name">{p.name}</span>
               <span className="chip-score">
-                {score(p)}
-                <span className="muted">/{game.settings.targetPoints}</span>
+                {score(p, game.settings)}
+                <Coins count={p.bonus} />
               </span>
             </div>
           ))}
@@ -152,7 +153,6 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
           <section className="card stack-sm">
             <h2>Your timeline</h2>
             <Timeline timeline={player.timeline} />
-            {player.bonus > 0 && <p className="muted small">+{player.bonus} bonus points</p>}
           </section>
           <p className="muted small center">{game.deck.length} songs left in the deck</p>
           <div className="bottom-bar">
@@ -227,27 +227,34 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
           </section>
 
           <section className="card stack-sm">
-            <h2>Points</h2>
-            <p className="muted small">+1 point each. Tap to change, e.g. if the year looks wrong.</p>
+            <h2>Card</h2>
+            <p className="muted small">Tap to change, e.g. if the year looks wrong.</p>
             <BonusToggle
-              label={`Card (guessed ${turn.yearGuess})`}
+              label={`Guessed ${turn.yearGuess}`}
               answer={turn.result.placementCorrect ? 'Goes in the timeline' : 'Wrong spot'}
               value={turn.result.placementCorrect}
               onChange={(placementCorrect) => updateResult({ placementCorrect })}
             />
+          </section>
+
+          <section className="card stack-sm">
+            <h2>Bonus coins</h2>
             <BonusToggle
+              coin
               label={`Exact year (guessed ${turn.yearGuess})`}
               answer={String(turn.song.year)}
               value={turn.result.exactYear}
               onChange={(exactYear) => updateResult({ exactYear })}
             />
             <BonusToggle
+              coin
               label="Title"
               answer={turn.song.title}
               value={turn.result.titleCorrect}
               onChange={(titleCorrect) => updateResult({ titleCorrect })}
             />
             <BonusToggle
+              coin
               label="Artist"
               answer={turn.song.artists.join(', ')}
               value={turn.result.artistCorrect}
@@ -351,7 +358,10 @@ function BonusToggle({
   answer,
   value,
   onChange,
+  coin = false,
 }: {
+  /** Rewards a bonus coin instead of a point. */
+  coin?: boolean
   label: string
   answer: string
   value: boolean
@@ -364,7 +374,10 @@ function BonusToggle({
         <span className="muted small">{label}</span>
         <span className="option-title">{answer}</span>
       </span>
-      <span className="bonus-mark">{value ? '+1' : '+0'}</span>
+      <span className="bonus-mark">
+        {value ? '+1' : '+0'}
+        {coin && <Coin />}
+      </span>
     </button>
   )
 }

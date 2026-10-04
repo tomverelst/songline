@@ -1,7 +1,15 @@
 import type { GameSettings, GameState, Player, Slot, Song } from './types'
 
-export function score(player: Player): number {
-  return player.timeline.length + player.bonus
+/** Points towards the target: one per card, plus coins if the rules say so. */
+export function score(player: Player, settings: Pick<GameSettings, 'bonusCountsTowardsGoal'>): number {
+  return player.timeline.length + (settings.bonusCountsTowardsGoal ? player.bonus : 0)
+}
+
+/** Players from best to worst: most points first, bonus coins break ties. */
+export function ranking(state: Pick<GameState, 'players' | 'settings'>): Player[] {
+  return [...state.players].sort(
+    (a, b) => score(b, state.settings) - score(a, state.settings) || b.bonus - a.bonus,
+  )
 }
 
 export function distinctYears(timeline: Song[]): number[] {
@@ -187,7 +195,7 @@ export function endTurn(state: GameState): GameState {
     }
   })
   const next = { ...state, players, turn: undefined }
-  if (score(players[state.currentPlayer]) >= state.settings.targetPoints) {
+  if (score(players[state.currentPlayer], state.settings) >= state.settings.targetPoints) {
     return { ...next, status: 'finished', winnerIds: [players[state.currentPlayer].id] }
   }
   if (next.deck.length === 0) return finish(next)
@@ -195,13 +203,18 @@ export function endTurn(state: GameState): GameState {
   return { ...next, currentPlayer: nextPlayer, round: nextPlayer === 0 ? state.round + 1 : state.round }
 }
 
-/** Ends the game early (deck ran out); highest score wins, ties share. */
+/**
+ * Ends the game early (deck ran out or ended from the menu): most points
+ * wins, bonus coins break ties, and players still level share the win.
+ */
 export function finish(state: GameState): GameState {
-  const best = Math.max(...state.players.map(score))
+  const [best] = ranking(state)
+  const level = (p: Player) =>
+    score(p, state.settings) === score(best, state.settings) && p.bonus === best.bonus
   return {
     ...state,
     status: 'finished',
     turn: undefined,
-    winnerIds: state.players.filter((p) => score(p) === best).map((p) => p.id),
+    winnerIds: state.players.filter(level).map((p) => p.id),
   }
 }
