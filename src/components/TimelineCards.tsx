@@ -110,6 +110,31 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
     closeGap.current = false
   }, [dragging])
 
+  // Cards move like real cards: when the guess changes place, every card
+  // slides from where it was to where it is now, and the guess flies over.
+  const cardLayers = useRef(new Map<string, HTMLDivElement>())
+  const guessLayer = useRef<HTMLDivElement | null>(null)
+  const lastCenters = useRef(new Map<string, Point>())
+  const lastGuessCenter = useRef<Point | null>(null)
+  const flyFrom = useRef<(Point & { tilt: number }) | null>(null)
+  const placementKey = `${onCardAt}|${ownSpotAt}|${dragging}`
+  const lastPlacementKey = useRef(placementKey)
+  useLayoutEffect(() => {
+    const moved = placementKey !== lastPlacementKey.current && !dragging
+    lastPlacementKey.current = placementKey
+    if (moved && !prefersReducedMotion()) {
+      cardLayers.current.forEach((el, key) => {
+        const from = lastCenters.current.get(key)
+        if (from) slide(el, from, centerOf(el))
+      })
+      const from = flyFrom.current ?? lastGuessCenter.current
+      if (guessLayer.current && from) slide(guessLayer.current, from, centerOf(guessLayer.current), flyFrom.current?.tilt)
+    }
+    flyFrom.current = null
+    lastCenters.current = new Map([...cardLayers.current].map(([key, el]) => [key, centerOf(el)]))
+    if (!dragging && guessLayer.current) lastGuessCenter.current = centerOf(guessLayer.current)
+  })
+
   // Where the finger is while dragging, for the listeners below.
   const finger = useRef({ x: 0, y: 0, grabX: 0 })
   const held = useRef<HTMLDivElement>(null)
@@ -162,7 +187,11 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
       }
       frameId = requestAnimationFrame(edgeScroll)
     }
-    const drop = () => setDrag(null)
+    const drop = () => {
+      // The guess card flies from where it was let go to its spot.
+      if (held.current) flyFrom.current = { ...centerOf(held.current), tilt }
+      setDrag(null)
+    }
     // Once the card is picked up, finger moves drag it instead of scrolling.
     const noScroll = (e: TouchEvent) => e.preventDefault()
     window.addEventListener('pointermove', move)
@@ -231,14 +260,16 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
     songIndex: i,
     content: (
       <>
-        <CardFace song={s} covered={i === onCardAt && !dragging} highlight={drag?.onIndex === i} />
+        <CardFace song={s} highlight={drag?.onIndex === i} />
         {i === onCardAt && (
           // Lies on top, shifted so the card underneath still shows.
           <div
             className={cx('absolute inset-0 z-10 translate-x-3 translate-y-12 rotate-[4deg]', dragging && 'invisible')}
             {...holdHandlers}
           >
-            {back}
+            <div ref={guessLayer} className="absolute inset-0">
+              {back}
+            </div>
           </div>
         )}
       </>
@@ -250,7 +281,9 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
       collapsed: dragging,
       content: (
         <div className={cx('absolute inset-0', dragging && 'invisible')} {...holdHandlers}>
-          {back}
+          <div ref={guessLayer} className="absolute inset-0">
+            {back}
+          </div>
         </div>
       ),
     })
@@ -295,14 +328,24 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
                 zIndex: 100 - Math.round(distance * 10),
               }}
             >
+              {/* Slides when the cards move (see slide()). */}
               <div
-                className="absolute inset-0 transition-transform duration-150 ease-out"
-                style={{
-                  transform: `translateX(${spread}px) translateY(${distance * distance * 5}px) rotate(${Math.max(-24, Math.min(24, d * 8))}deg) scale(${1 - distance * 0.05})`,
-                  transformOrigin: '50% 120%',
-                }}
+                ref={
+                  card.key === 'guess'
+                    ? undefined
+                    : (el) => void (el ? cardLayers.current.set(card.key, el) : cardLayers.current.delete(card.key))
+                }
+                className="absolute inset-0"
               >
-                {card.content}
+                <div
+                  className="absolute inset-0 transition-transform duration-150 ease-out"
+                  style={{
+                    transform: `translateX(${spread}px) translateY(${distance * distance * 5}px) rotate(${Math.max(-24, Math.min(24, d * 8))}deg) scale(${1 - distance * 0.05})`,
+                    transformOrigin: '50% 120%',
+                  }}
+                >
+                  {card.content}
+                </div>
               </div>
             </div>
           )
@@ -328,13 +371,35 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
   )
 }
 
+interface Point {
+  x: number
+  y: number
+}
+
+function centerOf(el: Element): Point {
+  const r = el.getBoundingClientRect()
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
+}
+
+function prefersReducedMotion() {
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+}
+
+/** Animates an element from `from` to where it now is (`to`), optionally untilting. */
+function slide(el: HTMLElement, from: Point, to: Point, tilt = 0) {
+  const dx = from.x - to.x
+  const dy = from.y - to.y
+  if (Math.abs(dx) < 1 && Math.abs(dy) < 1 && !tilt) return
+  el.animate([{ transform: `translate(${dx}px, ${dy}px) rotate(${tilt}deg)` }, { transform: 'none' }], {
+    duration: 320,
+    easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
+  })
+}
+
 const CARD = 'absolute inset-0 overflow-hidden rounded-2xl border-2 border-line shadow-[0_10px_30px_rgb(0_0_0/0.45)]'
 
-/**
- * `covered`: the guess lies on top, so the year moves up to stay visible.
- * `highlight`: the dragged guess card would land on this card.
- */
-function CardFace({ song, covered, highlight }: { song: Song; covered: boolean; highlight: boolean }) {
+/** `highlight`: the dragged guess card would land on this card. */
+function CardFace({ song, highlight }: { song: Song; highlight: boolean }) {
   return (
     <div className={cx(CARD, 'bg-surface-2', highlight && 'border-accent ring-4 ring-accent/60')}>
       {song.albumArt ? (
@@ -343,12 +408,7 @@ function CardFace({ song, covered, highlight }: { song: Song; covered: boolean; 
         <div className="absolute inset-0 bg-linear-160 from-surface-2 to-bg" />
       )}
       <div className="absolute inset-0 bg-linear-to-b from-black/10 via-transparent to-black/85" />
-      <span
-        className={cx(
-          'absolute inset-x-0 text-center text-4xl font-black text-white tabular-nums transition-all duration-200 [text-shadow:0_2px_12px_rgb(0_0_0/0.85)]',
-          covered ? 'top-1' : 'top-[38%] -translate-y-1/2',
-        )}
-      >
+      <span className="absolute inset-x-0 top-[38%] -translate-y-1/2 text-center text-4xl font-black text-white tabular-nums [text-shadow:0_2px_12px_rgb(0_0_0/0.85)]">
         {song.year}
       </span>
       <span className="absolute inset-x-2.5 bottom-2.5 flex flex-col">
