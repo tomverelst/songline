@@ -23,9 +23,10 @@ const HOLD_SLOP = 10
 /** Dragging this close to an edge scrolls the hand, faster nearer the edge. */
 const EDGE = 72
 const MAX_EDGE_SPEED = 14
-/** The held card's tilt at rest, and how far it leans when dragged fast (degrees). */
-const REST_TILT = 3
-const MAX_LEAN = 22
+/** How a card tilts at `d` cards from the middle of the fan (degrees). */
+function fanTilt(d: number) {
+  return Math.max(-24, Math.min(24, d * 8))
+}
 /** How far the cards on either side of the drop gap move apart. */
 const GAP_SPREAD = STEP * 0.35
 
@@ -154,25 +155,24 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
       const gapIndex = onIndex === null ? Math.min(years.length, Math.max(0, Math.ceil(at))) : null
       setDrag((d) => d && { ...d, x, y, onIndex, gapIndex })
     }
-    // The held card leans the way it's being dragged, more when faster.
-    let tilt = REST_TILT
-    let lean = 0
-    let lastMove = { x: finger.current.x, time: performance.now() }
     const move = (e: PointerEvent) => {
       const rect = frame.current?.getBoundingClientRect()
       finger.current.x = e.clientX - (rect?.left ?? 0)
       finger.current.y = e.clientY - (rect?.top ?? 0)
-      const now = performance.now()
-      const speed = (finger.current.x - lastMove.x) / Math.max(now - lastMove.time, 8) // px per ms
-      lean = Math.max(-MAX_LEAN, Math.min(MAX_LEAN, speed * 45))
-      lastMove = { x: finger.current.x, time: now }
       place()
     }
+    // The held card tilts like a card at its spot in the fan: upright in the
+    // middle, leaning out towards the sides. It eases there so it doesn't snap.
+    const fanTiltHere = () => {
+      const { x, grabX } = finger.current
+      const width = scroller.current?.clientWidth ?? 0
+      return fanTilt((x - grabX + CARD_W / 2 - width / 2) / STEP)
+    }
+    let tilt = fanTiltHere()
     // Every frame: ease the tilt and scroll the hand while the card is held
     // near an edge.
     const edgeScroll = () => {
-      tilt += (REST_TILT + lean - tilt) * 0.3
-      lean *= 0.9
+      tilt += (fanTiltHere() - tilt) * 0.3
       if (held.current) held.current.style.transform = `rotate(${tilt}deg) scale(1.06)`
       const el = scroller.current
       if (el) {
@@ -340,7 +340,7 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
                 <div
                   className="absolute inset-0 transition-transform duration-150 ease-out"
                   style={{
-                    transform: `translateX(${spread}px) translateY(${distance * distance * 5}px) rotate(${Math.max(-24, Math.min(24, d * 8))}deg) scale(${1 - distance * 0.05})`,
+                    transform: `translateX(${spread}px) translateY(${distance * distance * 5}px) rotate(${fanTilt(d)}deg) scale(${1 - distance * 0.05})`,
                     transformOrigin: '50% 120%',
                   }}
                 >
@@ -358,7 +358,7 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
           ref={held}
           className="pointer-events-none absolute z-[200] h-56 w-40 drop-shadow-[0_18px_30px_rgb(0_0_0/0.6)]"
           style={{
-            transform: `rotate(${REST_TILT}deg) scale(1.06)`,
+            transform: 'scale(1.06)',
             // Keep most of the card on screen, however far the finger goes.
             left: Math.min(Math.max(drag.x - drag.grabX, -CARD_W / 3), (frame.current?.clientWidth ?? 0) - (CARD_W * 2) / 3),
             top: drag.y - drag.grabY,
