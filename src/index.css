@@ -36,6 +36,36 @@
     }
   }
 
+  --animate-riffle-left: riffle-left 1.1s ease-in-out infinite;
+  --animate-riffle-right: riffle-right 1.1s ease-in-out infinite;
+
+  /* Cards jump out of the stack to one side and slide back in (LoadingScreen). */
+  @keyframes riffle-left {
+    0%,
+    100% {
+      transform: translate(0, 0) rotate(var(--tilt));
+    }
+    35% {
+      transform: translate(-70%, -6%) rotate(-14deg);
+    }
+    65% {
+      transform: translate(-10%, -2%) rotate(-4deg);
+    }
+  }
+
+  @keyframes riffle-right {
+    0%,
+    100% {
+      transform: translate(0, 0) rotate(var(--tilt));
+    }
+    35% {
+      transform: translate(70%, -6%) rotate(14deg);
+    }
+    65% {
+      transform: translate(10%, -2%) rotate(4deg);
+    }
+  }
+
   /* Draws a stroke whose length is in --perimeter (see TimerButton). */
   @keyframes timer-fill {
     from {

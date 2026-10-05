@@ -1,6 +1,7 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import type { GameMode, GameState } from '../game/types'
-import { newGame, withOriginalYear } from '../game/logic'
+import { newGame, shuffle, withOriginalYear } from '../game/logic'
+import { LoadingScreen, type LoadingState, type StartingCardCheck } from './LoadingScreen'
 import { originalYear } from '../musicbrainz'
 import { forgetPlayedSongs, playedSongIds, rememberSongs } from '../history'
 import { getClientId, isLoggedIn, login, logout, redirectUri, setClientId } from '../spotify/auth'
@@ -30,6 +31,7 @@ import {
   Screen,
   Switch,
   TextInput,
+  Toast,
 } from '../components/ui'
 import { cx } from '../components/classes'
 
@@ -65,7 +67,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
   const [deviceId, setDeviceId] = useState<string | null>(() => load(KEYS.device, null))
   const [loggedIn, setLoggedIn] = useState(isLoggedIn)
   const [error, setError] = useState<string | null>(initialError)
-  const [starting, setStarting] = useState<false | 'songs' | 'years'>(false)
+  const [loading, setLoading] = useState<LoadingState | null>(null)
   const [rememberedCount, setRememberedCount] = useState(() => playedSongIds().size)
 
   useEffect(() => save(KEYS.setup, draft), [draft])
@@ -73,18 +75,31 @@ export function SetupScreen({ onStart, initialError }: Props) {
 
   const update = (patch: Partial<SetupDraft>) => setDraft((d) => ({ ...d, ...patch }))
   const names = draft.names.map((n) => n.trim()).filter(Boolean)
-  const canStart = names.length >= 1 && !!draft.playlist && loggedIn && !starting
+  const canStart = names.length >= 1 && !!draft.playlist && loggedIn && !loading
+
+  // Each start gets an id; cancelling bumps it so late results are ignored.
+  const run = useRef(0)
+  const skipYears = useRef<() => void>(() => {})
 
   async function start() {
     if (!draft.playlist) return
-    setStarting('songs')
+    const id = ++run.current
+    const alive = () => run.current === id
+    const playlistName = draft.playlist.name
     setError(null)
+    setLoading({ phase: 'playlist', playlistName, art: [], checks: [] })
     try {
       const songs = await getPlaylistSongs(draft.playlist.id)
+      if (!alive()) return
       if (songs.length < names.length + 1) {
         throw new Error(`This playlist only has ${songs.length} usable songs — pick a bigger one.`)
       }
-      const game = newGame(
+      const art = shuffle(songs.flatMap((s) => (s.albumArt ? [s.albumArt] : []))).slice(0, 5)
+      setLoading({ phase: 'shuffle', playlistName, songCount: songs.length, art, checks: [] })
+      await sleep(SHUFFLE_SHOW_MS)
+      if (!alive()) return
+
+      let game = newGame(
         names,
         {
           mode: draft.mode,
@@ -93,19 +108,53 @@ export function SetupScreen({ onStart, initialError }: Props) {
           autoplay: draft.autoplay,
           flipBetweenTurns: draft.flipBetweenTurns,
           playlistId: draft.playlist.id,
-          playlistName: draft.playlist.name,
+          playlistName,
         },
         songs,
         Math.random,
         draft.avoidPlayedSongs ? playedSongIds() : new Set(),
       )
+      const checks: StartingCardCheck[] = game.players.map((p) => ({
+        player: p.name,
+        title: p.timeline[0].title,
+        artist: p.timeline[0].artists.join(', '),
+      }))
+      setLoading({ phase: 'years', playlistName, songCount: songs.length, art, checks })
+
+      // Look up every starting card's original year, giving up on cards that
+      // take too long or when the players tap "Start anyway".
+      const giveUp = Promise.race([
+        sleep(STARTING_YEARS_DEADLINE_MS),
+        new Promise<void>((resolve) => (skipYears.current = resolve)),
+      ]).then(() => null)
+      const players = await Promise.all(
+        game.players.map(async (p, i) => {
+          const card = withOriginalYear(p.timeline[0], await Promise.race([originalYear(p.timeline[0]), giveUp]))
+          if (alive()) {
+            checks[i] = { ...checks[i], year: card.year, fromMusicBrainz: card.yearSource === 'musicbrainz' }
+            setLoading((l) => l && { ...l, checks: [...checks] })
+          }
+          return { ...p, timeline: [card] }
+        }),
+      )
+      if (!alive()) return
+      game = { ...game, players }
+
+      setLoading((l) => l && { ...l, phase: 'ready' })
+      await sleep(READY_SHOW_MS)
+      if (!alive()) return
       rememberSongs(game.players.map((p) => p.timeline[0].id))
-      setStarting('years')
-      onStart(await withOriginalStartingYears(game))
+      onStart(game)
     } catch (e) {
+      if (!alive()) return
+      setLoading(null)
       setError((e as Error).message)
-      setStarting(false)
     }
+  }
+
+  function cancel() {
+    run.current++
+    setLoading(null)
   }
 
   return (
@@ -238,11 +287,13 @@ export function SetupScreen({ onStart, initialError }: Props) {
         )}
       </Card>
 
-      {error && <p className="text-sm text-bad">{error}</p>}
+      {error && <Toast onDismiss={() => setError(null)}>{error}</Toast>}
+
+      {loading && <LoadingScreen state={loading} onCancel={cancel} onSkipYears={() => skipYears.current()} />}
 
       <BottomBar>
         <Button variant="primary" block disabled={!canStart} onClick={start}>
-          {starting === 'songs' ? 'Shuffling songs…' : starting === 'years' ? 'Checking release years…' : 'Start game'}
+          Start game
         </Button>
       </BottomBar>
     </Screen>
@@ -250,22 +301,11 @@ export function SetupScreen({ onStart, initialError }: Props) {
 }
 
 const STARTING_YEARS_DEADLINE_MS = 10_000
+/** Let the shuffle animation play for a moment even when loading is quick. */
+const SHUFFLE_SHOW_MS = 1400
+const READY_SHOW_MS = 700
 
-/**
- * Looks up the original year of every starting card. Cards that MusicBrainz
- * can't answer for in time keep their Spotify year.
- */
-async function withOriginalStartingYears(game: GameState): Promise<GameState> {
-  const deadline = new Promise<null>((resolve) => setTimeout(() => resolve(null), STARTING_YEARS_DEADLINE_MS))
-  const players = await Promise.all(
-    game.players.map(async (p) => {
-      const [card] = p.timeline
-      const year = await Promise.race([originalYear(card), deadline])
-      return { ...p, timeline: [withOriginalYear(card, year)] }
-    }),
-  )
-  return { ...game, players }
-}
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
 function SpotifyLogin({ onError }: { onError: (e: string) => void }) {
   const [clientId, setId] = useState(getClientId)

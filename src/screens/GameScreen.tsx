@@ -25,7 +25,7 @@ import { YearInput } from '../components/YearInput'
 import { TimerButton } from '../components/TimerButton'
 import { Coin, Coins } from '../components/Coins'
 import { KEYS, load, save } from '../storage'
-import { Artwork, BottomBar, Button, Card, CardTitle, IconButton, Muted, Screen, Switch } from '../components/ui'
+import { Artwork, BottomBar, Button, Card, CardTitle, IconButton, Muted, Screen, Switch, Toast } from '../components/ui'
 import { cx } from '../components/classes'
 
 interface Props {
@@ -347,15 +347,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
         </>
       )}
 
-      {error && (
-        <div
-          className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+92px)] z-20 mx-auto max-w-[528px] rounded-xl border border-bad bg-[#3a1620] px-4 py-3 text-sm"
-          role="alert"
-          onClick={() => setError(null)}
-        >
-          {error}
-        </div>
-      )}
+      {error && <Toast onDismiss={() => setError(null)}>{error}</Toast>}
 
       {menuOpen && (
         <div className="fixed inset-0 z-30 flex items-end bg-black/60" onClick={() => setMenuOpen(false)}>

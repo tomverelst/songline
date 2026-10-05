@@ -143,3 +143,25 @@ export function Logo({ children }: { children: ReactNode }) {
     </div>
   )
 }
+
+/** A message above the bottom bar; tap to dismiss. */
+export function Toast({ children, onDismiss }: { children: ReactNode; onDismiss: () => void }) {
+  return (
+    <div
+      className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+92px)] z-20 mx-auto max-w-[528px] animate-slide-up rounded-xl border border-bad bg-[#3a1620] px-4 py-3 text-sm"
+      role="alert"
+      onClick={onDismiss}
+    >
+      {children}
+    </div>
+  )
+}
+
+export function Spinner({ className }: { className?: string }) {
+  return (
+    <span
+      className={cx('inline-block size-4 flex-none animate-spin rounded-full border-2 border-muted border-t-transparent', className)}
+      aria-hidden
+    />
+  )
+}
