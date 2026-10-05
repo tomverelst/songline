@@ -20,6 +20,7 @@ import { describePlaybackError, pause, playSong, resume, SpotifyError } from '..
 import { TimelineModeToggle, TimelineView } from '../components/TimelineView'
 import { useTimelineMode } from '../components/timelineMode'
 import { TimelineCarousel } from '../components/TimelineCarousel'
+import { TimelineHand } from '../components/TimelineHand'
 import { DevicePicker } from '../components/DevicePicker'
 import { YearInput } from '../components/YearInput'
 import { TimerButton } from '../components/TimerButton'
@@ -223,7 +224,10 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
               </div>
             </div>
             <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-              <Muted>{player.name} is guessing</Muted>
+              <div className="flex items-center justify-between gap-2">
+                <Muted className="truncate">{player.name} is guessing</Muted>
+                {timelineMode !== 'list' && <TimelineModeToggle small mode={timelineMode} onChange={setTimelineMode} />}
+              </div>
               <div className="flex flex-wrap items-center gap-1.5">
                 <Button size="sm" className="px-3" onClick={togglePause}>
                   {playing ? '❚❚ Pause' : '▶ Play'}
@@ -243,14 +247,15 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
               value={turn.yearGuess}
               startYear={medianYear(player.timeline)}
               onChange={setYearGuess}
-              compact={timelineMode === 'cards'}
+              compact={timelineMode !== 'list'}
             />
-            {timelineMode === 'cards' ? (
+            {timelineMode !== 'list' ? (
               <>
-                <TimelineCarousel timeline={player.timeline} guessYear={guessSlot ? turn.yearGuess : undefined} />
-                <div className="flex justify-end">
-                  <TimelineModeToggle mode={timelineMode} onChange={setTimelineMode} />
-                </div>
+                {timelineMode === 'cards' ? (
+                  <TimelineCarousel timeline={player.timeline} guessYear={guessSlot ? turn.yearGuess : undefined} />
+                ) : (
+                  <TimelineHand timeline={player.timeline} guessYear={guessSlot ? turn.yearGuess : undefined} />
+                )}
               </>
             ) : (
               <p className="min-h-6 text-center font-bold text-accent-2">{guessSlot && slotLabel(guessSlot)}</p>

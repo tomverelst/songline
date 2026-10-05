@@ -3,19 +3,38 @@ import { cx } from './classes'
 import type { TimelineMode } from './timelineMode'
 import { Timeline } from './Timeline'
 import { TimelineCarousel } from './TimelineCarousel'
+import { TimelineHand } from './TimelineHand'
 import { Card, CardTitle } from './ui'
 
-export function TimelineModeToggle({ mode, onChange }: { mode: TimelineMode; onChange: (m: TimelineMode) => void }) {
+const MODE_LABELS: Record<TimelineMode, string> = { list: 'List', cards: 'Cards', real: 'Real' }
+
+export function TimelineModeToggle({
+  mode,
+  onChange,
+  small,
+}: {
+  mode: TimelineMode
+  onChange: (m: TimelineMode) => void
+  small?: boolean
+}) {
   return (
-    <div className="flex flex-none rounded-full border border-line bg-bg p-0.5 text-sm" role="group" aria-label="Timeline view">
-      {(['list', 'cards'] as const).map((m) => (
+    <div
+      className={cx('flex flex-none rounded-full border border-line bg-bg p-0.5', small ? 'text-xs' : 'text-sm')}
+      role="group"
+      aria-label="Timeline view"
+    >
+      {(['list', 'cards', 'real'] as const).map((m) => (
         <button
           key={m}
           aria-pressed={mode === m}
-          className={cx('rounded-full px-3 py-1 font-semibold', mode === m ? 'bg-surface-2 text-ink' : 'text-muted')}
+          className={cx(
+            'rounded-full font-semibold',
+            small ? 'px-2.5 py-0.5' : 'px-3 py-1',
+            mode === m ? 'bg-surface-2 text-ink' : 'text-muted',
+          )}
           onClick={() => onChange(m)}
         >
-          {m === 'list' ? 'List' : 'Cards'}
+          {MODE_LABELS[m]}
         </button>
       ))}
     </div>
@@ -39,10 +58,12 @@ export function TimelineView({ title, timeline, mode, onModeChange, guessYear, s
     <Card className="gap-2">
       <div className="flex items-center justify-between gap-2">
         <CardTitle>{title}</CardTitle>
-        <TimelineModeToggle mode={mode} onChange={onModeChange} />
+        <TimelineModeToggle small mode={mode} onChange={onModeChange} />
       </div>
       {mode === 'cards' ? (
         <TimelineCarousel timeline={timeline} guessYear={guessYear} verdict={verdict} />
+      ) : mode === 'real' ? (
+        <TimelineHand timeline={timeline} guessYear={guessYear} verdict={verdict} />
       ) : (
         <Timeline
           timeline={timeline}
