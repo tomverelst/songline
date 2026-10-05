@@ -95,25 +95,39 @@ export function isValidYear(year: number | undefined): year is number {
   return year !== undefined && year >= MIN_YEAR && year <= MAX_YEAR
 }
 
+/** How close (in cards) to a card's middle counts as "on" that card. */
+const ON_CARD = 0.15
+
 /**
- * The guess year for dropping the guess card at position `at` along a row of
- * card years (sorted; `at` is a card index, so 1.5 is between cards 1 and 2).
- * Over a card it takes that card's year; in a gap it keeps the current guess
- * if it already fits there, otherwise it takes the middle of the gap.
+ * The guess year for the guess card held at position `at` along a row of card
+ * years (sorted; `at` is a card index, so 1.5 is between cards 1 and 2).
+ * Over a card it takes that card's year. In a gap the year runs through every
+ * year between the two cards as the card moves across it, and past either end
+ * it counts on by one year per `1 / yearsPerCardPastEnds` of a card.
  */
-export function yearForPosition(years: number[], current: number, at: number): { year: number; onIndex: number | null } {
+export function yearForPosition(
+  years: number[],
+  at: number,
+  yearsPerCardPastEnds = 5,
+): { year: number; onIndex: number | null } {
   const n = years.length
-  if (n === 0) return { year: current, onIndex: null }
   const clamp = (y: number) => Math.min(MAX_YEAR, Math.max(MIN_YEAR, y))
   const nearest = Math.min(n - 1, Math.max(0, Math.round(at)))
   const onCard = { year: years[nearest], onIndex: nearest }
-  if (Math.abs(at - nearest) < 0.3) return onCard
-  if (at < 0) return { year: clamp(current < years[0] ? current : years[0] - 5), onIndex: null }
-  if (at > n - 1) return { year: clamp(current > years[n - 1] ? current : years[n - 1] + 5), onIndex: null }
+  if (Math.abs(at - nearest) < ON_CARD) return onCard
+  if (at < 0) {
+    const past = -at - ON_CARD
+    return { year: clamp(years[0] - 1 - Math.floor(past * yearsPerCardPastEnds)), onIndex: null }
+  }
+  if (at > n - 1) {
+    const past = at - (n - 1) - ON_CARD
+    return { year: clamp(years[n - 1] + 1 + Math.floor(past * yearsPerCardPastEnds)), onIndex: null }
+  }
   const low = years[Math.floor(at)]
-  const high = years[Math.floor(at) + 1]
-  if (high - low <= 1) return onCard // no year fits between them
-  return { year: current > low && current < high ? current : Math.round((low + high) / 2), onIndex: null }
+  const room = years[Math.floor(at) + 1] - low - 1
+  if (room <= 0) return onCard // no year fits between them
+  const across = (at - Math.floor(at) - ON_CARD) / (1 - 2 * ON_CARD)
+  return { year: low + 1 + Math.min(room - 1, Math.floor(Math.max(0, across) * room)), onIndex: null }
 }
 
 /** The slot a guessed year falls into, given the player's timeline. */

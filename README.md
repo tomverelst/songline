@@ -23,8 +23,9 @@ in their personal timeline of songs.
    the year in big numbers, with the mystery song as a face-down card where
    your guess lands. Swipe through the hand, or tap a card to guess its year:
    the mystery card is laid on top of it. Press and hold the mystery card to
-   pick it up and drag it to another spot; the year follows (a card's year when
-   dropped on a card, the middle of a gap otherwise).
+   pick it up and drag it to another spot. The year follows the card: a card's
+   year when held over a card, and every year in between as it moves across a
+   gap (or past either end).
 4. Lock in. If the real year falls in the same spot as your guess, you win the
    card, even if you didn't hit the exact year.
 5. Bonus **coins**, one each, whether or not you won the card:

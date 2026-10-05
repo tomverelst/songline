@@ -180,23 +180,24 @@ describe('newGame with songs from earlier games', () => {
 describe('yearForPosition (dragging the guess card)', () => {
   const years = [1970, 1980, 1980, 1981, 2000]
 
-  it('takes the year of the card it is dropped on', () => {
-    expect(yearForPosition(years, 1990, 0.1)).toEqual({ year: 1970, onIndex: 0 })
-    expect(yearForPosition(years, 1990, 3.8)).toEqual({ year: 2000, onIndex: 4 })
+  it('takes the year of the card it is held over', () => {
+    expect(yearForPosition(years, 0.1)).toEqual({ year: 1970, onIndex: 0 })
+    expect(yearForPosition(years, 3.9)).toEqual({ year: 2000, onIndex: 4 })
   })
 
-  it('keeps a guess that already fits the gap, else takes the middle', () => {
-    expect(yearForPosition(years, 1972, 0.5).year).toBe(1972)
-    expect(yearForPosition(years, 1990, 0.5).year).toBe(1975)
+  it('runs through every year of a gap, one at a time', () => {
+    const seen = new Set<number>()
+    for (let at = 0.16; at < 0.85; at += 0.01) seen.add(yearForPosition(years, at).year)
+    expect([...seen].sort()).toEqual([1971, 1972, 1973, 1974, 1975, 1976, 1977, 1978, 1979])
   })
 
-  it('goes five years past the ends', () => {
-    expect(yearForPosition(years, 1990, -0.7).year).toBe(1965)
-    expect(yearForPosition(years, 1960, -0.7).year).toBe(1960)
-    expect(yearForPosition(years, 1990, 4.6).year).toBe(2005)
+  it('counts on one year at a time past the ends', () => {
+    expect(yearForPosition(years, -0.2).year).toBe(1969)
+    expect(yearForPosition(years, -0.15 - 3 / 5 - 0.01).year).toBe(1966)
+    expect(yearForPosition(years, 4.2).year).toBe(2001)
   })
 
   it('snaps to a card when no year fits between neighbours', () => {
-    expect(yearForPosition(years, 1990, 2.5)).toEqual({ year: 1981, onIndex: 3 })
+    expect(yearForPosition(years, 2.5)).toEqual({ year: 1981, onIndex: 3 })
   })
 })

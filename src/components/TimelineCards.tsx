@@ -23,6 +23,9 @@ const HOLD_SLOP = 10
 /** Dragging this close to an edge scrolls the hand, faster nearer the edge. */
 const EDGE = 72
 const MAX_EDGE_SPEED = 14
+/** The held card's tilt at rest, and how far it leans when dragged fast (degrees). */
+const REST_TILT = 3
+const MAX_LEAN = 22
 /** How far the cards on either side of the drop gap move apart. */
 const GAP_SPREAD = STEP * 0.35
 
@@ -109,6 +112,7 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
 
   // Where the finger is while dragging, for the listeners below.
   const finger = useRef({ x: 0, y: 0, grabX: 0 })
+  const held = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!dragging) return
     let frameId = 0
@@ -120,19 +124,31 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
       const cardMiddle = x - grabX + CARD_W / 2
       const at = (el.scrollLeft + cardMiddle - (firstCardLeft() + CARD_W / 2)) / STEP
       const { years, guessYear: current, onSelectYear: select } = latest.current
-      const { year, onIndex } = yearForPosition(years, current ?? years[0], at)
+      const { year, onIndex } = yearForPosition(years, at)
       if (year !== current) select?.(year)
       const gapIndex = onIndex === null ? Math.min(years.length, Math.max(0, Math.ceil(at))) : null
       setDrag((d) => d && { ...d, x, y, onIndex, gapIndex })
     }
+    // The held card leans the way it's being dragged, more when faster.
+    let tilt = REST_TILT
+    let lean = 0
+    let lastMove = { x: finger.current.x, time: performance.now() }
     const move = (e: PointerEvent) => {
       const rect = frame.current?.getBoundingClientRect()
       finger.current.x = e.clientX - (rect?.left ?? 0)
       finger.current.y = e.clientY - (rect?.top ?? 0)
+      const now = performance.now()
+      const speed = (finger.current.x - lastMove.x) / Math.max(now - lastMove.time, 8) // px per ms
+      lean = Math.max(-MAX_LEAN, Math.min(MAX_LEAN, speed * 45))
+      lastMove = { x: finger.current.x, time: now }
       place()
     }
-    // Scroll the hand while the card is held near an edge.
+    // Every frame: ease the tilt and scroll the hand while the card is held
+    // near an edge.
     const edgeScroll = () => {
+      tilt += (REST_TILT + lean - tilt) * 0.3
+      lean *= 0.9
+      if (held.current) held.current.style.transform = `rotate(${tilt}deg) scale(1.06)`
       const el = scroller.current
       if (el) {
         const { x } = finger.current
@@ -296,8 +312,10 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
       {drag && guessYear !== undefined && (
         // The picked-up guess card follows the finger.
         <div
-          className="pointer-events-none absolute z-[200] h-56 w-40 scale-105 rotate-3 drop-shadow-[0_18px_30px_rgb(0_0_0/0.6)]"
+          ref={held}
+          className="pointer-events-none absolute z-[200] h-56 w-40 drop-shadow-[0_18px_30px_rgb(0_0_0/0.6)]"
           style={{
+            transform: `rotate(${REST_TILT}deg) scale(1.06)`,
             // Keep most of the card on screen, however far the finger goes.
             left: Math.min(Math.max(drag.x - drag.grabX, -CARD_W / 3), (frame.current?.clientWidth ?? 0) - (CARD_W * 2) / 3),
             top: drag.y - drag.grabY,
