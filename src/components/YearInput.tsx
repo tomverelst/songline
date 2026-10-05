@@ -1,13 +1,16 @@
 import { MAX_YEAR, MIN_YEAR } from '../game/logic'
+import { cx } from './classes'
 
 interface Props {
   value: number | undefined
   /** Where the +/- buttons start counting from when nothing is entered yet. */
   startYear: number
+  /** Smaller digits, to leave room for the card view below. */
+  compact?: boolean
   onChange: (year: number | undefined) => void
 }
 
-export function YearInput({ value, startYear, onChange }: Props) {
+export function YearInput({ value, startYear, onChange, compact }: Props) {
   const step = (delta: number) => {
     const base = value ?? startYear
     onChange(Math.min(MAX_YEAR, Math.max(MIN_YEAR, base + delta)))
@@ -16,7 +19,10 @@ export function YearInput({ value, startYear, onChange }: Props) {
   return (
     <div className="flex flex-col gap-2.5">
       <input
-        className="w-full rounded-2xl border-2 border-line bg-bg py-1 text-center text-[clamp(4rem,26vw,6.5rem)] leading-[1.1] font-black tracking-[0.06em] text-ink tabular-nums caret-accent placeholder:text-line focus:border-accent focus:outline-none"
+        className={cx(
+          'w-full rounded-2xl border-2 border-line bg-bg py-1 text-center leading-[1.1] font-black tracking-[0.06em] text-ink tabular-nums caret-accent placeholder:text-line focus:border-accent focus:outline-none',
+          compact ? 'text-[clamp(3rem,19vw,5rem)]' : 'text-[clamp(4rem,26vw,6.5rem)]',
+        )}
         type="text"
         inputMode="numeric"
         pattern="[0-9]*"

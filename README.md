@@ -18,6 +18,10 @@ in their personal timeline of songs.
    - **between** two of your cards (e.g. between 1970 and 1980 means 1971–1979),
    - **after** your latest card, or
    - **in** the same year as one of your cards.
+
+   Tap **Cards** to see your timeline as a row of swipeable cards right under the
+   year, with the mystery song slotted in where your guess lands (tap **List**
+   to switch back; the phone remembers your choice).
 4. Lock in. If the real year falls in the same spot as your guess, you win the
    card, even if you didn't hit the exact year.
 5. Bonus **coins**, one each, whether or not you won the card:

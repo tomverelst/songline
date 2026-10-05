@@ -17,7 +17,9 @@ import { originalYear } from '../musicbrainz'
 import { rememberSongs } from '../history'
 import { celebrateCard, celebrateExact } from '../party'
 import { describePlaybackError, pause, playSong, resume, SpotifyError } from '../spotify/api'
-import { Timeline } from '../components/Timeline'
+import { TimelineModeToggle, TimelineView } from '../components/TimelineView'
+import { useTimelineMode } from '../components/timelineMode'
+import { TimelineCarousel } from '../components/TimelineCarousel'
 import { DevicePicker } from '../components/DevicePicker'
 import { YearInput } from '../components/YearInput'
 import { TimerButton } from '../components/TimerButton'
@@ -38,6 +40,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [checkingYear, setCheckingYear] = useState(false)
+  const [timelineMode, setTimelineMode] = useTimelineMode()
   const yearLookups = useRef(new Map<string, Promise<void>>())
 
   const player = game.players[game.currentPlayer]
@@ -207,28 +210,28 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
 
       {turn?.phase === 'guess' && (
         <>
-          <section className="flex items-center gap-4">
+          <section className="flex items-center gap-3">
             <div
               className={cx(
-                'vinyl-grooves grid size-24 flex-none place-items-center rounded-full ring-2 ring-line',
+                'vinyl-grooves grid size-16 flex-none place-items-center rounded-full ring-2 ring-line',
                 playing && 'animate-vinyl',
               )}
               aria-hidden
             >
-              <div className="grid size-10 place-items-center rounded-full bg-accent-gradient font-extrabold text-on-accent">
+              <div className="grid size-7 place-items-center rounded-full bg-accent-gradient text-sm font-extrabold text-on-accent">
                 ?
               </div>
             </div>
-            <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
               <Muted>{player.name} is guessing</Muted>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button size="sm" onClick={togglePause}>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Button size="sm" className="px-3" onClick={togglePause}>
                   {playing ? '❚❚ Pause' : '▶ Play'}
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => play(turn.song.uri)}>
+                <Button size="sm" variant="ghost" className="px-3" onClick={() => play(turn.song.uri)}>
                   ↺ Restart
                 </Button>
-                <Button size="sm" variant="ghost" onClick={skip}>
+                <Button size="sm" variant="ghost" className="px-3" onClick={skip}>
                   ⏭ Skip
                 </Button>
               </div>
@@ -236,18 +239,34 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
           </section>
 
           <Card className="gap-2">
-            <YearInput value={turn.yearGuess} startYear={medianYear(player.timeline)} onChange={setYearGuess} />
-            <p className="min-h-6 text-center font-bold text-accent-2">{guessSlot && slotLabel(guessSlot)}</p>
+            <YearInput
+              value={turn.yearGuess}
+              startYear={medianYear(player.timeline)}
+              onChange={setYearGuess}
+              compact={timelineMode === 'cards'}
+            />
+            {timelineMode === 'cards' ? (
+              <>
+                <TimelineCarousel timeline={player.timeline} guessYear={guessSlot ? turn.yearGuess : undefined} />
+                <div className="flex justify-end">
+                  <TimelineModeToggle mode={timelineMode} onChange={setTimelineMode} />
+                </div>
+              </>
+            ) : (
+              <p className="min-h-6 text-center font-bold text-accent-2">{guessSlot && slotLabel(guessSlot)}</p>
+            )}
           </Card>
 
-          <Card className="gap-2">
-            <CardTitle>{player.name}'s cards</CardTitle>
-            <Timeline
+          {timelineMode === 'list' && (
+            <TimelineView
+              title={`${player.name}'s cards`}
               timeline={player.timeline}
-              selected={guessSlot}
-              selectedLabel={guessSlot ? `🎵 ${turn.yearGuess}` : undefined}
+              mode={timelineMode}
+              onModeChange={setTimelineMode}
+              guessYear={guessSlot ? turn.yearGuess : undefined}
+              slot={guessSlot}
             />
-          </Card>
+          )}
 
           <BottomBar>
             <Button variant="primary" block disabled={!guessSlot || checkingYear} onClick={lockIn}>
@@ -310,15 +329,15 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
             />
           </Card>
 
-          <Card className="gap-2">
-            <CardTitle>{player.name}'s timeline</CardTitle>
-            <Timeline
-              timeline={player.timeline}
-              selected={turn.slot}
-              selectedLabel={`🎵 ${turn.yearGuess}`}
-              verdict={turn.result.placementCorrect ? 'correct' : 'wrong'}
-            />
-          </Card>
+          <TimelineView
+            title={`${player.name}'s timeline`}
+            timeline={player.timeline}
+            mode={timelineMode}
+            onModeChange={setTimelineMode}
+            guessYear={turn.yearGuess}
+            slot={turn.slot}
+            verdict={turn.result.placementCorrect ? 'correct' : 'wrong'}
+          />
 
           <BottomBar>
             <Button variant="primary" block onClick={nextTurn}>
