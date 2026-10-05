@@ -22,7 +22,7 @@ import { YearInput } from '../components/YearInput'
 import { TimerButton } from '../components/TimerButton'
 import { Coin, Coins } from '../components/Coins'
 import { KEYS, load, save } from '../storage'
-import { Artwork, BottomBar, Button, Card, CardTitle, IconButton, Muted, Screen } from '../components/ui'
+import { Artwork, BottomBar, Button, Card, CardTitle, IconButton, Muted, Screen, Switch } from '../components/ui'
 import { cx } from '../components/classes'
 
 interface Props {
@@ -352,6 +352,12 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
                 setDeviceId(id)
                 save(KEYS.device, id)
               }}
+            />
+            <Switch
+              title="Flip screen between turns"
+              description="Upside down every other turn, for players across the table."
+              checked={flipEnabled}
+              onChange={(flipBetweenTurns) => onChange((g) => ({ ...g, settings: { ...g.settings, flipBetweenTurns } }))}
             />
             <Button
               onClick={() => {
