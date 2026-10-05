@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { yearForPosition } from '../game/logic'
 import type { Song } from '../game/types'
 import { cx } from './classes'
 
@@ -8,13 +9,20 @@ interface Props {
   guessYear?: number
   /** Rings the guess card after the reveal. */
   verdict?: 'correct' | 'wrong'
-  /** When set, tapping a card guesses that card's year. */
+  /** When set, tapping a card guesses its year, and the guess card can be dragged. */
   onSelectYear?: (year: number) => void
 }
 
 const CARD_W = 160 // w-40
 const OVERLAP = 52
 const STEP = CARD_W - OVERLAP
+const TOP = 24 // pt-6
+/** Press this long on the guess card to pick it up. */
+const HOLD_MS = 300
+/** Moving further than this before then means scrolling, not holding. */
+const HOLD_SLOP = 10
+/** Dragging this close to an edge scrolls the hand. */
+const EDGE = 48
 
 const VERDICT_RING = {
   none: 'ring-2 ring-white/60',
@@ -22,14 +30,40 @@ const VERDICT_RING = {
   wrong: 'ring-4 ring-bad',
 }
 
+/** Where the guess card sits: on top of a card, or in its own spot. */
+interface Placement {
+  onCardAt: number
+  ownSpotAt: number
+}
+
+interface Drag {
+  /** Finger position, relative to the left of the hand. */
+  x: number
+  /** The card the guess would land on, if any. */
+  onIndex: number | null
+  /** Where the guess card was picked up from; it stays there, hidden. */
+  from: Placement
+}
+
+function placementOf(songs: Song[], guessYear: number | undefined): Placement {
+  if (guessYear === undefined) return { onCardAt: -1, ownSpotAt: -1 }
+  const onCardAt = songs.map((s) => s.year).lastIndexOf(guessYear)
+  return { onCardAt, ownSpotAt: onCardAt >= 0 ? -1 : songs.filter((s) => s.year <= guessYear).length }
+}
+
 /**
  * The timeline as a fanned hand of playing cards. The card in the middle
- * stands up straight; the others tilt away the further out they are.
+ * stands up straight; the others tilt away the further out they are. Press
+ * and hold the guess card to drag it to another spot.
  */
 export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Props) {
+  const frame = useRef<HTMLDivElement>(null)
   const scroller = useRef<HTMLDivElement>(null)
   // How far each card is from the middle of the view, in cards.
   const [middle, setMiddle] = useState(0)
+  const [drag, setDrag] = useState<Drag | null>(null)
+  const dragging = drag !== null
+  const hold = useRef<{ timer: number; x: number; y: number; startX: number; startY: number } | null>(null)
 
   // Card wrappers are never transformed, so their offsets are exact.
   const firstCardLeft = () => (scroller.current?.firstElementChild as HTMLElement | null)?.offsetLeft ?? 0
@@ -38,77 +72,223 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
 
   const songs = [...timeline].sort((a, b) => a.year - b.year)
   // A guess in the same year as a card lies on top of that card; otherwise
-  // it gets its own spot in the hand.
-  const onCardAt = guessYear === undefined ? -1 : songs.map((s) => s.year).lastIndexOf(guessYear)
-  const ownSpotAt = guessYear === undefined || onCardAt >= 0 ? -1 : songs.filter((s) => s.year <= guessYear).length
-  const count = songs.length + (ownSpotAt >= 0 ? 1 : 0)
+  // it gets its own spot in the hand. While it's dragged, its element stays
+  // where it was picked up (hidden, taking no room) so the touch that is
+  // dragging it keeps being delivered.
+  const { onCardAt, ownSpotAt } = drag ? drag.from : placementOf(songs, guessYear)
+  const count = songs.length + (ownSpotAt >= 0 && !dragging ? 1 : 0)
   const focusAt = onCardAt >= 0 ? onCardAt : ownSpotAt >= 0 ? ownSpotAt : Math.floor((count - 1) / 2)
 
   useEffect(() => {
+    if (dragging) return
     scroller.current?.scrollTo({ left: scrollFor(focusAt), behavior: 'smooth' })
     // scrollFor only reads the DOM.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusAt, count])
+  }, [focusAt, count, dragging])
+
+  // The latest props, for the window listeners while dragging.
+  const latest = useRef({ guessYear, onSelectYear, years: songs.map((s) => s.year) })
+  useEffect(() => {
+    latest.current = { guessYear, onSelectYear, years: songs.map((s) => s.year) }
+  })
+
+  // When the guess leaves its own spot, the cards after it close the gap;
+  // shift the view by half a card so the gap stays under the finger.
+  const closeGap = useRef(false)
+  useLayoutEffect(() => {
+    if (dragging && closeGap.current && scroller.current) scroller.current.scrollLeft -= STEP / 2
+    closeGap.current = false
+  }, [dragging])
+
+  useEffect(() => {
+    if (!dragging) return
+    let x = 0
+    let frameId = 0
+    const place = () => {
+      const el = scroller.current
+      if (!el) return
+      const at = (el.scrollLeft + x - (firstCardLeft() + CARD_W / 2)) / STEP
+      const { years, guessYear: current, onSelectYear: select } = latest.current
+      const { year, onIndex } = yearForPosition(years, current ?? years[0], at)
+      if (year !== current) select?.(year)
+      setDrag((d) => d && { ...d, x, onIndex })
+    }
+    const move = (e: PointerEvent) => {
+      x = e.clientX - (frame.current?.getBoundingClientRect().left ?? 0)
+      place()
+    }
+    // Scroll the hand while the card is held near an edge.
+    const edgeScroll = () => {
+      const el = scroller.current
+      if (el && x) {
+        const speed = x < EDGE ? -8 : x > el.clientWidth - EDGE ? 8 : 0
+        if (speed) {
+          el.scrollLeft += speed
+          place()
+        }
+      }
+      frameId = requestAnimationFrame(edgeScroll)
+    }
+    const drop = () => setDrag(null)
+    // Once the card is picked up, finger moves drag it instead of scrolling.
+    const noScroll = (e: TouchEvent) => e.preventDefault()
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', drop)
+    window.addEventListener('pointercancel', drop)
+    window.addEventListener('touchmove', noScroll, { passive: false })
+    frameId = requestAnimationFrame(edgeScroll)
+    return () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', drop)
+      window.removeEventListener('pointercancel', drop)
+      window.removeEventListener('touchmove', noScroll)
+      cancelAnimationFrame(frameId)
+    }
+    // firstCardLeft only reads the DOM.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dragging])
+
+  const cancelHold = () => {
+    if (hold.current) clearTimeout(hold.current.timer)
+    hold.current = null
+  }
+  // Handlers for the guess card: press and hold to pick it up.
+  const holdHandlers = onSelectYear
+    ? {
+        onPointerDown: (e: React.PointerEvent) => {
+          const { clientX: x, clientY: y } = e
+          cancelHold()
+          hold.current = {
+            x,
+            y,
+            startX: x,
+            startY: y,
+            timer: window.setTimeout(() => {
+              const h = hold.current
+              hold.current = null
+              if (!h) return
+              navigator.vibrate?.(15)
+              closeGap.current = ownSpotAt >= 0
+              setDrag({
+                x: h.x - (frame.current?.getBoundingClientRect().left ?? 0),
+                onIndex: null,
+                from: { onCardAt, ownSpotAt },
+              })
+            }, HOLD_MS),
+          }
+        },
+        onPointerMove: (e: React.PointerEvent) => {
+          const h = hold.current
+          if (!h) return
+          h.x = e.clientX
+          h.y = e.clientY
+          if (Math.hypot(h.x - h.startX, h.y - h.startY) > HOLD_SLOP) cancelHold()
+        },
+        onPointerUp: cancelHold,
+        onPointerCancel: cancelHold,
+        onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
+      }
+    : {}
 
   const back = guessYear !== undefined && <CardBack year={guessYear} ring={VERDICT_RING[verdict ?? 'none']} />
-  const cards: { key: string; content: ReactNode; year?: number }[] = songs.map((s, i) => ({
+  const cards: { key: string; content: ReactNode; year?: number; collapsed?: boolean }[] = songs.map((s, i) => ({
     key: s.id,
     year: s.year,
     content: (
       <>
-        <CardFace song={s} covered={i === onCardAt} />
+        <CardFace song={s} covered={i === onCardAt && !dragging} highlight={drag?.onIndex === i} />
         {i === onCardAt && (
           // Lies on top, shifted so the card underneath still shows.
-          <div className="absolute inset-0 z-10 translate-x-3 translate-y-12 rotate-[4deg]">{back}</div>
+          <div
+            className={cx('absolute inset-0 z-10 translate-x-3 translate-y-12 rotate-[4deg]', dragging && 'invisible')}
+            {...holdHandlers}
+          >
+            {back}
+          </div>
         )}
       </>
     ),
   }))
-  if (ownSpotAt >= 0) cards.splice(ownSpotAt, 0, { key: 'guess', content: back })
+  if (ownSpotAt >= 0) {
+    cards.splice(ownSpotAt, 0, {
+      key: 'guess',
+      collapsed: dragging,
+      content: (
+        <div className={cx('absolute inset-0', dragging && 'invisible')} {...holdHandlers}>
+          {back}
+        </div>
+      ),
+    })
+  }
+  // Position in the fan, skipping a collapsed guess spot.
+  let fanIndex = -1
 
   return (
-    <div
-      ref={scroller}
-      onScroll={(e) => setMiddle((e.currentTarget.scrollLeft - scrollFor(0)) / STEP)}
-      className="isolate -mx-4 flex snap-x snap-mandatory overflow-x-auto px-[calc(50%-4rem)] pt-6 pb-14 [scrollbar-width:none]"
-    >
-      {cards.map((card, i) => {
-        const d = i - middle
-        const distance = Math.min(Math.abs(d), 3)
-        const tappable = onSelectYear && card.year !== undefined
-        return (
-          // The wrapper sets the snap point; only the inner card tilts, so the
-          // snap points don't move while the hand fans out.
-          <div
-            key={card.key}
-            role={tappable ? 'button' : undefined}
-            aria-label={tappable ? `Guess ${card.year}` : undefined}
-            onClick={tappable ? () => onSelectYear(card.year!) : undefined}
-            className={cx('relative h-56 w-40 flex-none snap-center', tappable && 'cursor-pointer')}
-            style={{ marginLeft: i === 0 ? 0 : -OVERLAP, zIndex: 100 - Math.round(distance * 10) }}
-          >
+    <div ref={frame} className="relative -mx-4 select-none [-webkit-touch-callout:none]">
+      <div
+        ref={scroller}
+        onScroll={(e) => setMiddle((e.currentTarget.scrollLeft - scrollFor(0)) / STEP)}
+        className={cx(
+          'relative isolate flex overflow-x-auto px-[calc(50%-5rem)] pt-6 pb-14 [scrollbar-width:none]',
+          !dragging && 'snap-x snap-mandatory',
+        )}
+      >
+        {cards.map((card) => {
+          if (!card.collapsed) fanIndex++
+          const i = fanIndex
+          const d = i - middle
+          const distance = Math.min(Math.abs(d), 3)
+          const tappable = onSelectYear && card.year !== undefined
+          return (
+            // The wrapper sets the snap point; only the inner card tilts, so the
+            // snap points don't move while the hand fans out.
             <div
-              className="absolute inset-0 transition-transform duration-150 ease-out"
+              key={card.key}
+              role={tappable ? 'button' : undefined}
+              aria-label={tappable ? `Guess ${card.year}` : undefined}
+              onClick={tappable ? () => onSelectYear(card.year!) : undefined}
+              className={cx('relative h-56 flex-none snap-center', card.collapsed ? 'w-0' : 'w-40', tappable && 'cursor-pointer')}
               style={{
-                transform: `translateY(${distance * distance * 5}px) rotate(${Math.max(-24, Math.min(24, d * 8))}deg) scale(${1 - distance * 0.05})`,
-                transformOrigin: '50% 120%',
+                marginLeft: i === 0 || card.collapsed ? 0 : -OVERLAP,
+                zIndex: 100 - Math.round(distance * 10),
               }}
             >
-              {card.content}
+              <div
+                className="absolute inset-0 transition-transform duration-150 ease-out"
+                style={{
+                  transform: `translateY(${distance * distance * 5}px) rotate(${Math.max(-24, Math.min(24, d * 8))}deg) scale(${1 - distance * 0.05})`,
+                  transformOrigin: '50% 120%',
+                }}
+              >
+                {card.content}
+              </div>
             </div>
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
+
+      {drag && guessYear !== undefined && (
+        // The picked-up guess card follows the finger.
+        <div
+          className="pointer-events-none absolute z-[200] h-56 w-40 scale-105 rotate-3 drop-shadow-[0_18px_30px_rgb(0_0_0/0.6)]"
+          style={{ left: drag.x - CARD_W / 2, top: TOP }}
+        >
+          <CardBack year={guessYear} ring="ring-2 ring-white" />
+        </div>
+      )}
     </div>
   )
 }
 
 const CARD = 'absolute inset-0 overflow-hidden rounded-2xl border-2 border-line shadow-[0_10px_30px_rgb(0_0_0/0.45)]'
 
-/** `covered`: the guess lies on top, so the year moves up to stay visible. */
-function CardFace({ song, covered }: { song: Song; covered: boolean }) {
+/**
+ * `covered`: the guess lies on top, so the year moves up to stay visible.
+ * `highlight`: the dragged guess card would land on this card.
+ */
+function CardFace({ song, covered, highlight }: { song: Song; covered: boolean; highlight: boolean }) {
   return (
-    <div className={cx(CARD, 'bg-surface-2')}>
+    <div className={cx(CARD, 'bg-surface-2', highlight && 'border-accent ring-4 ring-accent/60')}>
       {song.albumArt ? (
         <img src={song.albumArt} alt="" className="absolute inset-0 size-full object-cover" />
       ) : (

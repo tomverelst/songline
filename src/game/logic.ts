@@ -95,6 +95,27 @@ export function isValidYear(year: number | undefined): year is number {
   return year !== undefined && year >= MIN_YEAR && year <= MAX_YEAR
 }
 
+/**
+ * The guess year for dropping the guess card at position `at` along a row of
+ * card years (sorted; `at` is a card index, so 1.5 is between cards 1 and 2).
+ * Over a card it takes that card's year; in a gap it keeps the current guess
+ * if it already fits there, otherwise it takes the middle of the gap.
+ */
+export function yearForPosition(years: number[], current: number, at: number): { year: number; onIndex: number | null } {
+  const n = years.length
+  if (n === 0) return { year: current, onIndex: null }
+  const clamp = (y: number) => Math.min(MAX_YEAR, Math.max(MIN_YEAR, y))
+  const nearest = Math.min(n - 1, Math.max(0, Math.round(at)))
+  const onCard = { year: years[nearest], onIndex: nearest }
+  if (Math.abs(at - nearest) < 0.3) return onCard
+  if (at < 0) return { year: clamp(current < years[0] ? current : years[0] - 5), onIndex: null }
+  if (at > n - 1) return { year: clamp(current > years[n - 1] ? current : years[n - 1] + 5), onIndex: null }
+  const low = years[Math.floor(at)]
+  const high = years[Math.floor(at) + 1]
+  if (high - low <= 1) return onCard // no year fits between them
+  return { year: current > low && current < high ? current : Math.round((low + high) / 2), onIndex: null }
+}
+
 /** The slot a guessed year falls into, given the player's timeline. */
 export function slotForYear(timeline: Song[], year: number): Slot {
   const years = distinctYears(timeline)
