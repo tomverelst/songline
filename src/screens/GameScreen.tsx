@@ -13,6 +13,7 @@ import {
   slotLabel,
 } from '../game/logic'
 import { originalYear } from '../musicbrainz'
+import { celebrateCard, celebrateExact } from '../party'
 import { describePlaybackError, pause, playSong, resume, SpotifyError } from '../spotify/api'
 import { Timeline } from '../components/Timeline'
 import { DevicePicker } from '../components/DevicePicker'
@@ -36,6 +37,18 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
 
   const player = game.players[game.currentPlayer]
   const turn = game.turn
+
+  // Party when the answer is revealed (once per song, not on later corrections).
+  const celebrated = useRef<string | null>(null)
+  const revealedSong = turn?.phase === 'reveal' ? turn.song.id : null
+  const wonCard = !!turn?.result?.placementCorrect
+  const exactHit = !!turn?.result?.exactYear
+  useEffect(() => {
+    if (!revealedSong || celebrated.current === revealedSong) return
+    celebrated.current = revealedSong
+    if (exactHit) celebrateExact()
+    else if (wonCard) celebrateCard()
+  }, [revealedSong, wonCard, exactHit])
 
   // Look up the original release year while the song is playing.
   const songToCheck = turn?.phase === 'guess' && !turn.song.yearSource ? turn.song : null
@@ -209,7 +222,9 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
 
       {turn?.phase === 'reveal' && turn.result && (
         <>
-          <section className={`reveal ${turn.result.placementCorrect ? 'correct' : 'wrong'}`}>
+          <section
+            className={`reveal ${turn.result.exactYear ? 'exact' : turn.result.placementCorrect ? 'correct' : 'wrong'}`}
+          >
             {turn.song.albumArt ? (
               <img className="album-art" src={turn.song.albumArt} alt="" />
             ) : (
@@ -220,9 +235,11 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
             <div className="reveal-title">{turn.song.title}</div>
             <div className="muted">{turn.song.artists.join(', ')}</div>
             <div className="verdict">
-              {turn.result.placementCorrect
-                ? `✓ You said ${turn.yearGuess} — the card is yours!`
-                : `✗ You said ${turn.yearGuess} — no card this time`}
+              {turn.result.exactYear
+                ? `🎯 Spot on, ${turn.yearGuess}! The card is yours`
+                : turn.result.placementCorrect
+                  ? `✓ You said ${turn.yearGuess} — the card is yours!`
+                  : `✗ You said ${turn.yearGuess} — no card this time`}
             </div>
           </section>
 
