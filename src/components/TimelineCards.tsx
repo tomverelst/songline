@@ -139,6 +139,41 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
   // Where the finger is while dragging, for the listeners below.
   const finger = useRef({ x: 0, y: 0, grabX: 0 })
   const held = useRef<HTMLDivElement>(null)
+  const tilt = useRef(0)
+  // Mirrors `dragging` without waiting for a render, so a finger lifted in
+  // between is never missed.
+  const isDragging = useRef(false)
+  const pressed = useRef(false)
+
+  // Always listening, so the drag ends however the touch ends: lifted,
+  // cancelled by the browser, or the page losing focus. A drag that never
+  // ends would leave the guess card hidden.
+  useEffect(() => {
+    const end = () => {
+      pressed.current = false
+      cancelHold()
+      if (!isDragging.current) return
+      isDragging.current = false
+      // The guess card flies from where it was let go to its spot.
+      if (held.current) flyFrom.current = { ...centerOf(held.current), tilt: tilt.current }
+      setDrag(null)
+    }
+    // Registered before any touch starts, so the browser waits for it and
+    // finger moves drag the card instead of scrolling once it's picked up.
+    const noScroll = (e: TouchEvent) => {
+      if (isDragging.current && e.cancelable) e.preventDefault()
+    }
+    const ends = ['pointerup', 'pointercancel', 'touchend', 'touchcancel', 'blur'] as const
+    ends.forEach((type) => window.addEventListener(type, end))
+    window.addEventListener('touchmove', noScroll, { passive: false })
+    return () => {
+      ends.forEach((type) => window.removeEventListener(type, end))
+      window.removeEventListener('touchmove', noScroll)
+    }
+    // cancelHold only touches refs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useEffect(() => {
     if (!dragging) return
     let frameId = 0
@@ -168,12 +203,12 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
       const width = scroller.current?.clientWidth ?? 0
       return fanTilt((x - grabX + CARD_W / 2 - width / 2) / STEP)
     }
-    let tilt = fanTiltHere()
+    tilt.current = fanTiltHere()
     // Every frame: ease the tilt and scroll the hand while the card is held
     // near an edge.
     const edgeScroll = () => {
-      tilt += (fanTiltHere() - tilt) * 0.3
-      if (held.current) held.current.style.transform = `rotate(${tilt}deg) scale(1.06)`
+      tilt.current += (fanTiltHere() - tilt.current) * 0.3
+      if (held.current) held.current.style.transform = `rotate(${tilt.current}deg) scale(1.06)`
       const el = scroller.current
       if (el) {
         const { x } = finger.current
@@ -187,30 +222,17 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
       }
       frameId = requestAnimationFrame(edgeScroll)
     }
-    const drop = () => {
-      // The guess card flies from where it was let go to its spot.
-      if (held.current) flyFrom.current = { ...centerOf(held.current), tilt }
-      setDrag(null)
-    }
-    // Once the card is picked up, finger moves drag it instead of scrolling.
-    const noScroll = (e: TouchEvent) => e.preventDefault()
     window.addEventListener('pointermove', move)
-    window.addEventListener('pointerup', drop)
-    window.addEventListener('pointercancel', drop)
-    window.addEventListener('touchmove', noScroll, { passive: false })
     frameId = requestAnimationFrame(edgeScroll)
     return () => {
       window.removeEventListener('pointermove', move)
-      window.removeEventListener('pointerup', drop)
-      window.removeEventListener('pointercancel', drop)
-      window.removeEventListener('touchmove', noScroll)
       cancelAnimationFrame(frameId)
     }
     // firstCardLeft only reads the DOM.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dragging])
 
-  const cancelHold = () => {
+  function cancelHold() {
     if (hold.current) clearTimeout(hold.current.timer)
     hold.current = null
   }
@@ -221,6 +243,7 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
           const { clientX: x, clientY: y } = e
           const card = e.currentTarget
           cancelHold()
+          pressed.current = true
           hold.current = {
             x,
             y,
@@ -229,7 +252,9 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
             timer: window.setTimeout(() => {
               const h = hold.current
               hold.current = null
-              if (!h || !frame.current) return
+              // Only pick the card up while the finger is still on it.
+              if (!h || !pressed.current || !frame.current) return
+              isDragging.current = true
               navigator.vibrate?.(15)
               closeGap.current = ownSpotAt >= 0
               const hand = frame.current.getBoundingClientRect()
