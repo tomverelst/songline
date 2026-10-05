@@ -289,7 +289,7 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
         {i === onCardAt && (
           // Lies on top, shifted so the card underneath still shows.
           <div
-            className={cx('absolute inset-0 z-10 translate-x-3 translate-y-12 rotate-[4deg]', dragging && 'invisible')}
+            className={cx('absolute inset-0 z-10 translate-x-3 translate-y-12 rotate-[4deg]', dragging && 'opacity-0')}
             {...holdHandlers}
           >
             <div ref={guessLayer} className="absolute inset-0">
@@ -305,7 +305,7 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
       key: 'guess',
       collapsed: dragging,
       content: (
-        <div className={cx('absolute inset-0', dragging && 'invisible')} {...holdHandlers}>
+        <div className={cx('absolute inset-0', dragging && 'opacity-0')} {...holdHandlers}>
           <div ref={guessLayer} className="absolute inset-0">
             {back}
           </div>
