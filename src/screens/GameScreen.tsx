@@ -227,18 +227,14 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
           </section>
 
           <section className="card stack-sm">
-            <h2>Card</h2>
+            <h2>Points</h2>
             <p className="muted small">Tap to change, e.g. if the year looks wrong.</p>
             <BonusToggle
-              label={`Guessed ${turn.yearGuess}`}
+              label={`Card (guessed ${turn.yearGuess})`}
               answer={turn.result.placementCorrect ? 'Goes in the timeline' : 'Wrong spot'}
               value={turn.result.placementCorrect}
               onChange={(placementCorrect) => updateResult({ placementCorrect })}
             />
-          </section>
-
-          <section className="card stack-sm">
-            <h2>Bonus coins</h2>
             <BonusToggle
               coin
               label={`Exact year (guessed ${turn.yearGuess})`}
