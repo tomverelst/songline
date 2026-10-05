@@ -4,6 +4,7 @@ import {
   drawSong,
   endTurn,
   finish,
+  isFlipped,
   isValidYear,
   reveal,
   score,
@@ -128,14 +129,14 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
       if (timedOut) onChange((g) => setTurnSongYear(g, turn.song.id, null))
       setCheckingYear(false)
     }
-    window.scrollTo(0, 0)
+    scrollToTop()
     onChange(reveal)
   }
 
   function nextTurn() {
     if (playing) pause(deviceId ?? undefined).catch(() => {})
     setPlaying(false)
-    window.scrollTo(0, 0)
+    scrollToTop()
     onChange(endTurn(game))
   }
 
@@ -152,7 +153,8 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
     onChange({ ...game, turn: { ...turn, result: { ...turn.result, ...patch } } })
   }
 
-  return (
+  const flipEnabled = !!game.settings.flipBetweenTurns
+  const screen = (
     <div className="screen game">
       <header className="topbar">
         <div className="scoreboard">
@@ -352,6 +354,20 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
       )}
     </div>
   )
+
+  if (!flipEnabled) return screen
+  // The game lives in its own full-screen frame so it can be rotated as a whole;
+  // fixed elements (bottom bar, menu) then stay pinned to the rotated frame.
+  return (
+    <div className={`flip-frame ${isFlipped(game) ? 'flipped' : ''}`}>
+      <div className="flip-scroller">{screen}</div>
+    </div>
+  )
+}
+
+function scrollToTop() {
+  window.scrollTo(0, 0)
+  document.querySelector('.flip-scroller')?.scrollTo(0, 0)
 }
 
 const YEAR_CHECK_WAIT_MS = 4000

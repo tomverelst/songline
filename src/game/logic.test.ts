@@ -11,6 +11,7 @@ import {
   slotsFor,
   drawSong,
   finish,
+  isFlipped,
   ranking,
 } from './logic'
 import type { GameSettings, Song } from './types'
@@ -135,5 +136,24 @@ describe('game flow', () => {
     const players = g.players.map((p, i) => ({ ...p, bonus: [1, 2, 0][i] }))
     expect(finish({ ...g, players }).winnerIds).toEqual(['p1'])
     expect(ranking({ ...g, players }).map((p) => p.name)).toEqual(['Bob', 'Ann', 'Cas'])
+  })
+})
+
+describe('isFlipped', () => {
+  const at = (round: number, currentPlayer: number, players: number, flipBetweenTurns = true) =>
+    isFlipped({
+      round,
+      currentPlayer,
+      players: Array.from({ length: players }) as never,
+      settings: { flipBetweenTurns } as GameSettings,
+    })
+
+  it('flips every other turn, also across rounds with an odd number of players', () => {
+    expect([at(1, 0, 2), at(1, 1, 2), at(2, 0, 2), at(2, 1, 2)]).toEqual([false, true, false, true])
+    expect([at(1, 0, 3), at(1, 1, 3), at(1, 2, 3), at(2, 0, 3)]).toEqual([false, true, false, true])
+  })
+
+  it('never flips when the option is off', () => {
+    expect(at(1, 1, 2, false)).toBe(false)
   })
 })

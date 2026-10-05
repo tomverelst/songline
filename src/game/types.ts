@@ -58,6 +58,8 @@ export interface GameSettings {
   bonusCountsTowardsGoal: boolean
   /** Advanced: start the next mystery song by itself after a few seconds. Unset means on. */
   autoplay?: boolean
+  /** Advanced: turn the screen upside down every other turn, for players across the table. */
+  flipBetweenTurns?: boolean
   playlistId: string
   playlistName: string
 }

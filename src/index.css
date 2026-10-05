@@ -1013,3 +1013,22 @@ h3 {
     stroke-dashoffset: 0;
   }
 }
+
+/* ---------- Flip between turns ---------- */
+
+.flip-frame {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  transition: transform 0.7s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.flip-frame.flipped {
+  transform: rotate(180deg);
+}
+
+.flip-scroller {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}

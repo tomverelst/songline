@@ -40,6 +40,9 @@ in their personal timeline of songs.
   starts the next mystery song by itself after 5 seconds. The border of the
   Play button fills up as a countdown; tap it to start straight away. Opening
   the ☰ menu pauses the countdown.
+- **Advanced options** → **Flip screen between turns**: turns the whole screen
+  upside down every other turn, so the phone can lie in the middle of the table
+  for players sitting across from each other.
 
 **Skip** next to Pause and Restart throws away a song with a wrong year or one
 that won't play. The ☰ menu lets you switch the playback device, end the game

@@ -22,6 +22,7 @@ interface SetupDraft {
   targetPoints: number
   bonusCountsTowardsGoal: boolean
   autoplay: boolean
+  flipBetweenTurns: boolean
   playlist: PlaylistSummary | null
 }
 
@@ -31,6 +32,7 @@ const DEFAULT_DRAFT: SetupDraft = {
   targetPoints: 10,
   bonusCountsTowardsGoal: false,
   autoplay: true,
+  flipBetweenTurns: false,
   playlist: null,
 }
 
@@ -69,6 +71,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
           targetPoints: draft.targetPoints,
           bonusCountsTowardsGoal: draft.bonusCountsTowardsGoal,
           autoplay: draft.autoplay,
+          flipBetweenTurns: draft.flipBetweenTurns,
           playlistId: draft.playlist.id,
           playlistName: draft.playlist.name,
         },
@@ -177,6 +180,21 @@ export function SetupScreen({ onStart, initialError }: Props) {
               className="switch"
               checked={draft.autoplay}
               onChange={(e) => update({ autoplay: e.target.checked })}
+            />
+          </label>
+          <label className="switch-row">
+            <span className="grow stack-xs">
+              <span className="option-title">Flip screen between turns</span>
+              <span className="muted small">
+                Turns the screen upside down every other turn, for players sitting across the table.
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              className="switch"
+              checked={draft.flipBetweenTurns}
+              onChange={(e) => update({ flipBetweenTurns: e.target.checked })}
             />
           </label>
         </details>

@@ -5,6 +5,13 @@ export function score(player: Player, settings: Pick<GameSettings, 'bonusCountsT
   return player.timeline.length + (settings.bonusCountsTowardsGoal ? player.bonus : 0)
 }
 
+/** Whether this turn's screen is shown upside down (every other turn when enabled). */
+export function isFlipped(state: Pick<GameState, 'settings' | 'round' | 'currentPlayer' | 'players'>): boolean {
+  if (!state.settings.flipBetweenTurns) return false
+  const turnNumber = (state.round - 1) * state.players.length + state.currentPlayer
+  return turnNumber % 2 === 1
+}
+
 /** Players from best to worst: most points first, bonus coins break ties. */
 export function ranking(state: Pick<GameState, 'players' | 'settings'>): Player[] {
   return [...state.players].sort(
