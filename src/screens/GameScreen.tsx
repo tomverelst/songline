@@ -18,6 +18,7 @@ import { describePlaybackError, pause, playSong, resume, SpotifyError } from '..
 import { Timeline } from '../components/Timeline'
 import { DevicePicker } from '../components/DevicePicker'
 import { YearInput } from '../components/YearInput'
+import { TimerButton } from '../components/TimerButton'
 import { Coin, Coins } from '../components/Coins'
 import { KEYS, load, save } from '../storage'
 
@@ -49,6 +50,20 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
     if (exactHit) celebrateExact()
     else if (wonCard) celebrateCard()
   }, [revealedSong, wonCard, exactHit])
+
+  // Autoplay: start the mystery song by itself a few seconds after the
+  // "whose turn" screen appears, unless the menu is open.
+  const autoplayActive = !turn && game.settings.autoplay !== false && !menuOpen
+  const startTurnRef = useRef(startTurn)
+  useEffect(() => {
+    startTurnRef.current = startTurn
+  })
+  const introKey = `${game.round}-${game.currentPlayer}`
+  useEffect(() => {
+    if (!autoplayActive) return
+    const timer = setTimeout(() => startTurnRef.current(), AUTOPLAY_MS)
+    return () => clearTimeout(timer)
+  }, [autoplayActive, introKey])
 
   // Look up the original release year while the song is playing.
   const songToCheck = turn?.phase === 'guess' && !turn.song.yearSource ? turn.song : null
@@ -163,15 +178,14 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
             <h1>{player.name}</h1>
             <p className="muted">It's your turn — grab the phone!</p>
           </section>
-          <section className="card stack-sm">
-            <h2>Your timeline</h2>
-            <Timeline timeline={player.timeline} />
-          </section>
-          <p className="muted small center">{game.deck.length} songs left in the deck</p>
           <div className="bottom-bar">
-            <button className="btn primary block" onClick={startTurn}>
+            <TimerButton
+              className="btn primary block"
+              onClick={startTurn}
+              timerMs={autoplayActive ? AUTOPLAY_MS : undefined}
+            >
               ▶ Play mystery song
-            </button>
+            </TimerButton>
           </div>
         </>
       )}
@@ -341,6 +355,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
 }
 
 const YEAR_CHECK_WAIT_MS = 4000
+const AUTOPLAY_MS = 5000
 
 function YearSource({ song }: { song: Song }) {
   if (song.yearSource === 'musicbrainz') {

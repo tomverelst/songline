@@ -36,6 +36,10 @@ in their personal timeline of songs.
   tie on points.
 - **Advanced options** → **Coins count as points**: makes coins count towards
   the target as well, so a perfect turn is worth 4 points.
+- **Advanced options** → **Autoplay** (on by default): the "whose turn" screen
+  starts the next mystery song by itself after 5 seconds. The border of the
+  Play button fills up as a countdown; tap it to start straight away. Opening
+  the ☰ menu pauses the countdown.
 
 **Skip** next to Pause and Restart throws away a song with a wrong year or one
 that won't play. The ☰ menu lets you switch the playback device, end the game

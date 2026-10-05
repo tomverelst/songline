@@ -21,6 +21,7 @@ interface SetupDraft {
   mode: GameMode
   targetPoints: number
   bonusCountsTowardsGoal: boolean
+  autoplay: boolean
   playlist: PlaylistSummary | null
 }
 
@@ -29,6 +30,7 @@ const DEFAULT_DRAFT: SetupDraft = {
   mode: 'standard',
   targetPoints: 10,
   bonusCountsTowardsGoal: false,
+  autoplay: true,
   playlist: null,
 }
 
@@ -66,6 +68,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
           mode: draft.mode,
           targetPoints: draft.targetPoints,
           bonusCountsTowardsGoal: draft.bonusCountsTowardsGoal,
+          autoplay: draft.autoplay,
           playlistId: draft.playlist.id,
           playlistName: draft.playlist.name,
         },
@@ -161,6 +164,19 @@ export function SetupScreen({ onStart, initialError }: Props) {
               className="switch"
               checked={draft.bonusCountsTowardsGoal}
               onChange={(e) => update({ bonusCountsTowardsGoal: e.target.checked })}
+            />
+          </label>
+          <label className="switch-row">
+            <span className="grow stack-xs">
+              <span className="option-title">Autoplay</span>
+              <span className="muted small">Start the next mystery song by itself 5 seconds after showing whose turn it is.</span>
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              className="switch"
+              checked={draft.autoplay}
+              onChange={(e) => update({ autoplay: e.target.checked })}
             />
           </label>
         </details>

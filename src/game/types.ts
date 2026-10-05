@@ -56,6 +56,8 @@ export interface GameSettings {
   targetPoints: number
   /** Advanced: bonus coins also count as points towards the target. */
   bonusCountsTowardsGoal: boolean
+  /** Advanced: start the next mystery song by itself after a few seconds. Unset means on. */
+  autoplay?: boolean
   playlistId: string
   playlistName: string
 }
