@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react'
 import type { GameMode, GameState } from '../game/types'
 import { newGame, withOriginalYear } from '../game/logic'
 import { originalYear } from '../musicbrainz'
+import { forgetPlayedSongs, playedSongIds, rememberSongs } from '../history'
 import { getClientId, isLoggedIn, login, logout, redirectUri, setClientId } from '../spotify/auth'
 import {
   getMyPlaylists,
@@ -39,6 +40,7 @@ interface SetupDraft {
   bonusCountsTowardsGoal: boolean
   autoplay: boolean
   flipBetweenTurns: boolean
+  avoidPlayedSongs: boolean
   playlist: PlaylistSummary | null
 }
 
@@ -49,6 +51,7 @@ const DEFAULT_DRAFT: SetupDraft = {
   bonusCountsTowardsGoal: false,
   autoplay: true,
   flipBetweenTurns: false,
+  avoidPlayedSongs: true,
   playlist: null,
 }
 
@@ -63,6 +66,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
   const [loggedIn, setLoggedIn] = useState(isLoggedIn)
   const [error, setError] = useState<string | null>(initialError)
   const [starting, setStarting] = useState<false | 'songs' | 'years'>(false)
+  const [rememberedCount, setRememberedCount] = useState(() => playedSongIds().size)
 
   useEffect(() => save(KEYS.setup, draft), [draft])
   useEffect(() => save(KEYS.device, deviceId), [deviceId])
@@ -92,7 +96,10 @@ export function SetupScreen({ onStart, initialError }: Props) {
           playlistName: draft.playlist.name,
         },
         songs,
+        Math.random,
+        draft.avoidPlayedSongs ? playedSongIds() : new Set(),
       )
+      rememberSongs(game.players.map((p) => p.timeline[0].id))
       setStarting('years')
       onStart(await withOriginalStartingYears(game))
     } catch (e) {
@@ -187,6 +194,27 @@ export function SetupScreen({ onStart, initialError }: Props) {
             checked={draft.flipBetweenTurns}
             onChange={(flipBetweenTurns) => update({ flipBetweenTurns })}
           />
+          <Switch
+            title="Avoid songs from earlier games"
+            description={
+              rememberedCount
+                ? `Songs you already heard (${rememberedCount} on this phone) only come up once the fresh ones run out.`
+                : 'Songs you already heard only come up once the fresh ones run out.'
+            }
+            checked={draft.avoidPlayedSongs}
+            onChange={(avoidPlayedSongs) => update({ avoidPlayedSongs })}
+          />
+          {rememberedCount > 0 && (
+            <LinkButton
+              className="mt-2"
+              onClick={() => {
+                forgetPlayedSongs()
+                setRememberedCount(0)
+              }}
+            >
+              Forget played songs
+            </LinkButton>
+          )}
         </details>
       </Card>
 

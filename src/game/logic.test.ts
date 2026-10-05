@@ -157,3 +157,21 @@ describe('isFlipped', () => {
     expect(at(1, 1, 2, false)).toBe(false)
   })
 })
+
+describe('newGame with songs from earlier games', () => {
+  const settings = { mode: 'standard', targetPoints: 10, bonusCountsTowardsGoal: false, playlistId: 'x', playlistName: 'x' } as const
+  const songs = [1960, 1970, 1980, 1990, 2000, 2010].map((y) => song(y))
+  const played = new Set(songs.slice(0, 3).map((s) => s.id))
+
+  it('deals and draws fresh songs before ones already heard', () => {
+    let g = newGame(['Ann', 'Bob'], settings, songs, Math.random, played)
+    const order = g.players.map((p) => p.timeline[0].id)
+    while (g.deck.length) {
+      g = drawSong(g)
+      order.push(g.turn!.song.id)
+      g = { ...g, turn: undefined }
+    }
+    expect(order.slice(0, 3).every((id) => !played.has(id))).toBe(true)
+    expect(order.slice(3).every((id) => played.has(id))).toBe(true)
+  })
+})

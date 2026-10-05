@@ -14,6 +14,7 @@ import {
   slotLabel,
 } from '../game/logic'
 import { originalYear } from '../musicbrainz'
+import { rememberSongs } from '../history'
 import { celebrateCard, celebrateExact } from '../party'
 import { describePlaybackError, pause, playSong, resume, SpotifyError } from '../spotify/api'
 import { Timeline } from '../components/Timeline'
@@ -67,6 +68,12 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
     const timer = setTimeout(() => startTurnRef.current(), AUTOPLAY_MS)
     return () => clearTimeout(timer)
   }, [autoplayActive, introKey])
+
+  // Remember every song that comes up, so later games can play fresh ones first.
+  const drawnSongId = turn?.song.id
+  useEffect(() => {
+    if (drawnSongId) rememberSongs([drawnSongId])
+  }, [drawnSongId])
 
   // Look up the original release year while the song is playing.
   const songToCheck = turn?.phase === 'guess' && !turn.song.yearSource ? turn.song : null

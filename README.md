@@ -44,6 +44,10 @@ in their personal timeline of songs.
   upside down every other turn, so the phone can lie in the middle of the table
   for players sitting across from each other. It can also be switched on or off
   mid-game from the ☰ menu.
+- **Advanced options** → **Avoid songs from earlier games** (on by default): the
+  phone remembers every song that came up (mystery songs, skipped songs and
+  starting cards). New games deal and play fresh songs first; songs you already
+  heard only come up once those run out. **Forget played songs** clears the list.
 
 **Skip** next to Pause and Restart throws away a song with a wrong year or one
 that won't play. The ☰ menu lets you switch the playback device, end the game

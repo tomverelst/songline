@@ -117,13 +117,22 @@ export function shuffle<T>(items: T[], random: () => number = Math.random): T[] 
   return copy
 }
 
+/**
+ * Starts a game. Songs in `alreadyPlayed` go to the bottom of the deck, so
+ * they only come up (and are only dealt) once the fresh songs run out.
+ */
 export function newGame(
   names: string[],
   settings: GameSettings,
   songs: Song[],
   random: () => number = Math.random,
+  alreadyPlayed: Set<string> = new Set(),
 ): GameState {
-  const deck = shuffle(songs, random)
+  // Cards are drawn from the end of the deck.
+  const deck = [
+    ...shuffle(songs.filter((s) => alreadyPlayed.has(s.id)), random),
+    ...shuffle(songs.filter((s) => !alreadyPlayed.has(s.id)), random),
+  ]
   const players: Player[] = names.map((name, i) => ({
     id: `p${i}`,
     name,

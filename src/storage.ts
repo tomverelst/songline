@@ -20,4 +20,5 @@ export const KEYS = {
   game: 'songline.game',
   setup: 'songline.setup',
   device: 'songline.device',
+  playedSongs: 'songline.playedSongs',
 } as const
