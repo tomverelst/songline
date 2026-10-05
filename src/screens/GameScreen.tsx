@@ -11,16 +11,12 @@ import {
   setTurnSongYear,
   skipSong,
   slotForYear,
-  slotLabel,
 } from '../game/logic'
 import { originalYear } from '../musicbrainz'
 import { rememberSongs } from '../history'
 import { celebrateCard, celebrateExact } from '../party'
 import { describePlaybackError, pause, playSong, resume, SpotifyError } from '../spotify/api'
-import { TimelineModeToggle, TimelineView } from '../components/TimelineView'
-import { useTimelineMode } from '../components/timelineMode'
-import { TimelineCarousel } from '../components/TimelineCarousel'
-import { TimelineHand } from '../components/TimelineHand'
+import { TimelineCards } from '../components/TimelineCards'
 import { DevicePicker } from '../components/DevicePicker'
 import { YearInput } from '../components/YearInput'
 import { TimerButton } from '../components/TimerButton'
@@ -41,7 +37,6 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [checkingYear, setCheckingYear] = useState(false)
-  const [timelineMode, setTimelineMode] = useTimelineMode()
   const yearLookups = useRef(new Map<string, Promise<void>>())
 
   const player = game.players[game.currentPlayer]
@@ -224,10 +219,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
               </div>
             </div>
             <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-              <div className="flex items-center justify-between gap-2">
-                <Muted className="truncate">{player.name} is guessing</Muted>
-                {timelineMode !== 'list' && <TimelineModeToggle small mode={timelineMode} onChange={setTimelineMode} />}
-              </div>
+              <Muted className="truncate">{player.name} is guessing</Muted>
               <div className="flex flex-wrap items-center gap-1.5">
                 <Button size="sm" className="px-3" onClick={togglePause}>
                   {playing ? '❚❚ Pause' : '▶ Play'}
@@ -247,35 +239,13 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
               value={turn.yearGuess}
               startYear={medianYear(player.timeline)}
               onChange={setYearGuess}
-              compact={timelineMode === 'real'}
             />
-            {timelineMode !== 'list' ? (
-              <>
-                {timelineMode === 'cards' ? (
-                  <TimelineCarousel timeline={player.timeline} guessYear={guessSlot ? turn.yearGuess : undefined} />
-                ) : (
-                  <TimelineHand
-                    timeline={player.timeline}
-                    guessYear={guessSlot ? turn.yearGuess : undefined}
-                    onSelectYear={setYearGuess}
-                  />
-                )}
-              </>
-            ) : (
-              <p className="min-h-6 text-center font-bold text-accent-2">{guessSlot && slotLabel(guessSlot)}</p>
-            )}
-          </Card>
-
-          {timelineMode === 'list' && (
-            <TimelineView
-              title={`${player.name}'s cards`}
+            <TimelineCards
               timeline={player.timeline}
-              mode={timelineMode}
-              onModeChange={setTimelineMode}
               guessYear={guessSlot ? turn.yearGuess : undefined}
-              slot={guessSlot}
+              onSelectYear={setYearGuess}
             />
-          )}
+          </Card>
 
           <BottomBar>
             <Button variant="primary" block disabled={!guessSlot || checkingYear} onClick={lockIn}>
@@ -338,15 +308,14 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
             />
           </Card>
 
-          <TimelineView
-            title={`${player.name}'s timeline`}
-            timeline={player.timeline}
-            mode={timelineMode}
-            onModeChange={setTimelineMode}
-            guessYear={turn.yearGuess}
-            slot={turn.slot}
-            verdict={turn.result.placementCorrect ? 'correct' : 'wrong'}
-          />
+          <Card className="gap-0">
+            <CardTitle>{player.name}'s cards</CardTitle>
+            <TimelineCards
+              timeline={player.timeline}
+              guessYear={turn.yearGuess}
+              verdict={turn.result.placementCorrect ? 'correct' : 'wrong'}
+            />
+          </Card>
 
           <BottomBar>
             <Button variant="primary" block onClick={nextTurn}>

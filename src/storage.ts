@@ -21,5 +21,4 @@ export const KEYS = {
   setup: 'songline.setup',
   device: 'songline.device',
   playedSongs: 'songline.playedSongs',
-  timelineView: 'songline.timelineView',
 } as const

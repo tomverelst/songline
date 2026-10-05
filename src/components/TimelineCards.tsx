@@ -26,7 +26,7 @@ const VERDICT_RING = {
  * The timeline as a fanned hand of playing cards. The card in the middle
  * stands up straight; the others tilt away the further out they are.
  */
-export function TimelineHand({ timeline, guessYear, verdict, onSelectYear }: Props) {
+export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Props) {
   const scroller = useRef<HTMLDivElement>(null)
   // How far each card is from the middle of the view, in cards.
   const [middle, setMiddle] = useState(0)
@@ -56,7 +56,7 @@ export function TimelineHand({ timeline, guessYear, verdict, onSelectYear }: Pro
     year: s.year,
     content: (
       <>
-        <CardFace song={s} />
+        <CardFace song={s} covered={i === onCardAt} />
         {i === onCardAt && (
           // Lies on top, shifted so the card underneath still shows.
           <div className="absolute inset-0 z-10 translate-x-3 translate-y-12 rotate-[4deg]">{back}</div>
@@ -105,7 +105,8 @@ export function TimelineHand({ timeline, guessYear, verdict, onSelectYear }: Pro
 
 const CARD = 'absolute inset-0 overflow-hidden rounded-2xl border-2 border-line shadow-[0_10px_30px_rgb(0_0_0/0.45)]'
 
-function CardFace({ song }: { song: Song }) {
+/** `covered`: the guess lies on top, so the year moves up to stay visible. */
+function CardFace({ song, covered }: { song: Song; covered: boolean }) {
   return (
     <div className={cx(CARD, 'bg-surface-2')}>
       {song.albumArt ? (
@@ -114,7 +115,12 @@ function CardFace({ song }: { song: Song }) {
         <div className="absolute inset-0 bg-linear-160 from-surface-2 to-bg" />
       )}
       <div className="absolute inset-0 bg-linear-to-b from-black/10 via-transparent to-black/85" />
-      <span className="absolute top-2 left-2 rounded-lg bg-black/75 px-2 py-0.5 text-2xl font-black text-accent-2 tabular-nums">
+      <span
+        className={cx(
+          'absolute inset-x-0 text-center text-4xl font-black text-white tabular-nums transition-all duration-200 [text-shadow:0_2px_12px_rgb(0_0_0/0.85)]',
+          covered ? 'top-1' : 'top-[38%] -translate-y-1/2',
+        )}
+      >
         {song.year}
       </span>
       <span className="absolute inset-x-2.5 bottom-2.5 flex flex-col">
