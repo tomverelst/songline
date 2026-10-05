@@ -234,13 +234,6 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
             <YearSource song={turn.song} />
             <div className="reveal-title">{turn.song.title}</div>
             <div className="muted">{turn.song.artists.join(', ')}</div>
-            <div className="verdict">
-              {turn.result.exactYear
-                ? `🎯 Spot on, ${turn.yearGuess}! The card is yours`
-                : turn.result.placementCorrect
-                  ? `✓ You said ${turn.yearGuess} — the card is yours!`
-                  : `✗ You said ${turn.yearGuess} — no card this time`}
-            </div>
           </section>
 
           <section className="card stack-sm">
