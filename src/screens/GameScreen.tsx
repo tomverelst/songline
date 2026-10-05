@@ -247,14 +247,18 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
               value={turn.yearGuess}
               startYear={medianYear(player.timeline)}
               onChange={setYearGuess}
-              compact={timelineMode !== 'list'}
+              compact={timelineMode === 'real'}
             />
             {timelineMode !== 'list' ? (
               <>
                 {timelineMode === 'cards' ? (
                   <TimelineCarousel timeline={player.timeline} guessYear={guessSlot ? turn.yearGuess : undefined} />
                 ) : (
-                  <TimelineHand timeline={player.timeline} guessYear={guessSlot ? turn.yearGuess : undefined} />
+                  <TimelineHand
+                    timeline={player.timeline}
+                    guessYear={guessSlot ? turn.yearGuess : undefined}
+                    onSelectYear={setYearGuess}
+                  />
                 )}
               </>
             ) : (

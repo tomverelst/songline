@@ -22,8 +22,9 @@ in their personal timeline of songs.
    Switch the timeline view with **List | Cards | Real** (the phone remembers
    your choice). **Cards** shows a row of swipeable cards right under the year,
    with the mystery song slotted in where your guess lands. **Real** shows the
-   same as a fanned hand of playing cards with album art, and the mystery song
-   as a face-down card.
+   same as a fanned hand of big playing cards with album art, and the mystery
+   song as a face-down card. In Real view you can tap a card to guess its year:
+   the mystery card is laid on top of it.
 4. Lock in. If the real year falls in the same spot as your guess, you win the
    card, even if you didn't hit the exact year.
 5. Bonus **coins**, one each, whether or not you won the card:
