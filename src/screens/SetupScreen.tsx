@@ -15,6 +15,22 @@ import { DevicePicker } from '../components/DevicePicker'
 import { KEYS, load, save } from '../storage'
 import { GAME_MODES } from '../game/modes'
 import { Coin } from '../components/Coins'
+import {
+  Artwork,
+  BottomBar,
+  Button,
+  Card,
+  CardTitle,
+  IconButton,
+  LinkButton,
+  Logo,
+  Muted,
+  OptionButton,
+  Screen,
+  Switch,
+  TextInput,
+} from '../components/ui'
+import { cx } from '../components/classes'
 
 interface SetupDraft {
   names: string[]
@@ -86,19 +102,18 @@ export function SetupScreen({ onStart, initialError }: Props) {
   }
 
   return (
-    <div className="screen">
-      <header className="hero">
-        <div className="logo">♪</div>
-        <h1>Songline</h1>
-        <p className="muted">Guess the year. Build your timeline. First to the target wins.</p>
+    <Screen>
+      <header className="flex flex-col items-center gap-2 pt-4 pb-1 text-center">
+        <Logo>♪</Logo>
+        <h1 className="text-[2rem] leading-tight font-bold">Songline</h1>
+        <p className="text-muted">Guess the year. Build your timeline. First to the target wins.</p>
       </header>
 
-      <section className="card stack">
-        <h2>Players</h2>
+      <Card>
+        <CardTitle>Players</CardTitle>
         {draft.names.map((name, i) => (
-          <div className="row" key={i}>
-            <input
-              className="input grow"
+          <div className="flex items-center gap-2" key={i}>
+            <TextInput
               placeholder={`Player ${i + 1}`}
               value={name}
               autoComplete="off"
@@ -106,129 +121,103 @@ export function SetupScreen({ onStart, initialError }: Props) {
               onChange={(e) => update({ names: draft.names.map((n, j) => (j === i ? e.target.value : n)) })}
             />
             {draft.names.length > 1 && (
-              <button
-                className="icon-btn"
+              <IconButton
                 aria-label={`Remove player ${i + 1}`}
                 onClick={() => update({ names: draft.names.filter((_, j) => j !== i) })}
               >
                 ✕
-              </button>
+              </IconButton>
             )}
           </div>
         ))}
-        <button className="btn ghost" onClick={() => update({ names: [...draft.names, ''] })}>
+        <Button variant="ghost" onClick={() => update({ names: [...draft.names, ''] })}>
           + Add player
-        </button>
-      </section>
+        </Button>
+      </Card>
 
-      <section className="card stack">
-        <h2>Game mode</h2>
-        <div className="options">
+      <Card>
+        <CardTitle>Game mode</CardTitle>
+        <div className="flex flex-col gap-1.5">
           {GAME_MODES.map((m) => (
-            <button
-              key={m.id}
-              className={`option ${draft.mode === m.id ? 'selected' : ''}`}
-              onClick={() => update({ mode: m.id })}
-            >
-              <span className="option-title">{m.name}</span>
-              <span className="muted small">{m.description}</span>
-            </button>
+            <OptionButton key={m.id} selected={draft.mode === m.id} onClick={() => update({ mode: m.id })}>
+              <span className="font-semibold">{m.name}</span>
+              <span className="text-sm text-muted">{m.description}</span>
+            </OptionButton>
           ))}
         </div>
 
-        <h3>Points to win</h3>
-        <div className="stepper">
-          <button className="icon-btn big" onClick={() => update({ targetPoints: Math.max(2, draft.targetPoints - 1) })}>
+        <h3 className="mt-1 text-[0.95rem] font-bold">Points to win</h3>
+        <div className="flex items-center justify-center gap-6">
+          <IconButton big onClick={() => update({ targetPoints: Math.max(2, draft.targetPoints - 1) })}>
             −
-          </button>
-          <span className="stepper-value">{draft.targetPoints}</span>
-          <button className="icon-btn big" onClick={() => update({ targetPoints: Math.min(50, draft.targetPoints + 1) })}>
+          </IconButton>
+          <span className="min-w-[2ch] text-center text-[2.5rem] font-extrabold tabular-nums">{draft.targetPoints}</span>
+          <IconButton big onClick={() => update({ targetPoints: Math.min(50, draft.targetPoints + 1) })}>
             +
-          </button>
+          </IconButton>
         </div>
-        <p className="muted small">
+        <Muted>
           Every card in your timeline is 1 point; you start with one. The exact year, the title and the artist each
           earn a bonus coin <Coin />
           {draft.bonusCountsTowardsGoal
             ? ', and coins count as points too.'
             : '. Coins don’t count towards winning, but break a tie if the songs run out.'}
-        </p>
+        </Muted>
 
-        <details className="advanced">
-          <summary>Advanced options</summary>
-          <label className="switch-row">
-            <span className="grow stack-xs">
-              <span className="option-title">Coins count as points</span>
-              <span className="muted small">Bonus coins also count towards the points to win.</span>
-            </span>
-            <input
-              type="checkbox"
-              role="switch"
-              className="switch"
-              checked={draft.bonusCountsTowardsGoal}
-              onChange={(e) => update({ bonusCountsTowardsGoal: e.target.checked })}
-            />
-          </label>
-          <label className="switch-row">
-            <span className="grow stack-xs">
-              <span className="option-title">Autoplay</span>
-              <span className="muted small">Start the next mystery song by itself 5 seconds after showing whose turn it is.</span>
-            </span>
-            <input
-              type="checkbox"
-              role="switch"
-              className="switch"
-              checked={draft.autoplay}
-              onChange={(e) => update({ autoplay: e.target.checked })}
-            />
-          </label>
-          <label className="switch-row">
-            <span className="grow stack-xs">
-              <span className="option-title">Flip screen between turns</span>
-              <span className="muted small">
-                Turns the screen upside down every other turn, for players sitting across the table.
-              </span>
-            </span>
-            <input
-              type="checkbox"
-              role="switch"
-              className="switch"
-              checked={draft.flipBetweenTurns}
-              onChange={(e) => update({ flipBetweenTurns: e.target.checked })}
-            />
-          </label>
+        <details className="group border-t border-line pt-3">
+          <summary className="flex min-h-8 list-none items-center font-semibold text-accent-2 [&::-webkit-details-marker]:hidden">
+            <span className="mr-2 inline-block transition-transform group-open:rotate-90">▸</span>
+            Advanced options
+          </summary>
+          <Switch
+            title="Coins count as points"
+            description="Bonus coins also count towards the points to win."
+            checked={draft.bonusCountsTowardsGoal}
+            onChange={(bonusCountsTowardsGoal) => update({ bonusCountsTowardsGoal })}
+          />
+          <Switch
+            title="Autoplay"
+            description="Start the next mystery song by itself 5 seconds after showing whose turn it is."
+            checked={draft.autoplay}
+            onChange={(autoplay) => update({ autoplay })}
+          />
+          <Switch
+            title="Flip screen between turns"
+            description="Turns the screen upside down every other turn, for players sitting across the table."
+            checked={draft.flipBetweenTurns}
+            onChange={(flipBetweenTurns) => update({ flipBetweenTurns })}
+          />
         </details>
-      </section>
+      </Card>
 
-      <section className="card stack">
-        <h2>Spotify</h2>
+      <Card>
+        <CardTitle>Spotify</CardTitle>
         {!loggedIn ? (
           <SpotifyLogin onError={setError} />
         ) : (
           <>
             <PlaylistPicker selected={draft.playlist} onSelect={(playlist) => update({ playlist })} onError={setError} />
             <DevicePicker deviceId={deviceId} onChange={setDeviceId} />
-            <button
-              className="link small"
+            <LinkButton
               onClick={() => {
                 logout()
                 setLoggedIn(false)
               }}
             >
               Disconnect Spotify
-            </button>
+            </LinkButton>
           </>
         )}
-      </section>
+      </Card>
 
-      {error && <p className="error">{error}</p>}
+      {error && <p className="text-sm text-bad">{error}</p>}
 
-      <div className="bottom-bar">
-        <button className="btn primary block" disabled={!canStart} onClick={start}>
+      <BottomBar>
+        <Button variant="primary" block disabled={!canStart} onClick={start}>
           {starting === 'songs' ? 'Shuffling songs…' : starting === 'years' ? 'Checking release years…' : 'Start game'}
-        </button>
-      </div>
-    </div>
+        </Button>
+      </BottomBar>
+    </Screen>
   )
 }
 
@@ -256,24 +245,19 @@ function SpotifyLogin({ onError }: { onError: (e: string) => void }) {
 
   if (editing) {
     return (
-      <div className="stack-sm">
-        <p className="muted small">
+      <div className="flex flex-col gap-2">
+        <Muted>
           Create an app on the{' '}
           <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noreferrer">
             Spotify developer dashboard
           </a>{' '}
           (Web API), add this redirect URI and paste its client ID below:
-        </p>
-        <code className="code">{redirectUri()}</code>
-        <input
-          className="input"
-          placeholder="Spotify client ID"
-          value={clientId}
-          autoComplete="off"
-          onChange={(e) => setId(e.target.value)}
-        />
-        <button
-          className="btn"
+        </Muted>
+        <code className="block rounded-[10px] border border-dashed border-line bg-bg px-3 py-2.5 text-sm break-all select-all">
+          {redirectUri()}
+        </code>
+        <TextInput placeholder="Spotify client ID" value={clientId} autoComplete="off" onChange={(e) => setId(e.target.value)} />
+        <Button
           disabled={!clientId.trim()}
           onClick={() => {
             setClientId(clientId)
@@ -281,20 +265,18 @@ function SpotifyLogin({ onError }: { onError: (e: string) => void }) {
           }}
         >
           Save client ID
-        </button>
+        </Button>
       </div>
     )
   }
 
   return (
-    <div className="stack-sm">
-      <button className="btn spotify block" onClick={() => login().catch((e) => onError(e.message))}>
+    <div className="flex flex-col gap-2">
+      <Button variant="spotify" block onClick={() => login().catch((e) => onError(e.message))}>
         Connect Spotify
-      </button>
-      <p className="muted small">Spotify Premium is needed to control playback.</p>
-      <button className="link small" onClick={() => setEditing(true)}>
-        Change client ID
-      </button>
+      </Button>
+      <Muted>Spotify Premium is needed to control playback.</Muted>
+      <LinkButton onClick={() => setEditing(true)}>Change client ID</LinkButton>
     </div>
   )
 }
@@ -337,54 +319,52 @@ function PlaylistPicker({
   }
 
   return (
-    <div className="stack-sm">
+    <div className="flex flex-col gap-2">
       {selected && (
-        <div className="selected-playlist">
-          {selected.image ? <img src={selected.image} alt="" /> : <div className="placeholder-art">♪</div>}
-          <div>
-            <div className="muted small">Playlist</div>
-            <div className="option-title">{selected.name}</div>
+        <div className="flex items-center gap-3 rounded-xl bg-linear-135 from-accent/20 to-accent-2/15 p-2.5">
+          <Artwork src={selected.image} className="size-14 rounded-md" />
+          <div className="min-w-0">
+            <Muted>Playlist</Muted>
+            <div className="truncate font-semibold">{selected.name}</div>
           </div>
         </div>
       )}
-      <div className="row">
-        <input
-          className="input grow"
-          placeholder="Paste a playlist link…"
-          value={link}
-          onChange={(e) => setLink(e.target.value)}
-        />
-        <button className="btn" disabled={!link.trim()} onClick={applyLink}>
+      <div className="flex items-center gap-2">
+        <TextInput placeholder="Paste a playlist link…" value={link} onChange={(e) => setLink(e.target.value)} />
+        <Button disabled={!link.trim()} onClick={applyLink}>
           Use
-        </button>
+        </Button>
       </div>
       {playlists === null ? (
-        <p className="muted small">Loading your playlists…</p>
+        <Muted>Loading your playlists…</Muted>
       ) : (
         <>
           {playlists.length > 8 && (
-            <input className="input" placeholder="Search your playlists" value={filter} onChange={(e) => setFilter(e.target.value)} />
+            <TextInput placeholder="Search your playlists" value={filter} onChange={(e) => setFilter(e.target.value)} />
           )}
-          <div className="playlist-list">
+          <div className="flex max-h-80 flex-col gap-1.5 overflow-y-auto overscroll-contain">
             {visible.map((p, i) => (
               <Fragment key={p.id}>
                 {!p.readable && (i === 0 || visible[i - 1].readable) && (
-                  <p className="muted small list-note">
+                  <Muted className="px-0.5 pt-2">
                     Playlists made by others can't be used — Spotify doesn't share their songs with this game. Copy
                     the songs into a playlist of your own to play them.
-                  </p>
+                  </Muted>
                 )}
                 <button
-                  className={`playlist-item ${selected?.id === p.id ? 'selected' : ''}`}
+                  className={cx(
+                    'flex min-h-13 w-full items-center gap-3 rounded-xl border px-3 py-2 text-left disabled:opacity-45',
+                    selected?.id === p.id ? 'border-accent bg-accent/12' : 'border-line bg-bg',
+                  )}
                   disabled={!p.readable}
                   onClick={() => onSelect(p)}
                 >
-                  {p.image ? <img src={p.image} alt="" loading="lazy" /> : <div className="placeholder-art">♪</div>}
-                  <span className="grow">
-                    <span className="option-title">{p.name}</span>
+                  <Artwork src={p.image} className="size-10 rounded-md" />
+                  <span className="min-w-0 flex-1">
+                    <span className="font-semibold">{p.name}</span>
                     {p.readable
-                      ? p.trackCount !== undefined && <span className="muted small"> · {p.trackCount} songs</span>
-                      : p.owner && <span className="muted small"> · by {p.owner}</span>}
+                      ? p.trackCount !== undefined && <span className="text-sm text-muted"> · {p.trackCount} songs</span>
+                      : p.owner && <span className="text-sm text-muted"> · by {p.owner}</span>}
                   </span>
                 </button>
               </Fragment>

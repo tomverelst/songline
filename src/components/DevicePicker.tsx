@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getDevices, type Device } from '../spotify/api'
+import { LinkButton, OptionButton } from './ui'
 
 interface Props {
   deviceId: string | null
@@ -28,35 +29,31 @@ export function DevicePicker({ deviceId, onChange }: Props) {
   }, [refresh])
 
   return (
-    <div className="stack-sm">
-      <div className="row between">
-        <span className="muted small">Play the music on</span>
-        <button className="link" onClick={refresh} disabled={loading}>
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm text-muted">Play the music on</span>
+        <LinkButton className="self-auto" onClick={refresh} disabled={loading}>
           {loading ? 'Refreshing…' : '↻ Refresh'}
-        </button>
+        </LinkButton>
       </div>
-      {error && <p className="error">{error}</p>}
-      <div className="options">
-        <button className={`option ${deviceId === null ? 'selected' : ''}`} onClick={() => onChange(null)}>
-          <span className="option-title">Active device</span>
-          <span className="muted small">Whatever is currently playing Spotify</span>
-        </button>
+      {error && <p className="text-sm text-bad">{error}</p>}
+      <div className="flex flex-col gap-1.5">
+        <OptionButton selected={deviceId === null} onClick={() => onChange(null)}>
+          <span className="font-semibold">Active device</span>
+          <span className="text-sm text-muted">Whatever is currently playing Spotify</span>
+        </OptionButton>
         {devices?.map((d) => (
-          <button
-            key={d.id}
-            className={`option ${deviceId === d.id ? 'selected' : ''}`}
-            onClick={() => onChange(d.id)}
-          >
-            <span className="option-title">{d.name}</span>
-            <span className="muted small">
+          <OptionButton key={d.id} selected={deviceId === d.id} onClick={() => onChange(d.id)}>
+            <span className="font-semibold">{d.name}</span>
+            <span className="text-sm text-muted">
               {d.type}
               {d.is_active ? ' · active' : ''}
             </span>
-          </button>
+          </OptionButton>
         ))}
       </div>
       {devices?.length === 0 && (
-        <p className="muted small">
+        <p className="text-sm text-muted">
           No devices found. Open the Spotify app on a phone, computer or speaker and press play once, then refresh.
         </p>
       )}

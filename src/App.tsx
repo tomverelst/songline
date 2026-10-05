@@ -24,7 +24,7 @@ export default function App() {
     setGame((g) => (typeof update === 'function' ? (g ? update(g) : g) : update))
   }, [])
 
-  if (!authReady) return <div className="screen center muted">Loading…</div>
+  if (!authReady) return <div className="grid min-h-dvh place-items-center text-muted">Loading…</div>
 
   if (!game) return <SetupScreen onStart={setGame} initialError={authError} />
   if (game.status === 'finished') return <FinishedScreen game={game} onNewGame={() => setGame(null)} />

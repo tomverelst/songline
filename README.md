@@ -115,4 +115,5 @@ Every push to `main` is tested, built and published to GitHub Pages at
 - `src/spotify/`: PKCE login, playlists and Connect playback
 - `src/musicbrainz.ts`: original release year lookup, with fallback
 - `src/screens/`: the setup, game and results screens
-- `src/components/`: the timeline and the device picker
+- `src/components/`: shared UI (`ui.tsx`: buttons, cards, inputs, switches), the timeline and the device picker
+- Styling is Tailwind CSS v4: theme colours live in `@theme` in `src/index.css`; use utility classes and the components in `ui.tsx` rather than new CSS

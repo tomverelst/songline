@@ -22,6 +22,8 @@ import { YearInput } from '../components/YearInput'
 import { TimerButton } from '../components/TimerButton'
 import { Coin, Coins } from '../components/Coins'
 import { KEYS, load, save } from '../storage'
+import { Artwork, BottomBar, Button, Card, CardTitle, IconButton, Muted, Screen } from '../components/ui'
+import { cx } from '../components/classes'
 
 interface Props {
   game: GameState
@@ -155,106 +157,123 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
 
   const flipEnabled = !!game.settings.flipBetweenTurns
   const screen = (
-    <div className="screen game">
-      <header className="topbar">
-        <div className="scoreboard">
+    <Screen>
+      <header className="sticky top-0 z-[5] -mx-4 -mt-4 flex items-center gap-2 bg-bg p-4">
+        <div className="flex flex-1 gap-1.5 overflow-x-auto [scrollbar-width:none]">
           {game.players.map((p, i) => (
-            <div key={p.id} className={`chip ${i === game.currentPlayer ? 'active' : ''}`}>
-              <span className="chip-name">{p.name}</span>
-              <span className="chip-score">
+            <div
+              key={p.id}
+              className={cx(
+                'flex flex-none flex-col rounded-xl border px-3 py-1.5 text-[0.8rem]',
+                i === game.currentPlayer ? 'border-accent bg-accent/15' : 'border-line bg-surface',
+              )}
+            >
+              <span className="max-w-[10ch] truncate">{p.name}</span>
+              <span className="inline-flex items-center text-base font-extrabold tabular-nums">
                 {score(p, game.settings)}
                 <Coins count={p.bonus} />
               </span>
             </div>
           ))}
         </div>
-        <button className="icon-btn" aria-label="Menu" onClick={() => setMenuOpen(true)}>
+        <IconButton aria-label="Menu" onClick={() => setMenuOpen(true)}>
           ☰
-        </button>
+        </IconButton>
       </header>
 
       {!turn && (
         <>
-          <section className="turn-intro">
-            <p className="muted">Round {game.round}</p>
-            <h1>{player.name}</h1>
-            <p className="muted">It's your turn — grab the phone!</p>
+          <section className="flex min-h-[calc(100dvh-260px)] flex-col justify-center gap-3 text-center">
+            <p className="text-lg text-muted">Round {game.round}</p>
+            <h1 className="text-accent-gradient text-[clamp(3.5rem,18vw,6rem)] leading-none font-bold [overflow-wrap:anywhere]">
+              {player.name}
+            </h1>
+            <p className="text-lg text-muted">It's your turn — grab the phone!</p>
           </section>
-          <div className="bottom-bar">
-            <TimerButton
-              className="btn primary block"
-              onClick={startTurn}
-              timerMs={autoplayActive ? AUTOPLAY_MS : undefined}
-            >
+          <BottomBar>
+            <TimerButton variant="primary" block onClick={startTurn} timerMs={autoplayActive ? AUTOPLAY_MS : undefined}>
               ▶ Play mystery song
             </TimerButton>
-          </div>
+          </BottomBar>
         </>
       )}
 
       {turn?.phase === 'guess' && (
         <>
-          <section className="now-playing">
-            <div className={`vinyl ${playing ? 'spinning' : ''}`} aria-hidden>
-              <div className="vinyl-label">?</div>
+          <section className="flex items-center gap-4">
+            <div
+              className={cx(
+                'vinyl-grooves grid size-24 flex-none place-items-center rounded-full ring-2 ring-line',
+                playing && 'animate-vinyl',
+              )}
+              aria-hidden
+            >
+              <div className="grid size-10 place-items-center rounded-full bg-accent-gradient font-extrabold text-on-accent">
+                ?
+              </div>
             </div>
-            <div className="stack-sm grow">
-              <div className="muted small">{player.name} is guessing</div>
-              <div className="row">
-                <button className="btn small" onClick={togglePause}>
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <Muted>{player.name} is guessing</Muted>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button size="sm" onClick={togglePause}>
                   {playing ? '❚❚ Pause' : '▶ Play'}
-                </button>
-                <button className="btn small ghost" onClick={() => play(turn.song.uri)}>
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => play(turn.song.uri)}>
                   ↺ Restart
-                </button>
-                <button className="btn small ghost" onClick={skip}>
+                </Button>
+                <Button size="sm" variant="ghost" onClick={skip}>
                   ⏭ Skip
-                </button>
+                </Button>
               </div>
             </div>
           </section>
 
-          <section className="card stack-sm">
+          <Card className="gap-2">
             <YearInput value={turn.yearGuess} startYear={medianYear(player.timeline)} onChange={setYearGuess} />
-            <p className="guess-slot">{guessSlot && slotLabel(guessSlot)}</p>
-          </section>
+            <p className="min-h-6 text-center font-bold text-accent-2">{guessSlot && slotLabel(guessSlot)}</p>
+          </Card>
 
-          <section className="card stack-sm">
-            <h2>{player.name}'s cards</h2>
+          <Card className="gap-2">
+            <CardTitle>{player.name}'s cards</CardTitle>
             <Timeline
               timeline={player.timeline}
               selected={guessSlot}
               selectedLabel={guessSlot ? `🎵 ${turn.yearGuess}` : undefined}
             />
-          </section>
+          </Card>
 
-          <div className="bottom-bar">
-            <button className="btn primary block" disabled={!guessSlot || checkingYear} onClick={lockIn}>
+          <BottomBar>
+            <Button variant="primary" block disabled={!guessSlot || checkingYear} onClick={lockIn}>
               {checkingYear ? 'Checking the year…' : guessSlot ? `Lock in ${turn.yearGuess}` : 'Enter a year'}
-            </button>
-          </div>
+            </Button>
+          </BottomBar>
         </>
       )}
 
       {turn?.phase === 'reveal' && turn.result && (
         <>
           <section
-            className={`reveal ${turn.result.exactYear ? 'exact' : turn.result.placementCorrect ? 'correct' : 'wrong'}`}
-          >
-            {turn.song.albumArt ? (
-              <img className="album-art" src={turn.song.albumArt} alt="" />
-            ) : (
-              <div className="album-art placeholder-art">♪</div>
+            className={cx(
+              'flex animate-pop flex-col items-center gap-1.5 rounded-2xl border-2 bg-surface px-4 py-5 text-center',
+              turn.result.exactYear
+                ? 'border-gold bg-linear-to-b from-gold/10 to-surface to-55% shadow-[0_0_0_1px_var(--color-gold),0_0_32px_rgb(255_204_51/0.35)]'
+                : turn.result.placementCorrect
+                  ? 'border-good'
+                  : 'border-bad',
             )}
-            <div className="reveal-year">{turn.song.year}</div>
+          >
+            <Artwork src={turn.song.albumArt} className="size-45 rounded-xl text-5xl shadow-[0_12px_32px_rgb(0_0_0/0.5)]" />
+            <div className={cx('mt-2 text-[3.5rem] leading-none font-black tabular-nums', turn.result.exactYear && 'text-gold')}>
+              {turn.song.year}
+            </div>
             <YearSource song={turn.song} />
-            <div className="reveal-title">{turn.song.title}</div>
-            <div className="muted">{turn.song.artists.join(', ')}</div>
+            <div className="text-xl font-bold [overflow-wrap:anywhere]">{turn.song.title}</div>
+            <div className="text-muted">{turn.song.artists.join(', ')}</div>
           </section>
 
-          <section className="card stack-sm">
-            <h2>Points</h2>
-            <p className="muted small">Tap to change, e.g. if the year looks wrong.</p>
+          <Card className="gap-2">
+            <CardTitle>Points</CardTitle>
+            <Muted>Tap to change, e.g. if the year looks wrong.</Muted>
             <BonusToggle
               label={`Card (guessed ${turn.yearGuess})`}
               answer={turn.result.placementCorrect ? 'Goes in the timeline' : 'Wrong spot'}
@@ -282,44 +301,51 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
               value={turn.result.artistCorrect}
               onChange={(artistCorrect) => updateResult({ artistCorrect })}
             />
-          </section>
+          </Card>
 
-          <section className="card stack-sm">
-            <h2>{player.name}'s timeline</h2>
+          <Card className="gap-2">
+            <CardTitle>{player.name}'s timeline</CardTitle>
             <Timeline
               timeline={player.timeline}
               selected={turn.slot}
               selectedLabel={`🎵 ${turn.yearGuess}`}
               verdict={turn.result.placementCorrect ? 'correct' : 'wrong'}
             />
-          </section>
+          </Card>
 
-          <div className="bottom-bar">
-            <button className="btn primary block" onClick={nextTurn}>
+          <BottomBar>
+            <Button variant="primary" block onClick={nextTurn}>
               Continue
-            </button>
-          </div>
+            </Button>
+          </BottomBar>
         </>
       )}
 
       {error && (
-        <div className="toast" role="alert" onClick={() => setError(null)}>
+        <div
+          className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+92px)] z-20 mx-auto max-w-[528px] rounded-xl border border-bad bg-[#3a1620] px-4 py-3 text-sm"
+          role="alert"
+          onClick={() => setError(null)}
+        >
           {error}
         </div>
       )}
 
       {menuOpen && (
-        <div className="sheet-backdrop" onClick={() => setMenuOpen(false)}>
-          <div className="sheet stack" onClick={(e) => e.stopPropagation()}>
-            <div className="row between">
-              <h2>Game menu</h2>
-              <button className="icon-btn" aria-label="Close" onClick={() => setMenuOpen(false)}>
+        <div className="fixed inset-0 z-30 flex items-end bg-black/60" onClick={() => setMenuOpen(false)}>
+          <div
+            className="mx-auto flex max-h-[85dvh] w-full max-w-[560px] animate-slide-up flex-col gap-3 overflow-y-auto rounded-t-[20px] bg-surface px-4 pt-5 pb-[calc(env(safe-area-inset-bottom)+20px)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle>Game menu</CardTitle>
+              <IconButton aria-label="Close" onClick={() => setMenuOpen(false)}>
                 ✕
-              </button>
+              </IconButton>
             </div>
-            <p className="muted small">
+            <Muted>
               Playlist: {game.settings.playlistName} · {game.deck.length} songs left
-            </p>
+            </Muted>
             <DevicePicker
               deviceId={deviceId}
               onChange={(id) => {
@@ -327,8 +353,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
                 save(KEYS.device, id)
               }}
             />
-            <button
-              className="btn"
+            <Button
               onClick={() => {
                 if (confirm('End the game now? The highest score wins.')) {
                   pause(deviceId ?? undefined).catch(() => {})
@@ -337,9 +362,9 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
               }}
             >
               🏁 End game now
-            </button>
-            <button
-              className="btn danger"
+            </Button>
+            <Button
+              variant="danger"
               onClick={() => {
                 if (confirm('Quit without a winner?')) {
                   pause(deviceId ?? undefined).catch(() => {})
@@ -348,26 +373,33 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
               }}
             >
               Quit to setup
-            </button>
+            </Button>
           </div>
         </div>
       )}
-    </div>
+    </Screen>
   )
 
   if (!flipEnabled) return screen
   // The game lives in its own full-screen frame so it can be rotated as a whole;
   // fixed elements (bottom bar, menu) then stay pinned to the rotated frame.
   return (
-    <div className={`flip-frame ${isFlipped(game) ? 'flipped' : ''}`}>
-      <div className="flip-scroller">{screen}</div>
+    <div
+      className={cx(
+        'fixed inset-0 bg-bg transition-transform duration-700 ease-[cubic-bezier(0.65,0,0.35,1)]',
+        isFlipped(game) && 'rotate-180',
+      )}
+    >
+      <div data-scroller className="h-full overflow-y-auto overscroll-contain">
+        {screen}
+      </div>
     </div>
   )
 }
 
 function scrollToTop() {
   window.scrollTo(0, 0)
-  document.querySelector('.flip-scroller')?.scrollTo(0, 0)
+  document.querySelector('[data-scroller]')?.scrollTo(0, 0)
 }
 
 const YEAR_CHECK_WAIT_MS = 4000
@@ -376,13 +408,13 @@ const AUTOPLAY_MS = 5000
 function YearSource({ song }: { song: Song }) {
   if (song.yearSource === 'musicbrainz') {
     return (
-      <div className="muted small">
+      <Muted>
         Original release (MusicBrainz)
         {song.spotifyYear !== song.year && ` · Spotify album says ${song.spotifyYear}`}
-      </div>
+      </Muted>
     )
   }
-  return <div className="muted small">Album release date (Spotify) · could be a later reissue</div>
+  return <Muted>Album release date (Spotify) · could be a later reissue</Muted>
 }
 
 function medianYear(timeline: Song[]): number {
@@ -405,13 +437,27 @@ function BonusToggle({
   onChange: (v: boolean) => void
 }) {
   return (
-    <button className={`bonus-toggle ${value ? 'on' : ''}`} aria-pressed={value} onClick={() => onChange(!value)}>
-      <span className="bonus-check">{value ? '✓' : ''}</span>
-      <span className="grow stack-xs">
-        <span className="muted small">{label}</span>
-        <span className="option-title">{answer}</span>
+    <button
+      className={cx(
+        'flex min-h-16 w-full items-center gap-3 rounded-xl border px-3 py-2 text-left',
+        value ? 'border-good bg-good/12' : 'border-line bg-bg',
+      )}
+      aria-pressed={value}
+      onClick={() => onChange(!value)}
+    >
+      <span
+        className={cx(
+          'grid size-8 flex-none place-items-center rounded-lg border-2 font-black',
+          value ? 'border-good bg-good text-[#04130a]' : 'border-line',
+        )}
+      >
+        {value ? '✓' : ''}
       </span>
-      <span className="bonus-mark">
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="text-sm text-muted">{label}</span>
+        <span className="font-semibold">{answer}</span>
+      </span>
+      <span className={cx('inline-flex flex-none items-center gap-1 font-extrabold', value ? 'text-good' : 'text-muted')}>
         {value ? '+1' : '+0'}
         {coin && <Coin />}
       </span>
