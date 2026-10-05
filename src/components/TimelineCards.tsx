@@ -16,13 +16,15 @@ interface Props {
 const CARD_W = 160 // w-40
 const OVERLAP = 52
 const STEP = CARD_W - OVERLAP
-const TOP = 24 // pt-6
 /** Press this long on the guess card to pick it up. */
-const HOLD_MS = 300
+const HOLD_MS = 250
 /** Moving further than this before then means scrolling, not holding. */
 const HOLD_SLOP = 10
-/** Dragging this close to an edge scrolls the hand. */
-const EDGE = 48
+/** Dragging this close to an edge scrolls the hand, faster nearer the edge. */
+const EDGE = 72
+const MAX_EDGE_SPEED = 14
+/** How far the cards on either side of the drop gap move apart. */
+const GAP_SPREAD = STEP * 0.35
 
 const VERDICT_RING = {
   none: 'ring-2 ring-white/60',
@@ -37,10 +39,15 @@ interface Placement {
 }
 
 interface Drag {
-  /** Finger position, relative to the left of the hand. */
+  /** Finger position, relative to the hand's top left. */
   x: number
-  /** The card the guess would land on, if any. */
+  y: number
+  /** Where on the card the finger grabbed it, so the card doesn't jump. */
+  grabX: number
+  grabY: number
+  /** The card the guess would land on, or the gap (cards from this index on move aside). */
   onIndex: number | null
+  gapIndex: number | null
   /** Where the guess card was picked up from; it stays there, hidden. */
   from: Placement
 }
@@ -100,28 +107,38 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
     closeGap.current = false
   }, [dragging])
 
+  // Where the finger is while dragging, for the listeners below.
+  const finger = useRef({ x: 0, y: 0, grabX: 0 })
   useEffect(() => {
     if (!dragging) return
-    let x = 0
     let frameId = 0
     const place = () => {
       const el = scroller.current
       if (!el) return
-      const at = (el.scrollLeft + x - (firstCardLeft() + CARD_W / 2)) / STEP
+      const { x, y, grabX } = finger.current
+      // Where the middle of the held card is, in cards along the hand.
+      const cardMiddle = x - grabX + CARD_W / 2
+      const at = (el.scrollLeft + cardMiddle - (firstCardLeft() + CARD_W / 2)) / STEP
       const { years, guessYear: current, onSelectYear: select } = latest.current
       const { year, onIndex } = yearForPosition(years, current ?? years[0], at)
       if (year !== current) select?.(year)
-      setDrag((d) => d && { ...d, x, onIndex })
+      const gapIndex = onIndex === null ? Math.min(years.length, Math.max(0, Math.ceil(at))) : null
+      setDrag((d) => d && { ...d, x, y, onIndex, gapIndex })
     }
     const move = (e: PointerEvent) => {
-      x = e.clientX - (frame.current?.getBoundingClientRect().left ?? 0)
+      const rect = frame.current?.getBoundingClientRect()
+      finger.current.x = e.clientX - (rect?.left ?? 0)
+      finger.current.y = e.clientY - (rect?.top ?? 0)
       place()
     }
     // Scroll the hand while the card is held near an edge.
     const edgeScroll = () => {
       const el = scroller.current
-      if (el && x) {
-        const speed = x < EDGE ? -8 : x > el.clientWidth - EDGE ? 8 : 0
+      if (el) {
+        const { x } = finger.current
+        const fromRight = el.clientWidth - x
+        const speed =
+          x < EDGE ? -MAX_EDGE_SPEED * (1 - x / EDGE) : fromRight < EDGE ? MAX_EDGE_SPEED * (1 - fromRight / EDGE) : 0
         if (speed) {
           el.scrollLeft += speed
           place()
@@ -155,8 +172,9 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
   // Handlers for the guess card: press and hold to pick it up.
   const holdHandlers = onSelectYear
     ? {
-        onPointerDown: (e: React.PointerEvent) => {
+        onPointerDown: (e: React.PointerEvent<HTMLElement>) => {
           const { clientX: x, clientY: y } = e
+          const card = e.currentTarget
           cancelHold()
           hold.current = {
             x,
@@ -166,14 +184,14 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
             timer: window.setTimeout(() => {
               const h = hold.current
               hold.current = null
-              if (!h) return
+              if (!h || !frame.current) return
               navigator.vibrate?.(15)
               closeGap.current = ownSpotAt >= 0
-              setDrag({
-                x: h.x - (frame.current?.getBoundingClientRect().left ?? 0),
-                onIndex: null,
-                from: { onCardAt, ownSpotAt },
-              })
+              const hand = frame.current.getBoundingClientRect()
+              const picked = card.getBoundingClientRect()
+              const grab = { grabX: h.x - picked.left, grabY: h.y - picked.top }
+              finger.current = { x: h.x - hand.left, y: h.y - hand.top, grabX: grab.grabX }
+              setDrag({ ...finger.current, ...grab, onIndex: null, gapIndex: null, from: { onCardAt, ownSpotAt } })
             }, HOLD_MS),
           }
         },
@@ -191,9 +209,10 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
     : {}
 
   const back = guessYear !== undefined && <CardBack year={guessYear} ring={VERDICT_RING[verdict ?? 'none']} />
-  const cards: { key: string; content: ReactNode; year?: number; collapsed?: boolean }[] = songs.map((s, i) => ({
+  const cards: { key: string; content: ReactNode; year?: number; songIndex?: number; collapsed?: boolean }[] = songs.map((s, i) => ({
     key: s.id,
     year: s.year,
+    songIndex: i,
     content: (
       <>
         <CardFace song={s} covered={i === onCardAt && !dragging} highlight={drag?.onIndex === i} />
@@ -239,6 +258,13 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
           const d = i - middle
           const distance = Math.min(Math.abs(d), 3)
           const tappable = onSelectYear && card.year !== undefined
+          // While dragging, the cards on either side of the drop gap move apart.
+          const spread =
+            drag?.gapIndex != null && card.songIndex !== undefined
+              ? card.songIndex < drag.gapIndex
+                ? -GAP_SPREAD
+                : GAP_SPREAD
+              : 0
           return (
             // The wrapper sets the snap point; only the inner card tilts, so the
             // snap points don't move while the hand fans out.
@@ -256,7 +282,7 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
               <div
                 className="absolute inset-0 transition-transform duration-150 ease-out"
                 style={{
-                  transform: `translateY(${distance * distance * 5}px) rotate(${Math.max(-24, Math.min(24, d * 8))}deg) scale(${1 - distance * 0.05})`,
+                  transform: `translateX(${spread}px) translateY(${distance * distance * 5}px) rotate(${Math.max(-24, Math.min(24, d * 8))}deg) scale(${1 - distance * 0.05})`,
                   transformOrigin: '50% 120%',
                 }}
               >
@@ -271,7 +297,11 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
         // The picked-up guess card follows the finger.
         <div
           className="pointer-events-none absolute z-[200] h-56 w-40 scale-105 rotate-3 drop-shadow-[0_18px_30px_rgb(0_0_0/0.6)]"
-          style={{ left: drag.x - CARD_W / 2, top: TOP }}
+          style={{
+            // Keep most of the card on screen, however far the finger goes.
+            left: Math.min(Math.max(drag.x - drag.grabX, -CARD_W / 3), (frame.current?.clientWidth ?? 0) - (CARD_W * 2) / 3),
+            top: drag.y - drag.grabY,
+          }}
         >
           <CardBack year={guessYear} ring="ring-2 ring-white" />
         </div>

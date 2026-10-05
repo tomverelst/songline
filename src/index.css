@@ -83,6 +83,12 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  html,
+  body {
+    /* Never scroll the page sideways (e.g. when a dragged card pokes out). */
+    overflow-x: clip;
+  }
+
   body {
     @apply min-h-dvh bg-bg font-sans text-ink antialiased;
   }
