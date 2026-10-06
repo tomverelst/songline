@@ -87,8 +87,10 @@ function SongSheet({ song, playlistId, onClose }: { song: Song; playlistId: stri
               <span className="text-[2.6rem] leading-none font-black tabular-nums">{song.year}</span>
               <span className="mt-1 text-xl font-bold [overflow-wrap:anywhere]">{song.title}</span>
               <span className="text-muted">{song.artists.join(', ')}</span>
+              <span className="mt-1 -ml-1.5 self-start">
+                <LikeButton song={song} playlistId={playlistId} />
+              </span>
             </div>
-            <LikeButton song={song} playlistId={playlistId} />
             <IconButton aria-label="Close" onClick={onClose}>
               ✕
             </IconButton>

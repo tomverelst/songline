@@ -66,12 +66,14 @@ export function LikeButton({ song, playlistId, className }: Props) {
       <button
         aria-label={liked ? 'Add to playlist' : 'Add to Liked Songs'}
         className={cx(
-          'grid size-10 flex-none place-items-center rounded-full transition-transform active:scale-90',
+          'inline-flex h-9 flex-none items-center gap-1.5 rounded-full pr-3 pl-1.5 text-sm font-semibold whitespace-nowrap transition-transform active:scale-95',
+          liked ? 'text-[#1ed760]' : 'text-muted',
           className,
         )}
         onClick={tap}
       >
         {liked ? <AddedIcon className="animate-pop" /> : <AddIcon />}
+        {liked ? 'Liked' : 'Add to Liked'}
       </button>
       {open && (
         <AddToPlaylistSheet

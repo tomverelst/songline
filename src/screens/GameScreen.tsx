@@ -308,13 +308,9 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
               {turn.song.year}
             </div>
             <YearSource song={turn.song} />
-            <div className="flex items-center gap-1">
-              <div className="flex min-w-0 flex-col">
-                <div className="text-xl font-bold [overflow-wrap:anywhere]">{turn.song.title}</div>
-                <div className="text-muted">{turn.song.artists.join(', ')}</div>
-              </div>
-              <LikeButton song={turn.song} playlistId={game.settings.playlistId} />
-            </div>
+            <div className="text-xl font-bold [overflow-wrap:anywhere]">{turn.song.title}</div>
+            <div className="text-muted">{turn.song.artists.join(', ')}</div>
+            <LikeButton song={turn.song} playlistId={game.settings.playlistId} />
           </section>
 
           <Card className="gap-2">
