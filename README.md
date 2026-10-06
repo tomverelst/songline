@@ -52,6 +52,12 @@ in their personal timeline of songs.
   upside down every other turn, so the phone can lie in the middle of the table
   for players sitting across from each other. It can also be switched on or off
   mid-game from the ☰ menu.
+- **Advanced options** → **Sideways while guessing**: turns the guessing screen
+  on its side, with the controls on one side and a wide hand of cards on the
+  other, for a phone lying on the table between players. Together with **Flip
+  screen between turns** it faces the other side of the table every other turn.
+  A phone already held in landscape just gets the wide layout. It can also be
+  switched on or off mid-game from the ☰ menu.
 - **Advanced options** → **Avoid songs from earlier games** (on by default): the
   phone remembers every song that came up (mystery songs, skipped songs and
   starting cards). New games deal and play fresh songs first; songs you already

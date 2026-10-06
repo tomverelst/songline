@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { GameState, Song, TurnResult } from '../game/types'
 import {
   drawSong,
@@ -24,6 +24,7 @@ import { Coin, Coins } from '../components/Coins'
 import { KEYS, load, save } from '../storage'
 import { Artwork, BottomBar, Button, Card, CardTitle, IconButton, Muted, Screen, Switch, Toast } from '../components/ui'
 import { cx } from '../components/classes'
+import { ScreenRotation } from '../components/rotation'
 
 interface Props {
   game: GameState
@@ -162,29 +163,89 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
   }
 
   const flipEnabled = !!game.settings.flipBetweenTurns
+  const sidewaysEnabled = !!game.settings.sidewaysGuessing
+  const sideways = sidewaysEnabled && turn?.phase === 'guess'
+  // A phone already held in landscape needs the sideways layout, not turning.
+  const landscape = useLandscape()
+  const turned = sideways && !landscape
+  const angle = (turned ? 90 : 0) + (isFlipped(game) ? 180 : 0)
+  const scoreboard = (
+    <>
+      <div className="flex flex-1 gap-1.5 overflow-x-auto [scrollbar-width:none]">
+        {game.players.map((p, i) => (
+          <div
+            key={p.id}
+            className={cx(
+              'flex flex-none flex-col rounded-xl border px-3 py-1.5 text-[0.8rem]',
+              i === game.currentPlayer ? 'border-accent bg-accent/15' : 'border-line bg-surface',
+            )}
+          >
+            <span className="max-w-[10ch] truncate">{p.name}</span>
+            <span className="inline-flex items-center text-base font-extrabold tabular-nums">
+              {score(p, game.settings)}
+              <Coins count={p.bonus} />
+            </span>
+          </div>
+        ))}
+      </div>
+      <IconButton aria-label="Menu" onClick={() => setMenuOpen(true)}>
+        ☰
+      </IconButton>
+    </>
+  )
+  // The guessing screen's parts, laid out upright or sideways.
+  const songControls = turn?.phase === 'guess' && (
+    <section className="flex items-center gap-3">
+      <div
+        className={cx(
+          'vinyl-grooves grid size-16 flex-none place-items-center rounded-full ring-2 ring-line',
+          playing && 'animate-vinyl',
+        )}
+        aria-hidden
+      >
+        <div className="grid size-7 place-items-center rounded-full bg-accent-gradient text-sm font-extrabold text-on-accent">
+          ?
+        </div>
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <Muted className="truncate">{player.name} is guessing</Muted>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Button size="sm" className="px-3" onClick={togglePause}>
+            {playing ? '❚❚ Pause' : '▶ Play'}
+          </Button>
+          <Button size="sm" variant="ghost" className="px-3" onClick={() => play(turn.song.uri)}>
+            ↺ Restart
+          </Button>
+          <Button size="sm" variant="ghost" className="px-3" onClick={skip}>
+            ⏭ Skip
+          </Button>
+        </div>
+      </div>
+    </section>
+  )
+  const yearInput = turn?.phase === 'guess' && (
+    <YearInput
+      value={turn.yearGuess}
+      startYear={medianYear(player.timeline)}
+      onChange={setYearGuess}
+    />
+  )
+  const hand = turn?.phase === 'guess' && (
+    <TimelineCards
+      timeline={player.timeline}
+      guessYear={guessSlot ? turn.yearGuess : undefined}
+      onSelectYear={setYearGuess}
+    />
+  )
+  const lockButton = turn?.phase === 'guess' && (
+    <Button variant="primary" block disabled={!guessSlot || checkingYear} onClick={lockIn}>
+      {checkingYear ? 'Checking the year…' : guessSlot ? `Lock in ${turn.yearGuess}` : 'Enter a year'}
+    </Button>
+  )
   const screen = (
     <Screen>
       <header className="sticky top-0 z-[5] -mx-4 -mt-4 flex items-center gap-2 bg-bg p-4">
-        <div className="flex flex-1 gap-1.5 overflow-x-auto [scrollbar-width:none]">
-          {game.players.map((p, i) => (
-            <div
-              key={p.id}
-              className={cx(
-                'flex flex-none flex-col rounded-xl border px-3 py-1.5 text-[0.8rem]',
-                i === game.currentPlayer ? 'border-accent bg-accent/15' : 'border-line bg-surface',
-              )}
-            >
-              <span className="max-w-[10ch] truncate">{p.name}</span>
-              <span className="inline-flex items-center text-base font-extrabold tabular-nums">
-                {score(p, game.settings)}
-                <Coins count={p.bonus} />
-              </span>
-            </div>
-          ))}
-        </div>
-        <IconButton aria-label="Menu" onClick={() => setMenuOpen(true)}>
-          ☰
-        </IconButton>
+        {scoreboard}
       </header>
 
       {!turn && (
@@ -204,54 +265,14 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
         </>
       )}
 
-      {turn?.phase === 'guess' && (
+      {turn?.phase === 'guess' && !sideways && (
         <>
-          <section className="flex items-center gap-3">
-            <div
-              className={cx(
-                'vinyl-grooves grid size-16 flex-none place-items-center rounded-full ring-2 ring-line',
-                playing && 'animate-vinyl',
-              )}
-              aria-hidden
-            >
-              <div className="grid size-7 place-items-center rounded-full bg-accent-gradient text-sm font-extrabold text-on-accent">
-                ?
-              </div>
-            </div>
-            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-              <Muted className="truncate">{player.name} is guessing</Muted>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <Button size="sm" className="px-3" onClick={togglePause}>
-                  {playing ? '❚❚ Pause' : '▶ Play'}
-                </Button>
-                <Button size="sm" variant="ghost" className="px-3" onClick={() => play(turn.song.uri)}>
-                  ↺ Restart
-                </Button>
-                <Button size="sm" variant="ghost" className="px-3" onClick={skip}>
-                  ⏭ Skip
-                </Button>
-              </div>
-            </div>
-          </section>
-
+          {songControls}
           <Card className="gap-2">
-            <YearInput
-              value={turn.yearGuess}
-              startYear={medianYear(player.timeline)}
-              onChange={setYearGuess}
-            />
-            <TimelineCards
-              timeline={player.timeline}
-              guessYear={guessSlot ? turn.yearGuess : undefined}
-              onSelectYear={setYearGuess}
-            />
+            {yearInput}
+            {hand}
           </Card>
-
-          <BottomBar>
-            <Button variant="primary" block disabled={!guessSlot || checkingYear} onClick={lockIn}>
-              {checkingYear ? 'Checking the year…' : guessSlot ? `Lock in ${turn.yearGuess}` : 'Enter a year'}
-            </Button>
-          </BottomBar>
+          <BottomBar>{lockButton}</BottomBar>
         </>
       )}
 
@@ -324,13 +345,16 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
           </BottomBar>
         </>
       )}
-
+    </Screen>
+  )
+  const overlays = (
+    <>
       {error && <Toast onDismiss={() => setError(null)}>{error}</Toast>}
 
       {menuOpen && (
         <div className="fixed inset-0 z-30 flex items-end bg-black/60" onClick={() => setMenuOpen(false)}>
           <div
-            className="mx-auto flex max-h-[85dvh] w-full max-w-[560px] animate-slide-up flex-col gap-3 overflow-y-auto rounded-t-[20px] bg-surface px-4 pt-5 pb-[calc(env(safe-area-inset-bottom)+20px)]"
+            className="mx-auto flex max-h-[85%] w-full max-w-[560px] animate-slide-up flex-col gap-3 overflow-y-auto rounded-t-[20px] bg-surface px-4 pt-5 pb-[calc(env(safe-area-inset-bottom)+20px)]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between gap-2">
@@ -348,6 +372,12 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
                 setDeviceId(id)
                 save(KEYS.device, id)
               }}
+            />
+            <Switch
+              title="Sideways while guessing"
+              description="Turns the guessing screen on its side, for a phone lying on the table."
+              checked={sidewaysEnabled}
+              onChange={(sidewaysGuessing) => onChange((g) => ({ ...g, settings: { ...g.settings, sidewaysGuessing } }))}
             />
             <Switch
               title="Flip screen between turns"
@@ -379,23 +409,62 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
           </div>
         </div>
       )}
-    </Screen>
+    </>
   )
 
-  if (!flipEnabled) return screen
-  // The game lives in its own full-screen frame so it can be rotated as a whole;
-  // fixed elements (bottom bar, menu) then stay pinned to the rotated frame.
+  const content = sideways ? (
+    // Landscape: the controls on the left, the hand of cards filling the rest.
+    <div className="grid h-full grid-cols-[minmax(0,21rem)_minmax(0,1fr)] gap-4 px-4 py-3">
+      <div className="flex min-h-0 flex-col gap-3 overflow-y-auto [scrollbar-width:none]">
+        <header className="flex items-center gap-2">{scoreboard}</header>
+        {songControls}
+        {yearInput}
+        <div className="mt-auto">{lockButton}</div>
+      </div>
+      <div className="flex min-w-0 flex-col justify-center">{hand}</div>
+    </div>
+  ) : (
+    screen
+  )
+
+  if (!flipEnabled && !sidewaysEnabled)
+    return (
+      <>
+        {content}
+        {overlays}
+      </>
+    )
+  // The game lives in its own full-screen frame so it can be turned as a whole;
+  // fixed elements (bottom bar, menu) then stay pinned to the turned frame.
   return (
-    <div
-      className={cx(
-        'fixed inset-0 bg-bg transition-transform duration-700 ease-[cubic-bezier(0.65,0,0.35,1)]',
-        isFlipped(game) && 'rotate-180',
-      )}
-    >
-      <div data-scroller className="h-full overflow-y-auto overscroll-contain">
-        {screen}
+    <div className="fixed inset-0 overflow-hidden bg-bg">
+      <div
+        className={cx(
+          'absolute top-1/2 left-1/2 bg-bg transition-transform duration-700 ease-[cubic-bezier(0.65,0,0.35,1)]',
+          turned ? 'h-[100dvw] w-[100dvh]' : 'size-full',
+        )}
+        style={{ transform: `translate(-50%, -50%) rotate(${angle}deg)` }}
+      >
+        <ScreenRotation value={angle}>
+          <div data-scroller className="h-full overflow-y-auto overscroll-contain">
+            {content}
+          </div>
+          {overlays}
+        </ScreenRotation>
       </div>
     </div>
+  )
+}
+
+/** Whether the phone is held (or the window is) wider than tall. */
+function useLandscape() {
+  return useSyncExternalStore(
+    (onChange) => {
+      const query = window.matchMedia('(orientation: landscape)')
+      query.addEventListener('change', onChange)
+      return () => query.removeEventListener('change', onChange)
+    },
+    () => window.matchMedia('(orientation: landscape)').matches,
   )
 }
 

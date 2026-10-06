@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import { yearForPosition } from '../game/logic'
 import type { Song } from '../game/types'
 import { cx } from './classes'
+import { rotateVector, toLocal, useScreenRotation, type Point } from './rotation'
 
 interface Props {
   timeline: Song[]
@@ -14,6 +15,7 @@ interface Props {
 }
 
 const CARD_W = 160 // w-40
+const CARD_H = 224 // h-56
 const OVERLAP = 52
 const STEP = CARD_W - OVERLAP
 /** Press this long on the guess card to pick it up. */
@@ -98,9 +100,12 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
   }, [focusAt, count, dragging])
 
   // The latest props, for the window listeners while dragging.
-  const latest = useRef({ guessYear, onSelectYear, years: songs.map((s) => s.year) })
+  // The screen may be turned (sideways or upside down); fingers move in
+  // screen coordinates, the hand in its own.
+  const angle = useScreenRotation()
+  const latest = useRef({ guessYear, onSelectYear, years: songs.map((s) => s.year), angle })
   useEffect(() => {
-    latest.current = { guessYear, onSelectYear, years: songs.map((s) => s.year) }
+    latest.current = { guessYear, onSelectYear, years: songs.map((s) => s.year), angle }
   })
 
   // When the guess leaves its own spot, the cards after it close the gap;
@@ -126,10 +131,10 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
     if (moved && !prefersReducedMotion()) {
       cardLayers.current.forEach((el, key) => {
         const from = lastCenters.current.get(key)
-        if (from) slide(el, from, centerOf(el))
+        if (from) slide(el, from, centerOf(el), angle)
       })
       const from = flyFrom.current ?? lastGuessCenter.current
-      if (guessLayer.current && from) slide(guessLayer.current, from, centerOf(guessLayer.current), flyFrom.current?.tilt)
+      if (guessLayer.current && from) slide(guessLayer.current, from, centerOf(guessLayer.current), angle, flyFrom.current?.tilt)
     }
     flyFrom.current = null
     lastCenters.current = new Map([...cardLayers.current].map(([key, el]) => [key, centerOf(el)]))
@@ -191,9 +196,10 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
       setDrag((d) => d && { ...d, x, y, onIndex, gapIndex })
     }
     const move = (e: PointerEvent) => {
-      const rect = frame.current?.getBoundingClientRect()
-      finger.current.x = e.clientX - (rect?.left ?? 0)
-      finger.current.y = e.clientY - (rect?.top ?? 0)
+      if (!frame.current) return
+      const at = toLocal({ x: e.clientX, y: e.clientY }, frame.current, latest.current.angle)
+      finger.current.x = at.x
+      finger.current.y = at.y
       place()
     }
     // The held card tilts like a card at its spot in the fan: upright in the
@@ -257,10 +263,10 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
               isDragging.current = true
               navigator.vibrate?.(15)
               closeGap.current = ownSpotAt >= 0
-              const hand = frame.current.getBoundingClientRect()
-              const picked = card.getBoundingClientRect()
-              const grab = { grabX: h.x - picked.left, grabY: h.y - picked.top }
-              finger.current = { x: h.x - hand.left, y: h.y - hand.top, grabX: grab.grabX }
+              const at = toLocal(h, frame.current, angle)
+              const picked = toLocal(centerOf(card), frame.current, angle)
+              const grab = { grabX: at.x - (picked.x - CARD_W / 2), grabY: at.y - (picked.y - CARD_H / 2) }
+              finger.current = { x: at.x, y: at.y, grabX: grab.grabX }
               setDrag({ ...finger.current, ...grab, onIndex: null, gapIndex: null, from: { onCardAt, ownSpotAt } })
             }, HOLD_MS),
           }
@@ -396,11 +402,6 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
   )
 }
 
-interface Point {
-  x: number
-  y: number
-}
-
 function centerOf(el: Element): Point {
   const r = el.getBoundingClientRect()
   return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
@@ -410,10 +411,12 @@ function prefersReducedMotion() {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 }
 
-/** Animates an element from `from` to where it now is (`to`), optionally untilting. */
-function slide(el: HTMLElement, from: Point, to: Point, tilt = 0) {
-  const dx = from.x - to.x
-  const dy = from.y - to.y
+/**
+ * Animates an element from `from` to where it now is (`to`), optionally
+ * untilting. Both are on the screen, which is turned by `angle`.
+ */
+function slide(el: HTMLElement, from: Point, to: Point, angle: number, tilt = 0) {
+  const { x: dx, y: dy } = rotateVector({ x: from.x - to.x, y: from.y - to.y }, -angle)
   if (Math.abs(dx) < 1 && Math.abs(dy) < 1 && !tilt) return
   el.animate([{ transform: `translate(${dx}px, ${dy}px) rotate(${tilt}deg)` }, { transform: 'none' }], {
     duration: 320,

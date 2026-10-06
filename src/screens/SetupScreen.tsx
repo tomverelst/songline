@@ -42,6 +42,7 @@ interface SetupDraft {
   bonusCountsTowardsGoal: boolean
   autoplay: boolean
   flipBetweenTurns: boolean
+  sidewaysGuessing: boolean
   avoidPlayedSongs: boolean
   playlist: PlaylistSummary | null
 }
@@ -53,6 +54,7 @@ const DEFAULT_DRAFT: SetupDraft = {
   bonusCountsTowardsGoal: false,
   autoplay: true,
   flipBetweenTurns: false,
+  sidewaysGuessing: false,
   avoidPlayedSongs: true,
   playlist: null,
 }
@@ -107,6 +109,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
           bonusCountsTowardsGoal: draft.bonusCountsTowardsGoal,
           autoplay: draft.autoplay,
           flipBetweenTurns: draft.flipBetweenTurns,
+          sidewaysGuessing: draft.sidewaysGuessing,
           playlistId: draft.playlist.id,
           playlistName,
         },
@@ -236,6 +239,12 @@ export function SetupScreen({ onStart, initialError }: Props) {
             description="Start the next mystery song by itself 2.5 seconds after showing whose turn it is."
             checked={draft.autoplay}
             onChange={(autoplay) => update({ autoplay })}
+          />
+          <Switch
+            title="Sideways while guessing"
+            description="Turns the guessing screen on its side, for a phone lying on the table between players."
+            checked={draft.sidewaysGuessing}
+            onChange={(sidewaysGuessing) => update({ sidewaysGuessing })}
           />
           <Switch
             title="Flip screen between turns"
