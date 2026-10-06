@@ -66,13 +66,8 @@ export function TableView(props: Props) {
 
       <CardRow timeline={timeline} guessYear={yearGuess} onSelectYear={onSelectYear} />
 
-      <footer className="flex items-center gap-3 px-4 pb-3">
-        <div className="w-28 flex-none text-center">
-          <div className="text-[0.65rem] font-bold tracking-[0.2em] text-muted uppercase">Your guess</div>
-          <div className={cx('text-[2.6rem] leading-none font-black tabular-nums', yearGuess === undefined && 'text-line')}>
-            {yearGuess ?? '????'}
-          </div>
-        </div>
+      {/* The ruler runs the full width so its needle lines up under the guess card. */}
+      <footer className="relative pb-3">
         <YearRuler
           value={yearGuess}
           startYear={startYear}
@@ -80,7 +75,7 @@ export function TableView(props: Props) {
           onChange={onSelectYear}
         />
         <button
-          className="h-14 flex-none rounded-full bg-accent-gradient px-6 text-lg font-extrabold text-on-accent shadow-[0_8px_24px_rgb(255_77_141/0.35)] disabled:opacity-40 disabled:shadow-none"
+          className="absolute top-[calc(50%-0.375rem)] right-4 h-14 -translate-y-1/2 rounded-full bg-accent-gradient px-6 text-lg font-extrabold text-on-accent shadow-[0_8px_24px_rgb(255_77_141/0.35)] disabled:bg-none disabled:bg-surface-2 disabled:text-muted disabled:shadow-none"
           disabled={props.lockDisabled}
           onClick={props.onLock}
         >
@@ -214,7 +209,7 @@ function YearRuler({
   const marked = new Set(marks)
 
   return (
-    <div className="relative min-w-0 flex-1">
+    <div className="relative">
       <div
         ref={ruler}
         className="snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [mask-image:linear-gradient(to_right,transparent,black_18%,black_82%,transparent)]"
