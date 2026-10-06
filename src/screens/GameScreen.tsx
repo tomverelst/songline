@@ -405,7 +405,7 @@ function scrollToTop() {
 }
 
 const YEAR_CHECK_WAIT_MS = 4000
-const AUTOPLAY_MS = 5000
+const AUTOPLAY_MS = 2500
 
 function YearSource({ song }: { song: Song }) {
   if (song.yearSource === 'musicbrainz') {

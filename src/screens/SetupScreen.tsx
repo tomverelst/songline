@@ -233,7 +233,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
           />
           <Switch
             title="Autoplay"
-            description="Start the next mystery song by itself 5 seconds after showing whose turn it is."
+            description="Start the next mystery song by itself 2.5 seconds after showing whose turn it is."
             checked={draft.autoplay}
             onChange={(autoplay) => update({ autoplay })}
           />
