@@ -40,6 +40,8 @@ const SLOT = CARD_W + GAP
  */
 export function TableView(props: Props) {
   const { scoreboard, playerName, timeline, yearGuess, startYear, onSelectYear, playing } = props
+  // Moves the ruler along with a swipe on the cards.
+  const followRuler = useRef<((year: number) => void) | null>(null)
   return (
     <div className="flex h-full flex-col select-none bg-[radial-gradient(ellipse_at_50%_55%,rgb(255_255_255/0.06),transparent_70%)]">
       <header className="flex items-center gap-3 px-4 pt-3">
@@ -74,12 +76,13 @@ export function TableView(props: Props) {
         timeline={timeline}
         guessYear={yearGuess}
         onSelectYear={onSelectYear}
-        swipe={props.swipeCards ? { startYear } : undefined}
+        swipe={props.swipeCards ? { startYear, onMove: (year) => followRuler.current?.(year) } : undefined}
       />
 
       {/* The ruler runs the full width so its needle lines up under the guess card. */}
       <footer className="relative pb-3">
         <YearRuler
+          followRef={followRuler}
           value={yearGuess}
           startYear={startYear}
           marks={timeline.map((s) => s.year)}
@@ -132,10 +135,14 @@ function CardRow({
    * row changes the year (from `startYear` if nothing is guessed yet); the
    * other cards slide past it.
    */
-  swipe?: { startYear: number }
+  swipe?: { startYear: number; onMove: (exactYear: number) => void }
 }) {
   const scroller = useRef<HTMLDivElement>(null)
-  const swipeHandlers = useYearSwipe(guessYear ?? swipe?.startYear ?? 0, (year) => onSelectYear?.(year))
+  const swipeHandlers = useYearSwipe(
+    guessYear ?? swipe?.startYear ?? 0,
+    (year) => onSelectYear?.(year),
+    (exactYear) => swipe?.onMove(exactYear),
+  )
   const songs = [...timeline].sort((a, b) => a.year - b.year)
   const onCardAt = guessYear === undefined ? -1 : songs.map((s) => s.year).lastIndexOf(guessYear)
   const ownSpotAt =
@@ -219,11 +226,11 @@ const SWIPE_PX = 22
  * to later years, like pulling the row of cards along. A flick keeps going
  * for a moment. A tap still reaches the card under the finger.
  */
-function useYearSwipe(year: number, onChange: (year: number) => void) {
+function useYearSwipe(year: number, onChange: (year: number) => void, onMove: (exactYear: number) => void) {
   const angle = useScreenRotation()
-  const latest = useRef({ year, onChange, angle })
+  const latest = useRef({ year, onChange, onMove, angle })
   useEffect(() => {
-    latest.current = { year, onChange, angle }
+    latest.current = { year, onChange, onMove, angle }
   })
   const gesture = useRef<{ x: number; y: number; base: number; moved: boolean; lastX: number; lastT: number; v: number } | null>(
     null,
@@ -235,7 +242,9 @@ function useYearSwipe(year: number, onChange: (year: number) => void) {
   // How far the finger moved along the row, whichever way the screen is turned.
   const along = (dx: number, dy: number) => rotateVector({ x: dx, y: dy }, -latest.current.angle).x
   const setYear = (base: number, distance: number) => {
-    const next = Math.min(MAX_YEAR, Math.max(MIN_YEAR, Math.round(base - distance / SWIPE_PX)))
+    const exact = Math.min(MAX_YEAR, Math.max(MIN_YEAR, base - distance / SWIPE_PX))
+    latest.current.onMove(exact)
+    const next = Math.round(exact)
     if (next !== latest.current.year) {
       navigator.vibrate?.(4)
       latest.current.year = next
@@ -412,11 +421,14 @@ const TICK = 12
  * The years of your cards are marked on it.
  */
 function YearRuler({
+  followRef,
   value,
   startYear,
   marks,
   onChange,
 }: {
+  /** Gets a function that moves the ruler to a (fractional) year right away. */
+  followRef: { current: ((year: number) => void) | null }
   value: number | undefined
   startYear: number
   marks: number[]
@@ -427,10 +439,36 @@ function YearRuler({
   // so the years it passes on the way aren't taken as the guess.
   const following = useRef(false)
   const first = useRef(true)
+  // Set while the ruler moves along with a swipe elsewhere.
+  const live = useRef(0)
+
+  useEffect(() => {
+    followRef.current = (year) => {
+      const el = ruler.current
+      if (!el) return
+      // Glide freely with the finger; snap to the year once it stops.
+      following.current = true
+      el.style.scrollSnapType = 'none'
+      el.scrollLeft = (year - MIN_YEAR) * TICK
+      clearTimeout(live.current)
+      live.current = window.setTimeout(() => {
+        live.current = 0
+        el.style.scrollSnapType = ''
+        el.scrollTo({ left: Math.round(year - MIN_YEAR) * TICK, behavior: 'smooth' })
+        window.setTimeout(() => {
+          if (!live.current) following.current = false
+        }, 400)
+      }, 150)
+    }
+    return () => {
+      followRef.current = null
+      clearTimeout(live.current)
+    }
+  }, [followRef])
 
   useEffect(() => {
     const el = ruler.current
-    if (!el) return
+    if (!el || live.current) return
     const target = ((value ?? startYear) - MIN_YEAR) * TICK
     if (Math.abs(el.scrollLeft - target) < TICK / 2) return
     following.current = true
