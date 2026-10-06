@@ -72,7 +72,7 @@ export function HoldToOpen({ song, children }: { song: Song; children: ReactNode
 
 function SongSheet({ song, playlistId, onClose }: { song: Song; playlistId: string; onClose: () => void }) {
   return (
-    <div className="@container fixed inset-0 z-[35] flex items-end bg-black/60" onClick={onClose}>
+    <div className="@container fixed inset-0 z-[35] flex items-end bg-black/60 text-left" onClick={onClose}>
       <div
         className="mx-auto flex max-h-[90%] w-full max-w-[560px] animate-slide-up flex-col gap-4 overflow-y-auto rounded-t-[20px] bg-surface p-4 pb-[calc(env(safe-area-inset-bottom)+20px)] @min-[36rem]:flex-row @min-[36rem]:items-center"
         onClick={(e) => e.stopPropagation()}

@@ -71,15 +71,7 @@ export function LikeButton({ song, playlistId, className }: Props) {
         )}
         onClick={tap}
       >
-        {liked ? (
-          <span className="grid size-7 animate-pop place-items-center rounded-full bg-[#1ed760] text-sm font-black text-black">
-            ✓
-          </span>
-        ) : (
-          <span className="grid size-7 place-items-center rounded-full border-2 border-muted text-lg leading-none font-bold text-muted">
-            +
-          </span>
-        )}
+        {liked ? <AddedIcon className="animate-pop" /> : <AddIcon />}
       </button>
       {open && (
         <AddToPlaylistSheet
@@ -160,7 +152,7 @@ function AddToPlaylistSheet({
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end bg-black/60" onClick={onClose}>
+    <div className="fixed inset-0 z-40 flex items-end bg-black/60 text-left" onClick={onClose}>
       <div
         className="mx-auto flex max-h-[90%] w-full max-w-[560px] animate-slide-up flex-col rounded-t-[20px] bg-surface pt-4 pb-[calc(env(safe-area-inset-bottom)+16px)]"
         onClick={(e) => e.stopPropagation()}
@@ -254,12 +246,32 @@ function Row({
         {subtitle && <span className="text-sm text-muted">{subtitle}</span>}
       </span>
       {checked ? (
-        <span className="grid size-6 flex-none place-items-center rounded-full bg-[#1ed760] text-xs font-black text-black">
-          ✓
-        </span>
+        <AddedIcon className="flex-none" />
       ) : (
-        <span className="size-6 flex-none rounded-full border-2 border-muted" />
+        <svg viewBox="0 0 24 24" className="size-6 flex-none text-muted" aria-hidden>
+          <circle cx="12" cy="12" r="10.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
+        </svg>
       )}
     </button>
+  )
+}
+
+// Spotify's icons: a thin outlined circle with a plus, and a filled green
+// circle with a check once the song is saved.
+function AddIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-6 text-muted" aria-hidden>
+      <circle cx="12" cy="12" r="10.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M12 7.5v9M7.5 12h9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function AddedIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={cx('size-6', className)} aria-hidden>
+      <circle cx="12" cy="12" r="11" fill="#1ed760" />
+      <path d="M7.25 12.25l3.25 3.25 6.25-6.75" fill="none" stroke="#000" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   )
 }
