@@ -303,14 +303,16 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
                   : 'border-bad',
             )}
           >
-            <Artwork src={turn.song.albumArt} className="size-45 rounded-xl text-5xl shadow-[0_12px_32px_rgb(0_0_0/0.5)]" />
+            <div className="relative">
+              <Artwork src={turn.song.albumArt} className="size-45 rounded-xl text-5xl shadow-[0_12px_32px_rgb(0_0_0/0.5)]" />
+              <LikeButton song={turn.song} playlistId={game.settings.playlistId} onArt className="absolute right-2 bottom-2" />
+            </div>
             <div className={cx('mt-2 text-[3.5rem] leading-none font-black tabular-nums', turn.result.exactYear && 'text-gold')}>
               {turn.song.year}
             </div>
             <YearSource song={turn.song} />
             <div className="text-xl font-bold [overflow-wrap:anywhere]">{turn.song.title}</div>
             <div className="text-muted">{turn.song.artists.join(', ')}</div>
-            <LikeButton song={turn.song} playlistId={game.settings.playlistId} />
           </section>
 
           <Card className="gap-2">
@@ -460,7 +462,9 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
         exact={turn.result.exactYear}
         song={turn.song}
         yearSource={<YearSource song={turn.song} />}
-        likeButton={<LikeButton song={turn.song} playlistId={game.settings.playlistId} />}
+        likeButton={
+          <LikeButton song={turn.song} playlistId={game.settings.playlistId} onArt iconOnly className="absolute -right-2 -bottom-2" />
+        }
         points={[
           { label: 'Card', value: turn.result.placementCorrect, onChange: (placementCorrect) => updateResult({ placementCorrect }) },
           { label: 'Exact year', coin: true, value: turn.result.exactYear, onChange: (exactYear) => updateResult({ exactYear }) },

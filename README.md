@@ -70,7 +70,7 @@ in their personal timeline of songs.
   starting cards). New games deal and play fresh songs first; songs you already
   heard only come up once those run out. **Forget played songs** clears the list.
 
-**⊕ Save the song:** on the reveal, the ⊕ next to the title saves the song to
+**⊕ Save the song:** on the reveal, the ⊕ on the corner of the album art saves the song to
 your Liked Songs and opens **Add to playlist**: Liked Songs at the top, then your
 own playlists. Every tick saves straight away. Press and hold any
 card in a timeline (or tap a song on the final scores) to open it: the song

@@ -16,6 +16,10 @@ interface Props {
   song: Song
   /** The game's playlist: the song is in it already. */
   playlistId: string
+  /** Lies on the corner of album art: a dark backdrop so it reads on any cover. */
+  onArt?: boolean
+  /** Just the icon, for small spaces. */
+  iconOnly?: boolean
   className?: string
 }
 
@@ -42,7 +46,7 @@ function myPlaylists() {
  * the "Add to playlist" sheet; once liked it shows a green ✓ and opens the
  * sheet straight away.
  */
-export function LikeButton({ song, playlistId, className }: Props) {
+export function LikeButton({ song, playlistId, onArt, iconOnly, className }: Props) {
   const allowed = hasAllScopes()
   const [liked, setLikedState] = useState<boolean | null>(null)
   const [open, setOpen] = useState(false)
@@ -71,14 +75,16 @@ export function LikeButton({ song, playlistId, className }: Props) {
       <button
         aria-label={liked ? 'Add to playlist' : 'Add to Liked Songs'}
         className={cx(
-          'inline-flex h-9 flex-none items-center gap-1.5 rounded-full pr-3 pl-1.5 text-sm font-semibold whitespace-nowrap transition-transform active:scale-95',
-          liked ? 'text-[#1ed760]' : 'text-muted',
+          'inline-flex h-9 flex-none items-center gap-1.5 rounded-full pl-1.5 text-sm font-semibold whitespace-nowrap transition-transform active:scale-95',
+          iconOnly ? 'pr-1.5' : 'pr-3',
+          onArt && 'bg-black/70 backdrop-blur-sm',
+          liked ? 'text-[#1ed760]' : onArt ? 'text-white' : 'text-muted',
           className,
         )}
         onClick={tap}
       >
         {liked ? <AddedIcon className="animate-pop" /> : <AddIcon />}
-        {liked ? 'Liked' : 'Add to Liked'}
+        {!iconOnly && (liked ? 'Liked' : 'Add to Liked')}
       </button>
       {open && (
         <AddToPlaylistSheet
@@ -259,7 +265,7 @@ function Row({
 // circle with a check once the song is saved.
 function AddIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="size-6 text-muted" aria-hidden>
+    <svg viewBox="0 0 24 24" className="size-6" aria-hidden>
       <circle cx="12" cy="12" r="10.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
       <path d="M12 7.5v9M7.5 12h9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>

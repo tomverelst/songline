@@ -77,19 +77,19 @@ function SongSheet({ song, playlistId, onClose }: { song: Song; playlistId: stri
         className="mx-auto flex max-h-[90%] w-full max-w-[560px] animate-slide-up flex-col gap-4 overflow-y-auto rounded-t-[20px] bg-surface p-4 pb-[calc(env(safe-area-inset-bottom)+20px)] @min-[36rem]:flex-row @min-[36rem]:items-center"
         onClick={(e) => e.stopPropagation()}
       >
-        <Artwork
-          src={song.albumArt}
-          className="aspect-square w-full max-w-64 self-center rounded-xl text-6xl shadow-[0_12px_32px_rgb(0_0_0/0.5)] @min-[36rem]:w-44"
-        />
+        <div className="relative w-full max-w-64 self-center @min-[36rem]:w-44">
+          <Artwork
+            src={song.albumArt}
+            className="aspect-square w-full rounded-xl text-6xl shadow-[0_12px_32px_rgb(0_0_0/0.5)]"
+          />
+          <LikeButton song={song} playlistId={playlistId} onArt className="absolute right-2 bottom-2" />
+        </div>
         <div className="flex min-w-0 flex-1 flex-col gap-3">
           <div className="flex items-start gap-2">
             <div className="flex min-w-0 flex-1 flex-col">
               <span className="text-[2.6rem] leading-none font-black tabular-nums">{song.year}</span>
               <span className="mt-1 text-xl font-bold [overflow-wrap:anywhere]">{song.title}</span>
               <span className="text-muted">{song.artists.join(', ')}</span>
-              <span className="mt-1 -ml-1.5 self-start">
-                <LikeButton song={song} playlistId={playlistId} />
-              </span>
             </div>
             <IconButton aria-label="Close" onClick={onClose}>
               ✕
