@@ -424,6 +424,8 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
               checked={flipEnabled}
               onChange={(flipBetweenTurns) => onChange((g) => ({ ...g, settings: { ...g.settings, flipBetweenTurns } }))}
             />
+            {/* Pull-to-refresh can't reach the turned game screen; the game is saved, so this is safe. */}
+            <Button onClick={() => window.location.reload()}>↻ Reload</Button>
             <Button
               onClick={() => {
                 if (confirm('End the game now? The highest score wins.')) {
