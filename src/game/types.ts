@@ -62,6 +62,8 @@ export interface GameSettings {
   flipBetweenTurns?: boolean
   /** Advanced: a phone turned on its side while guessing shows the table view. Unset means on. */
   tableView?: boolean
+  /** Advanced: in the table view, the guess card stays in the middle and swiping the cards changes the year. */
+  swipeCards?: boolean
   playlistId: string
   playlistName: string
 }

@@ -45,6 +45,7 @@ interface SetupDraft {
   autoplay: boolean
   flipBetweenTurns: boolean
   tableView: boolean
+  swipeCards: boolean
   avoidPlayedSongs: boolean
   playlist: PlaylistSummary | null
 }
@@ -57,6 +58,7 @@ const DEFAULT_DRAFT: SetupDraft = {
   autoplay: true,
   flipBetweenTurns: false,
   tableView: true,
+  swipeCards: false,
   avoidPlayedSongs: true,
   playlist: null,
 }
@@ -114,6 +116,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
           autoplay: draft.autoplay,
           flipBetweenTurns: draft.flipBetweenTurns,
           tableView: draft.tableView,
+          swipeCards: draft.swipeCards,
           playlistId: draft.playlist.id,
           playlistName,
         },
@@ -250,6 +253,14 @@ export function SetupScreen({ onStart, initialError }: Props) {
             checked={draft.tableView}
             onChange={(tableView) => update({ tableView })}
           />
+          {draft.tableView && (
+            <Switch
+              title="Guess card stays in the middle"
+              description="In the table view, swipe anywhere on the cards to change the year; they slide past your guess."
+              checked={draft.swipeCards}
+              onChange={(swipeCards) => update({ swipeCards })}
+            />
+          )}
           <Switch
             title="Flip screen between turns"
             description="Turns the screen upside down every other turn, for players sitting across the table."

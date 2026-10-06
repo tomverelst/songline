@@ -56,7 +56,9 @@ in their personal timeline of songs.
   turn the phone on its side while guessing and the screen switches to a table
   view: your cards lie in one straight row, and you pick the year by swiping a
   ruler along the bottom (your cards' years are dotted on it). Tap a card to
-  guess its year. The reveal gets a matching view: the song on one side, your
+  guess its year. With **Guess card stays in the middle**, the guess card
+  stays put and you swipe anywhere on the cards to change the year (a flick
+  keeps going); the cards slide past it. The reveal gets a matching view: the song on one side, your
   row of cards with the guess ringed green or red, and the points as chips to
   tap along the bottom. The screen follows the phone's motion sensor, so it faces
   whoever holds it, even with auto-rotate locked; held upside down it flips.

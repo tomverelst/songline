@@ -405,6 +405,14 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
                 onChange((g) => ({ ...g, settings: { ...g.settings, tableView } }))
               }}
             />
+            {tableViewEnabled && (
+              <Switch
+                title="Guess card stays in the middle"
+                description="In the table view, swipe anywhere on the cards to change the year; they slide past your guess."
+                checked={!!game.settings.swipeCards}
+                onChange={(swipeCards) => onChange((g) => ({ ...g, settings: { ...g.settings, swipeCards } }))}
+              />
+            )}
             <Switch
               title="Flip screen between turns"
               description="Upside down every other turn, for players across the table."
@@ -472,6 +480,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
         lockLabel={checkingYear ? 'Checking…' : guessSlot ? 'Lock in' : 'Pick a year'}
         lockDisabled={!guessSlot || checkingYear}
         onLock={lockIn}
+        swipeCards={!!game.settings.swipeCards}
       />
   ) : (
     screen
