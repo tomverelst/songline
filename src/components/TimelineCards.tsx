@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import { yearForPosition } from '../game/logic'
 import type { Song } from '../game/types'
 import { cx } from './classes'
+import { HoldToOpen } from './SongDetails'
 import { rotateVector, toLocal, useScreenRotation, type Point } from './rotation'
 
 interface Props {
@@ -291,7 +292,9 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
     songIndex: i,
     content: (
       <>
-        <CardFace song={s} highlight={drag?.onIndex === i} />
+        <HoldToOpen song={s}>
+          <CardFace song={s} highlight={drag?.onIndex === i} />
+        </HoldToOpen>
         {i === onCardAt && (
           // Lies on top, shifted so the card underneath still shows.
           <div

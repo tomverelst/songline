@@ -1,8 +1,10 @@
 import type { Song } from '../game/types'
 import { distinctYears } from '../game/logic'
+import { useOpenSong } from './openSong'
 
 /** A player's cards as a compact list, grouped by year (used on the end screen). */
 export function Timeline({ timeline }: { timeline: Song[] }) {
+  const open = useOpenSong()
   return (
     <ol className="flex flex-col gap-1.5">
       {distinctYears(timeline).map((year) => (
@@ -12,10 +14,15 @@ export function Timeline({ timeline }: { timeline: Song[] }) {
             {timeline
               .filter((s) => s.year === year)
               .map((s) => (
-                <span key={s.id} className="flex flex-col">
+                <button
+                  key={s.id}
+                  className="flex flex-col text-left disabled:cursor-default"
+                  disabled={!open}
+                  onClick={() => open?.(s)}
+                >
                   <span className="truncate">{s.title}</span>
                   <span className="truncate text-sm text-muted">{s.artists.join(', ')}</span>
-                </span>
+                </button>
               ))}
           </span>
         </li>

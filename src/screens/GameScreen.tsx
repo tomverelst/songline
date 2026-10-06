@@ -19,6 +19,7 @@ import { describePlaybackError, pause, playSong, resume, SpotifyError } from '..
 import { TimelineCards } from '../components/TimelineCards'
 import { TableReveal, TableView } from '../components/TableView'
 import { LikeButton } from '../components/LikeButton'
+import { SongDetailsProvider } from '../components/SongDetails'
 import { DevicePicker } from '../components/DevicePicker'
 import { YearInput } from '../components/YearInput'
 import { TimerButton } from '../components/TimerButton'
@@ -505,10 +506,13 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
         style={{ transform: `translate(-50%, -50%) rotate(${angle}deg)` }}
       >
         <ScreenRotation value={angle}>
-          <div data-scroller className="h-full overflow-y-auto overscroll-contain">
-            {content}
-          </div>
-          {overlays}
+          {/* Hold a card to open its song. */}
+          <SongDetailsProvider playlistId={game.settings.playlistId}>
+            <div data-scroller className="h-full overflow-y-auto overscroll-contain">
+              {content}
+            </div>
+            {overlays}
+          </SongDetailsProvider>
         </ScreenRotation>
       </div>
     </div>

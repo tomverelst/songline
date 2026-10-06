@@ -3,6 +3,7 @@ import { MAX_YEAR, MIN_YEAR } from '../game/logic'
 import type { Song } from '../game/types'
 import { CardBack, CardFace } from './TimelineCards'
 import { cx } from './classes'
+import { HoldToOpen } from './SongDetails'
 import { Coin } from './Coins'
 import { Artwork } from './ui'
 import { rotateVector, useScreenRotation } from './rotation'
@@ -40,7 +41,7 @@ const SLOT = CARD_W + GAP
 export function TableView(props: Props) {
   const { scoreboard, playerName, timeline, yearGuess, startYear, onSelectYear, playing } = props
   return (
-    <div className="flex h-full flex-col bg-[radial-gradient(ellipse_at_50%_55%,rgb(255_255_255/0.06),transparent_70%)]">
+    <div className="flex h-full flex-col select-none bg-[radial-gradient(ellipse_at_50%_55%,rgb(255_255_255/0.06),transparent_70%)]">
       <header className="flex items-center gap-3 px-4 pt-3">
         <div
           className={cx(
@@ -175,12 +176,14 @@ function CardRow({
           <button
             key={song.id}
             aria-label={onSelectYear ? `Guess ${song.year}` : `${song.title}, ${song.year}`}
-            disabled={!onSelectYear}
-            className={cx('absolute top-0 left-0', glide)}
+            // Not disabled when there's nothing to guess: it can still be held open.
+            className={cx('absolute top-0 left-0', !onSelectYear && 'cursor-default', glide)}
             style={{ width: CARD_W, height: CARD_H, transform: `translateX(${slotOf(i) * SLOT}px)` }}
             onClick={() => onSelectYear?.(song.year)}
           >
-            <CardFace song={song} highlight={false} />
+            <HoldToOpen song={song}>
+              <CardFace song={song} highlight={false} />
+            </HoldToOpen>
           </button>
         ))}
         {guessYear !== undefined && (
@@ -323,7 +326,7 @@ export function TableReveal({
   onContinue: () => void
 }) {
   return (
-    <div className="flex h-full flex-col bg-[radial-gradient(ellipse_at_50%_55%,rgb(255_255_255/0.06),transparent_70%)]">
+    <div className="flex h-full flex-col select-none bg-[radial-gradient(ellipse_at_50%_55%,rgb(255_255_255/0.06),transparent_70%)]">
       <header className="flex items-center gap-3 px-4 pt-3">
         <div className="flex min-w-0 flex-col leading-tight">
           <span className="text-xs text-muted">{playerName}</span>
