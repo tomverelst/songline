@@ -427,7 +427,7 @@ function slide(el: HTMLElement, from: Point, to: Point, angle: number, tilt = 0)
 const CARD = 'absolute inset-0 overflow-hidden rounded-2xl border-2 border-line shadow-[0_10px_30px_rgb(0_0_0/0.45)]'
 
 /** `highlight`: the dragged guess card would land on this card. */
-function CardFace({ song, highlight }: { song: Song; highlight: boolean }) {
+export function CardFace({ song, highlight }: { song: Song; highlight: boolean }) {
   return (
     <div className={cx(CARD, 'bg-surface-2', highlight && 'border-accent ring-4 ring-accent/60')}>
       {song.albumArt ? (
@@ -448,7 +448,7 @@ function CardFace({ song, highlight }: { song: Song; highlight: boolean }) {
 }
 
 /** The mystery song, face down: the card back from the loading screen. */
-function CardBack({ year, ring }: { year: number; ring: string }) {
+export function CardBack({ year, ring }: { year: number; ring: string }) {
   return (
     <div className={cx(CARD, 'grid place-items-center bg-accent-gradient text-on-accent', ring)}>
       <div className="absolute inset-2.5 rounded-xl border-2 border-dashed border-on-accent/25" />

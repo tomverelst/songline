@@ -17,6 +17,7 @@ import { rememberSongs } from '../history'
 import { celebrateCard, celebrateExact } from '../party'
 import { describePlaybackError, pause, playSong, resume, SpotifyError } from '../spotify/api'
 import { TimelineCards } from '../components/TimelineCards'
+import { TableView } from '../components/TableView'
 import { DevicePicker } from '../components/DevicePicker'
 import { YearInput } from '../components/YearInput'
 import { TimerButton } from '../components/TimerButton'
@@ -412,17 +413,23 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
     </>
   )
 
-  const content = sideways ? (
-    // Landscape: the controls on the left, the hand of cards filling the rest.
-    <div className="grid h-full grid-cols-[minmax(0,21rem)_minmax(0,1fr)] gap-4 px-4 py-3">
-      <div className="flex min-h-0 flex-col gap-3 overflow-y-auto [scrollbar-width:none]">
-        <header className="flex items-center gap-2">{scoreboard}</header>
-        {songControls}
-        {yearInput}
-        <div className="mt-auto">{lockButton}</div>
-      </div>
-      <div className="flex min-w-0 flex-col justify-center">{hand}</div>
-    </div>
+  const content =
+    sideways && turn ? (
+      <TableView
+        scoreboard={scoreboard}
+        playerName={player.name}
+        timeline={player.timeline}
+        yearGuess={turn.yearGuess}
+        startYear={medianYear(player.timeline)}
+        onSelectYear={setYearGuess}
+        playing={playing}
+        onTogglePause={togglePause}
+        onRestart={() => play(turn.song.uri)}
+        onSkip={skip}
+        lockLabel={checkingYear ? 'Checking…' : guessSlot ? 'Lock in' : 'Pick a year'}
+        lockDisabled={!guessSlot || checkingYear}
+        onLock={lockIn}
+      />
   ) : (
     screen
   )
