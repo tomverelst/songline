@@ -190,6 +190,25 @@ export async function getPlaylistSongs(id: string): Promise<Song[]> {
   return songs
 }
 
+// ---------- Liked Songs and playlists ----------
+
+export async function isLiked(uri: string): Promise<boolean> {
+  const [liked] = await request<boolean[]>(`/me/library/contains?uris=${encodeURIComponent(uri)}`)
+  return !!liked
+}
+
+export async function setLiked(uri: string, liked: boolean) {
+  await request(`/me/library?uris=${encodeURIComponent(uri)}`, { method: liked ? 'PUT' : 'DELETE' })
+}
+
+export async function addToPlaylist(playlistId: string, uri: string) {
+  await request(`/playlists/${playlistId}/items`, { method: 'POST', body: JSON.stringify({ uris: [uri] }) })
+}
+
+export async function removeFromPlaylist(playlistId: string, uri: string) {
+  await request(`/playlists/${playlistId}/items`, { method: 'DELETE', body: JSON.stringify({ items: [{ uri }] }) })
+}
+
 // ---------- Playback (Spotify Connect) ----------
 
 export interface Device {

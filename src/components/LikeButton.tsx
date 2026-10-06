@@ -1,0 +1,265 @@
+import { useEffect, useState } from 'react'
+import type { Song } from '../game/types'
+import {
+  addToPlaylist,
+  getMyPlaylists,
+  isLiked,
+  removeFromPlaylist,
+  setLiked,
+  type PlaylistSummary,
+} from '../spotify/api'
+import { hasAllScopes, login } from '../spotify/auth'
+import { cx } from './classes'
+import { Artwork, Button, Spinner } from './ui'
+
+interface Props {
+  song: Song
+  /** The game's playlist: the song is in it already. */
+  playlistId: string
+  className?: string
+}
+
+// Playlists you added songs to during this visit, so the sheet remembers them.
+const addedTo = new Map<string, Set<string>>()
+let playlistsPromise: Promise<PlaylistSummary[]> | null = null
+function myPlaylists() {
+  playlistsPromise ??= getMyPlaylists()
+    .then((all) => all.filter((p) => p.readable))
+    .catch((e) => {
+      playlistsPromise = null
+      throw e
+    })
+  return playlistsPromise
+}
+
+/**
+ * Spotify's ⊕ button: the first tap saves the song to Liked Songs and opens
+ * the "Add to playlist" sheet; once liked it shows a green ✓ and opens the
+ * sheet straight away.
+ */
+export function LikeButton({ song, playlistId, className }: Props) {
+  const allowed = hasAllScopes()
+  const [liked, setLikedState] = useState<boolean | null>(null)
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (!allowed) return
+    let current = true
+    isLiked(song.uri)
+      .then((l) => current && setLikedState(l))
+      .catch(() => {})
+    return () => {
+      current = false
+    }
+  }, [song.uri, allowed])
+
+  const tap = () => {
+    if (allowed && !liked) {
+      setLikedState(true)
+      setLiked(song.uri, true).catch(() => setLikedState(false))
+    }
+    setOpen(true)
+  }
+
+  return (
+    <>
+      <button
+        aria-label={liked ? 'Add to playlist' : 'Add to Liked Songs'}
+        className={cx(
+          'grid size-10 flex-none place-items-center rounded-full transition-transform active:scale-90',
+          className,
+        )}
+        onClick={tap}
+      >
+        {liked ? (
+          <span className="grid size-7 animate-pop place-items-center rounded-full bg-[#1ed760] text-sm font-black text-black">
+            ✓
+          </span>
+        ) : (
+          <span className="grid size-7 place-items-center rounded-full border-2 border-muted text-lg leading-none font-bold text-muted">
+            +
+          </span>
+        )}
+      </button>
+      {open && (
+        <AddToPlaylistSheet
+          song={song}
+          playlistId={playlistId}
+          allowed={allowed}
+          liked={liked ?? true}
+          onLikedChange={setLikedState}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
+  )
+}
+
+function AddToPlaylistSheet({
+  song,
+  playlistId,
+  allowed,
+  liked,
+  onLikedChange,
+  onClose,
+}: {
+  song: Song
+  playlistId: string
+  allowed: boolean
+  liked: boolean
+  onLikedChange: (liked: boolean) => void
+  onClose: () => void
+}) {
+  const [playlists, setPlaylists] = useState<PlaylistSummary[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  // Where the song is now, and where you want it (applied on Done, like Spotify).
+  const [initial] = useState(() => new Set([playlistId, ...(addedTo.get(song.uri) ?? [])]))
+  const [wantLiked, setWantLiked] = useState(liked)
+  const [want, setWant] = useState(() => new Set(initial))
+
+  useEffect(() => {
+    if (!allowed) return
+    myPlaylists()
+      .then(setPlaylists)
+      .catch((e) => setError((e as Error).message))
+  }, [allowed])
+
+  const toggle = (id: string) =>
+    setWant((w) => {
+      const next = new Set(w)
+      if (!next.delete(id)) next.add(id)
+      return next
+    })
+
+  async function done() {
+    setSaving(true)
+    setError(null)
+    try {
+      if (wantLiked !== liked) {
+        await setLiked(song.uri, wantLiked)
+        onLikedChange(wantLiked)
+      }
+      const added = addedTo.get(song.uri) ?? new Set<string>()
+      for (const p of playlists ?? []) {
+        if (want.has(p.id) && !initial.has(p.id)) {
+          await addToPlaylist(p.id, song.uri)
+          added.add(p.id)
+        } else if (!want.has(p.id) && initial.has(p.id)) {
+          await removeFromPlaylist(p.id, song.uri)
+          added.delete(p.id)
+        }
+      }
+      addedTo.set(song.uri, added)
+      onClose()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-end bg-black/60" onClick={onClose}>
+      <div
+        className="mx-auto flex max-h-[90%] w-full max-w-[560px] animate-slide-up flex-col rounded-t-[20px] bg-surface pt-4 pb-[calc(env(safe-area-inset-bottom)+16px)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line" />
+        <div className="flex items-center gap-3 px-4 pb-3">
+          <Artwork src={song.albumArt} className="size-12 rounded-md text-xl" />
+          <div className="flex min-w-0 flex-col">
+            <span className="text-lg font-extrabold">Add to playlist</span>
+            <span className="truncate text-sm text-muted">
+              {song.title} · {song.artists.join(', ')}
+            </span>
+          </div>
+        </div>
+
+        {!allowed ? (
+          <div className="flex flex-col gap-3 px-4 pb-2">
+            <p className="text-muted">
+              To save songs, Spotify needs you to log in again once. Your game stays where it is.
+            </p>
+            <Button variant="spotify" block onClick={() => login()}>
+              Log in to Spotify again
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2">
+              <Row
+                title="Liked Songs"
+                tile={
+                  <div className="grid size-12 place-items-center rounded-md bg-linear-135 from-[#450af5] to-[#c4efd9] text-xl text-white">
+                    ♥
+                  </div>
+                }
+                checked={wantLiked}
+                onToggle={() => setWantLiked((l) => !l)}
+              />
+              <div className="px-2 pt-3 pb-1 text-xs font-bold tracking-wider text-muted uppercase">Your playlists</div>
+              {playlists === null && !error && (
+                <div className="grid place-items-center py-6">
+                  <Spinner />
+                </div>
+              )}
+              {playlists?.map((p) => (
+                <Row
+                  key={p.id}
+                  title={p.name}
+                  subtitle={p.trackCount !== undefined ? `${p.trackCount} songs` : undefined}
+                  tile={<Artwork src={p.image} className="size-12 rounded-md text-xl" />}
+                  checked={want.has(p.id)}
+                  onToggle={() => toggle(p.id)}
+                />
+              ))}
+            </div>
+            {error && <p className="px-4 pt-2 text-sm text-bad">{error}</p>}
+            <div className="px-4 pt-3">
+              <Button variant="spotify" block disabled={saving} onClick={done}>
+                {saving ? 'Saving…' : 'Done'}
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function Row({
+  title,
+  subtitle,
+  tile,
+  checked,
+  onToggle,
+}: {
+  title: string
+  subtitle?: string
+  tile: React.ReactNode
+  checked: boolean
+  onToggle: () => void
+}) {
+  return (
+    <button
+      role="checkbox"
+      aria-checked={checked}
+      className="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left active:bg-surface-2"
+      onClick={onToggle}
+    >
+      {tile}
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate font-semibold">{title}</span>
+        {subtitle && <span className="text-sm text-muted">{subtitle}</span>}
+      </span>
+      {checked ? (
+        <span className="grid size-6 flex-none place-items-center rounded-full bg-[#1ed760] text-xs font-black text-black">
+          ✓
+        </span>
+      ) : (
+        <span className="size-6 flex-none rounded-full border-2 border-muted" />
+      )}
+    </button>
+  )
+}

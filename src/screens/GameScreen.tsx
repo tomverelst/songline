@@ -18,6 +18,7 @@ import { celebrateCard, celebrateExact } from '../party'
 import { describePlaybackError, pause, playSong, resume, SpotifyError } from '../spotify/api'
 import { TimelineCards } from '../components/TimelineCards'
 import { TableReveal, TableView } from '../components/TableView'
+import { LikeButton } from '../components/LikeButton'
 import { DevicePicker } from '../components/DevicePicker'
 import { YearInput } from '../components/YearInput'
 import { TimerButton } from '../components/TimerButton'
@@ -306,8 +307,13 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
               {turn.song.year}
             </div>
             <YearSource song={turn.song} />
-            <div className="text-xl font-bold [overflow-wrap:anywhere]">{turn.song.title}</div>
-            <div className="text-muted">{turn.song.artists.join(', ')}</div>
+            <div className="flex items-center gap-1">
+              <div className="flex min-w-0 flex-col">
+                <div className="text-xl font-bold [overflow-wrap:anywhere]">{turn.song.title}</div>
+                <div className="text-muted">{turn.song.artists.join(', ')}</div>
+              </div>
+              <LikeButton song={turn.song} playlistId={game.settings.playlistId} />
+            </div>
           </section>
 
           <Card className="gap-2">
@@ -457,6 +463,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
         exact={turn.result.exactYear}
         song={turn.song}
         yearSource={<YearSource song={turn.song} />}
+        likeButton={<LikeButton song={turn.song} playlistId={game.settings.playlistId} />}
         points={[
           { label: 'Card', value: turn.result.placementCorrect, onChange: (placementCorrect) => updateResult({ placementCorrect }) },
           { label: 'Exact year', coin: true, value: turn.result.exactYear, onChange: (exactYear) => updateResult({ exactYear }) },

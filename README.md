@@ -70,6 +70,11 @@ in their personal timeline of songs.
   starting cards). New games deal and play fresh songs first; songs you already
   heard only come up once those run out. **Forget played songs** clears the list.
 
+**⊕ Save the song:** on the reveal, the ⊕ next to the title saves the song to
+your Liked Songs and opens **Add to playlist**: Liked Songs at the top, then your
+own playlists to tick, saved when you tap **Done** (like in Spotify). Logins
+from before this feature need to log in to Spotify once more for it.
+
 **Skip** next to Pause and Restart throws away a song with a wrong year or one
 that won't play. The ☰ menu lets you switch the playback device, end the game
 early, or quit.

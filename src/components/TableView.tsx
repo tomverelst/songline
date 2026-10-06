@@ -304,6 +304,7 @@ export function TableReveal({
   exact,
   song,
   yearSource,
+  likeButton,
   points,
   onContinue,
 }: {
@@ -316,6 +317,8 @@ export function TableReveal({
   song: Song
   /** Where the year comes from, in small print. */
   yearSource: ReactNode
+  /** Save the song to Liked Songs or a playlist. */
+  likeButton: ReactNode
   points: Points[]
   onContinue: () => void
 }) {
@@ -348,9 +351,12 @@ export function TableReveal({
           )}
         >
           <Artwork src={song.albumArt} className="size-20 rounded-lg text-3xl shadow-[0_8px_20px_rgb(0_0_0/0.5)]" />
-          <div className="flex min-w-0 flex-col">
-            <span className={cx('text-[2.6rem] leading-none font-black tabular-nums', exact && 'text-gold')}>
-              {song.year}
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="flex items-center justify-between">
+              <span className={cx('text-[2.6rem] leading-none font-black tabular-nums', exact && 'text-gold')}>
+                {song.year}
+              </span>
+              {likeButton}
             </span>
             <span className="mt-1 line-clamp-2 leading-tight font-bold">{song.title}</span>
             <span className="truncate text-sm text-muted">{song.artists.join(', ')}</span>

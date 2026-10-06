@@ -6,6 +6,11 @@ const SCOPES = [
   'playlist-read-collaborative',
   'user-read-playback-state',
   'user-modify-playback-state',
+  // Liking songs and adding them to playlists.
+  'user-library-read',
+  'user-library-modify',
+  'playlist-modify-public',
+  'playlist-modify-private',
 ]
 
 // Songline's own Spotify app. Client IDs are public (PKCE needs no secret).
@@ -18,6 +23,8 @@ const VERIFIER_KEY = 'songline.pkceVerifier'
 interface StoredToken {
   accessToken: string
   refreshToken: string
+  /** What the user allowed; missing for logins from before it was stored. */
+  scope?: string
   expiresAt: number
 }
 
@@ -71,6 +78,15 @@ export function isLoggedIn(): boolean {
   return readToken() !== null
 }
 
+/**
+ * Whether the login allows everything the game asks for now. Logins from
+ * before a feature was added (e.g. liking songs) need to log in again.
+ */
+export function hasAllScopes(): boolean {
+  const granted = new Set(readToken()?.scope?.split(' '))
+  return SCOPES.every((s) => granted.has(s))
+}
+
 function readToken(): StoredToken | null {
   try {
     return JSON.parse(localStorage.getItem(TOKEN_KEY) || 'null')
@@ -79,10 +95,14 @@ function readToken(): StoredToken | null {
   }
 }
 
-function storeToken(body: { access_token: string; refresh_token?: string; expires_in: number }, previousRefresh = '') {
+function storeToken(
+  body: { access_token: string; refresh_token?: string; expires_in: number; scope?: string },
+  previous?: StoredToken,
+) {
   const token: StoredToken = {
     accessToken: body.access_token,
-    refreshToken: body.refresh_token || previousRefresh,
+    refreshToken: body.refresh_token || previous?.refreshToken || '',
+    scope: body.scope ?? previous?.scope,
     expiresAt: Date.now() + (body.expires_in - 60) * 1000,
   }
   localStorage.setItem(TOKEN_KEY, JSON.stringify(token))
@@ -145,7 +165,7 @@ export async function getAccessToken(forceRefresh = false): Promise<string> {
   if (!token) throw new Error('Not logged in to Spotify.')
   if (!forceRefresh && Date.now() < token.expiresAt) return token.accessToken
   refreshing ??= tokenRequest({ grant_type: 'refresh_token', refresh_token: token.refreshToken })
-    .then((body) => storeToken(body, token.refreshToken))
+    .then((body) => storeToken(body, token))
     .catch((e) => {
       logout()
       throw e
