@@ -19,8 +19,13 @@ interface Props {
   className?: string
 }
 
-// Playlists you added songs to during this visit, so the sheet remembers them.
-const addedTo = new Map<string, Set<string>>()
+// Which of your playlists each song is in, as far as this visit knows: the
+// game's playlist to begin with, plus whatever you tick here.
+const inPlaylists = new Map<string, Set<string>>()
+function playlistsWith(uri: string, gamePlaylist: string) {
+  if (!inPlaylists.has(uri)) inPlaylists.set(uri, new Set([gamePlaylist]))
+  return inPlaylists.get(uri)!
+}
 let playlistsPromise: Promise<PlaylistSummary[]> | null = null
 function myPlaylists() {
   playlistsPromise ??= getMyPlaylists()
@@ -106,11 +111,9 @@ function AddToPlaylistSheet({
 }) {
   const [playlists, setPlaylists] = useState<PlaylistSummary[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
-  // Where the song is now, and where you want it (applied on Done, like Spotify).
-  const [initial] = useState(() => new Set([playlistId, ...(addedTo.get(song.uri) ?? [])]))
-  const [wantLiked, setWantLiked] = useState(liked)
-  const [want, setWant] = useState(() => new Set(initial))
+  // Every tick saves straight away; a failed save puts the tick back.
+  const [likedNow, setLikedNow] = useState(liked)
+  const [ticked, setTicked] = useState(() => new Set(playlistsWith(song.uri, playlistId)))
 
   useEffect(() => {
     if (!allowed) return
@@ -119,38 +122,32 @@ function AddToPlaylistSheet({
       .catch((e) => setError((e as Error).message))
   }, [allowed])
 
-  const toggle = (id: string) =>
-    setWant((w) => {
-      const next = new Set(w)
-      if (!next.delete(id)) next.add(id)
-      return next
-    })
-
-  async function done() {
-    setSaving(true)
+  const toggleLiked = () => {
+    const on = !likedNow
+    setLikedNow(on)
+    onLikedChange(on)
     setError(null)
-    try {
-      if (wantLiked !== liked) {
-        await setLiked(song.uri, wantLiked)
-        onLikedChange(wantLiked)
-      }
-      const added = addedTo.get(song.uri) ?? new Set<string>()
-      for (const p of playlists ?? []) {
-        if (want.has(p.id) && !initial.has(p.id)) {
-          await addToPlaylist(p.id, song.uri)
-          added.add(p.id)
-        } else if (!want.has(p.id) && initial.has(p.id)) {
-          await removeFromPlaylist(p.id, song.uri)
-          added.delete(p.id)
-        }
-      }
-      addedTo.set(song.uri, added)
-      onClose()
-    } catch (e) {
+    setLiked(song.uri, on).catch((e) => {
+      setLikedNow(!on)
+      onLikedChange(!on)
       setError((e as Error).message)
-    } finally {
-      setSaving(false)
+    })
+  }
+
+  const toggle = (id: string) => {
+    const on = !ticked.has(id)
+    const set = (value: boolean) => {
+      const where = playlistsWith(song.uri, playlistId)
+      if (value) where.add(id)
+      else where.delete(id)
+      setTicked(new Set(where))
     }
+    set(on)
+    setError(null)
+    ;(on ? addToPlaylist(id, song.uri) : removeFromPlaylist(id, song.uri)).catch((e) => {
+      set(!on)
+      setError((e as Error).message)
+    })
   }
 
   return (
@@ -189,8 +186,8 @@ function AddToPlaylistSheet({
                     ♥
                   </div>
                 }
-                checked={wantLiked}
-                onToggle={() => setWantLiked((l) => !l)}
+                checked={likedNow}
+                onToggle={toggleLiked}
               />
               <div className="px-2 pt-3 pb-1 text-xs font-bold tracking-wider text-muted uppercase">Your playlists</div>
               {playlists === null && !error && (
@@ -204,15 +201,15 @@ function AddToPlaylistSheet({
                   title={p.name}
                   subtitle={p.trackCount !== undefined ? `${p.trackCount} songs` : undefined}
                   tile={<Artwork src={p.image} className="size-12 rounded-md text-xl" />}
-                  checked={want.has(p.id)}
+                  checked={ticked.has(p.id)}
                   onToggle={() => toggle(p.id)}
                 />
               ))}
             </div>
             {error && <p className="px-4 pt-2 text-sm text-bad">{error}</p>}
             <div className="px-4 pt-3">
-              <Button variant="spotify" block disabled={saving} onClick={done}>
-                {saving ? 'Saving…' : 'Done'}
+              <Button variant="spotify" block onClick={onClose}>
+                Done
               </Button>
             </div>
           </>

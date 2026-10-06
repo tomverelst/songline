@@ -72,7 +72,7 @@ in their personal timeline of songs.
 
 **⊕ Save the song:** on the reveal, the ⊕ next to the title saves the song to
 your Liked Songs and opens **Add to playlist**: Liked Songs at the top, then your
-own playlists to tick, saved when you tap **Done** (like in Spotify). Press and hold any
+own playlists. Every tick saves straight away. Press and hold any
 card in a timeline (or tap a song on the final scores) to open it: the song
 with the same ⊕, and a link to open it in Spotify. Logins
 from before this feature need to log in to Spotify once more for it.
