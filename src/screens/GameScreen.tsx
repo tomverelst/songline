@@ -17,7 +17,7 @@ import { rememberSongs } from '../history'
 import { celebrateCard, celebrateExact } from '../party'
 import { describePlaybackError, pause, playSong, resume, SpotifyError } from '../spotify/api'
 import { TimelineCards } from '../components/TimelineCards'
-import { TableView } from '../components/TableView'
+import { TableReveal, TableView } from '../components/TableView'
 import { DevicePicker } from '../components/DevicePicker'
 import { YearInput } from '../components/YearInput'
 import { TimerButton } from '../components/TimerButton'
@@ -168,7 +168,8 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
   const flipEnabled = !!game.settings.flipBetweenTurns
   const fullscreen = useFullscreen()
   const tableViewEnabled = game.settings.tableView !== false
-  const guessing = turn?.phase === 'guess'
+  // The guess and the reveal have a table view for a phone on its side.
+  const tablePhase = turn?.phase === 'guess' || turn?.phase === 'reveal'
   // The screen faces whoever holds the phone, going by its motion sensor (this
   // works with the phone's auto-rotate locked too). Lying flat, or without a
   // sensor, it follows the flip setting.
@@ -177,10 +178,10 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
   const flipAngle = isFlipped(game) ? 180 : 0
   let angle = deviceTurn === null ? flipAngle : (deviceTurn - screenAngle + 360) % 360
   // Only the table view is made for a phone on its side.
-  if (angle % 180 !== 0 && !(guessing && tableViewEnabled)) angle = flipAngle
+  if (angle % 180 !== 0 && !(tablePhase && tableViewEnabled)) angle = flipAngle
   const turned = angle % 180 !== 0
   const landscape = useLandscape()
-  const sideways = guessing && tableViewEnabled && (turned || landscape)
+  const sideways = tablePhase && tableViewEnabled && (turned || landscape)
   const scoreboard = (
     <>
       <div className="flex flex-1 gap-1.5 overflow-x-auto [scrollbar-width:none]">
@@ -288,7 +289,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
         </>
       )}
 
-      {turn?.phase === 'reveal' && turn.result && (
+      {turn?.phase === 'reveal' && turn.result && !sideways && (
         <>
           <section
             className={cx(
@@ -397,7 +398,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
             )}
             <Switch
               title="Table view when turned sideways"
-              description="Turn the phone on its side while guessing to lay your cards out in a row and pick the year on a ruler."
+              description="Turn the phone on its side while guessing or revealing to lay your cards out in a row and pick the year on a ruler."
               checked={tableViewEnabled}
               onChange={(tableView) => {
                 if (tableView) requestMotionAccess()
@@ -438,7 +439,25 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
   )
 
   const content =
-    sideways && turn ? (
+    sideways && turn?.phase === 'reveal' && turn.result ? (
+      <TableReveal
+        scoreboard={scoreboard}
+        playerName={player.name}
+        timeline={player.timeline}
+        yearGuess={turn.yearGuess}
+        verdict={turn.result.placementCorrect ? 'correct' : 'wrong'}
+        exact={turn.result.exactYear}
+        song={turn.song}
+        yearSource={<YearSource song={turn.song} />}
+        points={[
+          { label: 'Card', value: turn.result.placementCorrect, onChange: (placementCorrect) => updateResult({ placementCorrect }) },
+          { label: 'Exact year', coin: true, value: turn.result.exactYear, onChange: (exactYear) => updateResult({ exactYear }) },
+          { label: 'Title', coin: true, value: turn.result.titleCorrect, onChange: (titleCorrect) => updateResult({ titleCorrect }) },
+          { label: 'Artist', coin: true, value: turn.result.artistCorrect, onChange: (artistCorrect) => updateResult({ artistCorrect }) },
+        ]}
+        onContinue={nextTurn}
+      />
+    ) : sideways && turn ? (
       <TableView
         scoreboard={scoreboard}
         playerName={player.name}

@@ -246,7 +246,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
           />
           <Switch
             title="Table view when turned sideways"
-            description="Turn the phone on its side while guessing to lay your cards out in a row and pick the year on a ruler."
+            description="Turn the phone on its side while guessing or revealing to lay your cards out in a row and pick the year on a ruler."
             checked={draft.tableView}
             onChange={(tableView) => update({ tableView })}
           />

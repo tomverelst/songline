@@ -3,6 +3,8 @@ import { MAX_YEAR, MIN_YEAR } from '../game/logic'
 import type { Song } from '../game/types'
 import { CardBack, CardFace } from './TimelineCards'
 import { cx } from './classes'
+import { Coin } from './Coins'
+import { Artwork } from './ui'
 
 interface Props {
   /** The scores and menu button, shown along the top. */
@@ -107,10 +109,14 @@ function CardRow({
   timeline,
   guessYear,
   onSelectYear,
+  verdict,
 }: {
   timeline: Song[]
   guessYear: number | undefined
-  onSelectYear: (year: number) => void
+  /** When set, tapping a card guesses its year. */
+  onSelectYear?: (year: number) => void
+  /** Rings the guess card after the reveal. */
+  verdict?: 'correct' | 'wrong'
 }) {
   const scroller = useRef<HTMLDivElement>(null)
   const songs = [...timeline].sort((a, b) => a.year - b.year)
@@ -139,10 +145,11 @@ function CardRow({
         {songs.map((song, i) => (
           <button
             key={song.id}
-            aria-label={`Guess ${song.year}`}
+            aria-label={onSelectYear ? `Guess ${song.year}` : `${song.title}, ${song.year}`}
+            disabled={!onSelectYear}
             className={cx('absolute top-0 left-0', glide)}
             style={{ width: CARD_W, height: CARD_H, transform: `translateX(${slotOf(i) * SLOT}px)` }}
-            onClick={() => onSelectYear(song.year)}
+            onClick={() => onSelectYear?.(song.year)}
           >
             <CardFace song={song} highlight={false} />
           </button>
@@ -160,11 +167,128 @@ function CardRow({
             }}
           >
             <div className="absolute inset-0 drop-shadow-[0_14px_22px_rgb(0_0_0/0.55)]">
-              <CardBack year={guessYear} ring="ring-2 ring-white/70" />
+              <CardBack
+                year={guessYear}
+                ring={verdict === 'correct' ? 'ring-4 ring-good' : verdict === 'wrong' ? 'ring-4 ring-bad' : 'ring-2 ring-white/70'}
+              />
             </div>
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+interface Points {
+  label: string
+  value: boolean
+  onChange: (value: boolean) => void
+  /** Rewards a bonus coin instead of a card. */
+  coin?: boolean
+}
+
+/**
+ * The reveal for a phone on its side: the song on the left, your row of cards
+ * with the guess ringed green or red, and the points to confirm along the
+ * bottom.
+ */
+export function TableReveal({
+  scoreboard,
+  playerName,
+  timeline,
+  yearGuess,
+  verdict,
+  exact,
+  song,
+  yearSource,
+  points,
+  onContinue,
+}: {
+  scoreboard: ReactNode
+  playerName: string
+  timeline: Song[]
+  yearGuess: number | undefined
+  verdict: 'correct' | 'wrong'
+  exact: boolean
+  song: Song
+  /** Where the year comes from, in small print. */
+  yearSource: ReactNode
+  points: Points[]
+  onContinue: () => void
+}) {
+  return (
+    <div className="flex h-full flex-col bg-[radial-gradient(ellipse_at_50%_55%,rgb(255_255_255/0.06),transparent_70%)]">
+      <header className="flex items-center gap-3 px-4 pt-3">
+        <div className="flex min-w-0 flex-col leading-tight">
+          <span className="text-xs text-muted">{playerName}</span>
+          <span
+            className={cx(
+              'truncate text-2xl font-black',
+              exact ? 'text-gold' : verdict === 'correct' ? 'text-good' : 'text-bad',
+            )}
+          >
+            {exact ? 'Spot on!' : verdict === 'correct' ? 'Card won' : 'Wrong spot'}
+          </span>
+        </div>
+        <div className="ml-auto flex min-w-0 items-center gap-2">{scoreboard}</div>
+      </header>
+
+      <div className="flex min-h-0 flex-1 items-center">
+        <section
+          className={cx(
+            'ml-4 flex w-64 flex-none animate-pop items-center gap-3 rounded-2xl border-2 bg-surface p-3',
+            exact
+              ? 'border-gold shadow-[0_0_0_1px_var(--color-gold),0_0_28px_rgb(255_204_51/0.35)]'
+              : verdict === 'correct'
+                ? 'border-good'
+                : 'border-bad',
+          )}
+        >
+          <Artwork src={song.albumArt} className="size-20 rounded-lg text-3xl shadow-[0_8px_20px_rgb(0_0_0/0.5)]" />
+          <div className="flex min-w-0 flex-col">
+            <span className={cx('text-[2.6rem] leading-none font-black tabular-nums', exact && 'text-gold')}>
+              {song.year}
+            </span>
+            <span className="mt-1 line-clamp-2 leading-tight font-bold">{song.title}</span>
+            <span className="truncate text-sm text-muted">{song.artists.join(', ')}</span>
+            <div className="mt-1 line-clamp-2 text-[0.65rem] leading-tight [&_*]:text-[0.65rem]">{yearSource}</div>
+          </div>
+        </section>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <CardRow timeline={timeline} guessYear={yearGuess} verdict={verdict} />
+        </div>
+      </div>
+
+      <footer className="flex items-center gap-2 px-4 pb-3">
+        {points.map((p) => (
+          <button
+            key={p.label}
+            aria-pressed={p.value}
+            className={cx(
+              'flex h-12 min-w-0 items-center gap-2 rounded-full border px-3 text-sm font-bold',
+              p.value ? 'border-good bg-good/15' : 'border-line bg-surface-2 text-muted',
+            )}
+            onClick={() => p.onChange(!p.value)}
+          >
+            <span
+              className={cx(
+                'grid size-6 flex-none place-items-center rounded-full border-2 text-xs font-black',
+                p.value ? 'border-good bg-good text-[#04130a]' : 'border-line',
+              )}
+            >
+              {p.value ? '✓' : ''}
+            </span>
+            <span className="truncate">{p.label}</span>
+            {p.coin ? <Coin /> : <span className={p.value ? 'text-good' : ''}>+1</span>}
+          </button>
+        ))}
+        <button
+          className="ml-auto h-12 flex-none rounded-full bg-accent-gradient px-6 text-lg font-extrabold text-on-accent shadow-[0_8px_24px_rgb(255_77_141/0.35)]"
+          onClick={onContinue}
+        >
+          Continue
+        </button>
+      </footer>
     </div>
   )
 }
