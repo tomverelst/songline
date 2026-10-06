@@ -26,6 +26,7 @@ import { KEYS, load, save } from '../storage'
 import { Artwork, BottomBar, Button, Card, CardTitle, IconButton, Muted, Screen, Switch, Toast } from '../components/ui'
 import { cx } from '../components/classes'
 import { ScreenRotation } from '../components/rotation'
+import { requestMotionAccess, useDeviceTurn, useScreenAngle } from '../motion'
 
 interface Props {
   game: GameState
@@ -164,12 +165,20 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
   }
 
   const flipEnabled = !!game.settings.flipBetweenTurns
-  const sidewaysEnabled = !!game.settings.sidewaysGuessing
-  const sideways = sidewaysEnabled && turn?.phase === 'guess'
-  // A phone already held in landscape needs the sideways layout, not turning.
+  const tableViewEnabled = game.settings.tableView !== false
+  const guessing = turn?.phase === 'guess'
+  // The screen faces whoever holds the phone, going by its motion sensor (this
+  // works with the phone's auto-rotate locked too). Lying flat, or without a
+  // sensor, it follows the flip setting.
+  const deviceTurn = useDeviceTurn(introKey)
+  const screenAngle = useScreenAngle()
+  const flipAngle = isFlipped(game) ? 180 : 0
+  let angle = deviceTurn === null ? flipAngle : (deviceTurn - screenAngle + 360) % 360
+  // Only the table view is made for a phone on its side.
+  if (angle % 180 !== 0 && !(guessing && tableViewEnabled)) angle = flipAngle
+  const turned = angle % 180 !== 0
   const landscape = useLandscape()
-  const turned = sideways && !landscape
-  const angle = (turned ? 90 : 0) + (isFlipped(game) ? 180 : 0)
+  const sideways = guessing && tableViewEnabled && (turned || landscape)
   const scoreboard = (
     <>
       <div className="flex flex-1 gap-1.5 overflow-x-auto [scrollbar-width:none]">
@@ -375,10 +384,13 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
               }}
             />
             <Switch
-              title="Sideways while guessing"
-              description="Turns the guessing screen on its side, for a phone lying on the table."
-              checked={sidewaysEnabled}
-              onChange={(sidewaysGuessing) => onChange((g) => ({ ...g, settings: { ...g.settings, sidewaysGuessing } }))}
+              title="Table view when turned sideways"
+              description="Turn the phone on its side while guessing to lay your cards out in a row and pick the year on a ruler."
+              checked={tableViewEnabled}
+              onChange={(tableView) => {
+                if (tableView) requestMotionAccess()
+                onChange((g) => ({ ...g, settings: { ...g.settings, tableView } }))
+              }}
             />
             <Switch
               title="Flip screen between turns"
@@ -434,13 +446,6 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
     screen
   )
 
-  if (!flipEnabled && !sidewaysEnabled)
-    return (
-      <>
-        {content}
-        {overlays}
-      </>
-    )
   // The game lives in its own full-screen frame so it can be turned as a whole;
   // fixed elements (bottom bar, menu) then stay pinned to the turned frame.
   return (

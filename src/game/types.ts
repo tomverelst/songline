@@ -60,8 +60,8 @@ export interface GameSettings {
   autoplay?: boolean
   /** Advanced: turn the screen upside down every other turn, for players across the table. */
   flipBetweenTurns?: boolean
-  /** Advanced: turn the guessing screen on its side, for a phone lying on the table. */
-  sidewaysGuessing?: boolean
+  /** Advanced: a phone turned on its side while guessing shows the table view. Unset means on. */
+  tableView?: boolean
   playlistId: string
   playlistName: string
 }

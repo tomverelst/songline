@@ -34,6 +34,7 @@ import {
   Toast,
 } from '../components/ui'
 import { cx } from '../components/classes'
+import { requestMotionAccess } from '../motion'
 
 interface SetupDraft {
   names: string[]
@@ -42,7 +43,7 @@ interface SetupDraft {
   bonusCountsTowardsGoal: boolean
   autoplay: boolean
   flipBetweenTurns: boolean
-  sidewaysGuessing: boolean
+  tableView: boolean
   avoidPlayedSongs: boolean
   playlist: PlaylistSummary | null
 }
@@ -54,7 +55,7 @@ const DEFAULT_DRAFT: SetupDraft = {
   bonusCountsTowardsGoal: false,
   autoplay: true,
   flipBetweenTurns: false,
-  sidewaysGuessing: false,
+  tableView: true,
   avoidPlayedSongs: true,
   playlist: null,
 }
@@ -84,6 +85,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
   const skipYears = useRef<() => void>(() => {})
 
   async function start() {
+    requestMotionAccess()
     if (!draft.playlist) return
     const id = ++run.current
     const alive = () => run.current === id
@@ -109,7 +111,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
           bonusCountsTowardsGoal: draft.bonusCountsTowardsGoal,
           autoplay: draft.autoplay,
           flipBetweenTurns: draft.flipBetweenTurns,
-          sidewaysGuessing: draft.sidewaysGuessing,
+          tableView: draft.tableView,
           playlistId: draft.playlist.id,
           playlistName,
         },
@@ -241,10 +243,10 @@ export function SetupScreen({ onStart, initialError }: Props) {
             onChange={(autoplay) => update({ autoplay })}
           />
           <Switch
-            title="Sideways while guessing"
-            description="Turns the guessing screen on its side, for a phone lying on the table between players."
-            checked={draft.sidewaysGuessing}
-            onChange={(sidewaysGuessing) => update({ sidewaysGuessing })}
+            title="Table view when turned sideways"
+            description="Turn the phone on its side while guessing to lay your cards out in a row and pick the year on a ruler."
+            checked={draft.tableView}
+            onChange={(tableView) => update({ tableView })}
           />
           <Switch
             title="Flip screen between turns"
