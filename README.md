@@ -73,6 +73,12 @@ early, or quit.
 The game state is saved in the browser, so a refresh or an accidental tab
 close doesn't lose the game.
 
+**Full screen:** the game hides the browser's address bar when you press
+**Start game**, and the ☰ menu switches it on or off. iPhones don't allow that
+in Safari; add Songline to the Home Screen instead (Share → Add to Home Screen),
+which also works on Android. Log in to Spotify in the browser first; the Home
+Screen app picks up the login.
+
 ## Spotify setup
 
 The app talks to Spotify directly from the browser (Authorization Code + PKCE),

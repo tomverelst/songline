@@ -27,6 +27,7 @@ import { Artwork, BottomBar, Button, Card, CardTitle, IconButton, Muted, Screen,
 import { cx } from '../components/classes'
 import { ScreenRotation } from '../components/rotation'
 import { requestMotionAccess, useDeviceTurn, useScreenAngle } from '../motion'
+import { canFullscreen, enterFullscreen, exitFullscreen, useFullscreen } from '../fullscreen'
 
 interface Props {
   game: GameState
@@ -165,6 +166,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
   }
 
   const flipEnabled = !!game.settings.flipBetweenTurns
+  const fullscreen = useFullscreen()
   const tableViewEnabled = game.settings.tableView !== false
   const guessing = turn?.phase === 'guess'
   // The screen faces whoever holds the phone, going by its motion sensor (this
@@ -383,6 +385,16 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
                 save(KEYS.device, id)
               }}
             />
+            {canFullscreen() ? (
+              <Switch
+                title="Full screen"
+                description="Hides the address bar."
+                checked={fullscreen}
+                onChange={(on) => (on ? enterFullscreen() : exitFullscreen())}
+              />
+            ) : (
+              <Muted>To hide the address bar, add Songline to your Home Screen (Share → Add to Home Screen) and play from there.</Muted>
+            )}
             <Switch
               title="Table view when turned sideways"
               description="Turn the phone on its side while guessing to lay your cards out in a row and pick the year on a ruler."

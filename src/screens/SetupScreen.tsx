@@ -35,6 +35,7 @@ import {
 } from '../components/ui'
 import { cx } from '../components/classes'
 import { requestMotionAccess } from '../motion'
+import { enterFullscreen } from '../fullscreen'
 
 interface SetupDraft {
   names: string[]
@@ -86,6 +87,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
 
   async function start() {
     requestMotionAccess()
+    enterFullscreen()
     if (!draft.playlist) return
     const id = ++run.current
     const alive = () => run.current === id
