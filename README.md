@@ -70,6 +70,11 @@ in their personal timeline of songs.
   starting cards). New games deal and play fresh songs first; songs you already
   heard only come up once those run out. **Forget played songs** clears the list.
 
+**Year looks off?** On the reveal, **🔍 Look up** searches the song's release
+year on DuckDuckGo, and **✎ Edit** lets you overwrite it right there; the card
+and exact-year points are worked out again from the new year. Holding a card in
+a timeline offers the same, and the card moves to its new spot.
+
 **⊕ Save the song:** on the reveal, the ⊕ on the corner of the album art saves the song to
 your Liked Songs and opens **Add to playlist**: Liked Songs at the top, then your
 own playlists. Every tick saves straight away. Press and hold any

@@ -6,6 +6,8 @@ import {
   finish,
   isFlipped,
   isValidYear,
+  overwriteCardYear,
+  overwriteRevealedYear,
   reveal,
   score,
   setTurnSongYear,
@@ -20,6 +22,7 @@ import { TimelineCards } from '../components/TimelineCards'
 import { TableReveal, TableView } from '../components/TableView'
 import { LikeButton } from '../components/LikeButton'
 import { SongDetailsProvider } from '../components/SongDetails'
+import { useYearEditor } from '../components/YearEdit'
 import { DevicePicker } from '../components/DevicePicker'
 import { YearInput } from '../components/YearInput'
 import { TimerButton } from '../components/TimerButton'
@@ -157,6 +160,10 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
   const guessSlot = turn?.phase === 'guess' && isValidYear(turn.yearGuess)
     ? slotForYear(player.timeline, turn.yearGuess)
     : undefined
+
+  function overwriteYear(year: number) {
+    onChange((g) => overwriteRevealedYear(g, year))
+  }
 
   function setYearGuess(yearGuess: number | undefined) {
     if (turn) onChange({ ...game, turn: { ...turn, yearGuess } })
@@ -307,10 +314,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
               <Artwork src={turn.song.albumArt} className="size-45 rounded-xl text-5xl shadow-[0_12px_32px_rgb(0_0_0/0.5)]" />
               <LikeButton song={turn.song} playlistId={game.settings.playlistId} onArt className="absolute right-2 bottom-2" />
             </div>
-            <div className={cx('mt-2 text-[3.5rem] leading-none font-black tabular-nums', turn.result.exactYear && 'text-gold')}>
-              {turn.song.year}
-            </div>
-            <YearSource song={turn.song} />
+            <RevealYear key={turn.song.id} song={turn.song} exact={turn.result.exactYear} onSave={overwriteYear} />
             <div className="text-xl font-bold [overflow-wrap:anywhere]">{turn.song.title}</div>
             <div className="text-muted">{turn.song.artists.join(', ')}</div>
           </section>
@@ -464,6 +468,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
         exact={turn.result.exactYear}
         song={turn.song}
         yearSource={<YearSource song={turn.song} />}
+        onEditYear={overwriteYear}
         likeButton={
           <LikeButton song={turn.song} playlistId={game.settings.playlistId} onArt iconOnly className="absolute -right-2 -bottom-2" />
         }
@@ -509,7 +514,10 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
       >
         <ScreenRotation value={angle}>
           {/* Hold a card to open its song. */}
-          <SongDetailsProvider playlistId={game.settings.playlistId}>
+          <SongDetailsProvider
+            playlistId={game.settings.playlistId}
+            onEditYear={(songId, year) => onChange((g) => overwriteCardYear(g, songId, year))}
+          >
             <div data-scroller className="h-full overflow-y-auto overscroll-contain">
               {content}
             </div>
@@ -541,7 +549,29 @@ function scrollToTop() {
 const YEAR_CHECK_WAIT_MS = 4000
 const AUTOPLAY_MS = 2500
 
+/** The revealed year, which can be looked up and overwritten in place. */
+function RevealYear({ song, exact, onSave }: { song: Song; exact: boolean; onSave: (year: number) => void }) {
+  const editor = useYearEditor(song, onSave)
+  return (
+    <>
+      {editor.editing ? (
+        <div className="mt-2 w-full">{editor.input}</div>
+      ) : (
+        <>
+          <div className={cx('mt-2 text-[3.5rem] leading-none font-black tabular-nums', exact && 'text-gold')}>
+            {song.year}
+          </div>
+          <YearSource song={song} />
+        </>
+      )}
+      {editor.pills}
+    </>
+  )
+}
+
 function YearSource({ song }: { song: Song }) {
+  // An overwritten year speaks for itself.
+  if (song.yearSource === 'manual') return null
   if (song.yearSource === 'musicbrainz') {
     return (
       <Muted>

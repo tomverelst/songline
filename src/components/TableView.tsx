@@ -1,9 +1,10 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { MAX_YEAR, MIN_YEAR } from '../game/logic'
 import type { Song } from '../game/types'
 import { CardBack, CardFace } from './TimelineCards'
 import { cx } from './classes'
 import { HoldToOpen } from './SongDetails'
+import { useYearEditor } from './YearEdit'
 import { Coin } from './Coins'
 import { Artwork } from './ui'
 import { rotateVector, useScreenRotation } from './rotation'
@@ -316,6 +317,7 @@ export function TableReveal({
   exact,
   song,
   yearSource,
+  onEditYear,
   likeButton,
   points,
   onContinue,
@@ -329,11 +331,14 @@ export function TableReveal({
   song: Song
   /** Where the year comes from, in small print. */
   yearSource: ReactNode
+  /** Overwrites the song's year (when Spotify's is off). */
+  onEditYear: (year: number) => void
   /** Save the song to Liked Songs or a playlist. */
   likeButton: ReactNode
   points: Points[]
   onContinue: () => void
 }) {
+  const [editing, setEditing] = useState(false)
   return (
     <div className="flex h-full flex-col select-none bg-[radial-gradient(ellipse_at_50%_55%,rgb(255_255_255/0.06),transparent_70%)]">
       <header className="flex items-center gap-3 px-4 pt-3">
@@ -354,7 +359,9 @@ export function TableReveal({
       <div className="flex min-h-0 flex-1 items-center">
         <section
           className={cx(
-            'ml-4 flex w-64 flex-none animate-pop items-center gap-3 rounded-2xl border-2 bg-surface p-3',
+            'ml-4 flex flex-none animate-pop items-center gap-3 rounded-2xl border-2 bg-surface p-3 transition-[width]',
+            // Room for the year control while editing.
+            editing ? 'w-[32rem]' : 'w-64',
             exact
               ? 'border-gold shadow-[0_0_0_1px_var(--color-gold),0_0_28px_rgb(255_204_51/0.35)]'
               : verdict === 'correct'
@@ -366,14 +373,14 @@ export function TableReveal({
             <Artwork src={song.albumArt} className="size-20 rounded-lg text-3xl shadow-[0_8px_20px_rgb(0_0_0/0.5)]" />
             {likeButton}
           </div>
-          <div className="flex min-w-0 flex-1 flex-col">
-            <span className={cx('text-[2.6rem] leading-none font-black tabular-nums', exact && 'text-gold')}>
-              {song.year}
-            </span>
-            <span className="mt-1 line-clamp-2 leading-tight font-bold">{song.title}</span>
-            <span className="truncate text-sm text-muted">{song.artists.join(', ')}</span>
-            <div className="mt-1 line-clamp-2 text-[0.65rem] leading-tight [&_*]:text-[0.65rem]">{yearSource}</div>
-          </div>
+          <PanelSong
+            key={song.id}
+            song={song}
+            exact={exact}
+            yearSource={yearSource}
+            onEditYear={onEditYear}
+            onEditing={setEditing}
+          />
         </section>
         <div className="flex min-w-0 flex-1 flex-col">
           <CardRow timeline={timeline} guessYear={yearGuess} verdict={verdict} />
@@ -410,6 +417,41 @@ export function TableReveal({
           Continue
         </button>
       </footer>
+    </div>
+  )
+}
+
+/** The song panel's text; while editing, the year control takes its place. */
+function PanelSong({
+  song,
+  exact,
+  yearSource,
+  onEditYear,
+  onEditing,
+}: {
+  song: Song
+  exact: boolean
+  yearSource: ReactNode
+  onEditYear: (year: number) => void
+  onEditing: (editing: boolean) => void
+}) {
+  const editor = useYearEditor(song, onEditYear, { compact: true })
+  useEffect(() => onEditing(editor.editing), [editor.editing, onEditing])
+  return (
+    <div className="flex min-w-0 flex-1 flex-col">
+      {editor.editing ? (
+        editor.input
+      ) : (
+        <>
+          <span className={cx('text-[2.6rem] leading-none font-black tabular-nums', exact && 'text-gold')}>
+            {song.year}
+          </span>
+          <span className="mt-1 line-clamp-2 leading-tight font-bold">{song.title}</span>
+          <span className="truncate text-sm text-muted">{song.artists.join(', ')}</span>
+          <div className="mt-1 line-clamp-2 text-[0.65rem] leading-tight [&_*]:text-[0.65rem]">{yearSource}</div>
+        </>
+      )}
+      <span className="mt-1.5 self-start">{editor.pills}</span>
     </div>
   )
 }

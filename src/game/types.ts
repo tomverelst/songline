@@ -8,7 +8,8 @@ export interface Song {
   /** Release date of the album the track is on, according to Spotify. */
   spotifyYear: number
   /** Unset until the original release year has been looked up. */
-  yearSource?: 'spotify' | 'musicbrainz'
+  /** Where `year` comes from; 'manual' when a player overwrote it. */
+  yearSource?: 'spotify' | 'musicbrainz' | 'manual'
   isrc?: string
   albumArt?: string
 }

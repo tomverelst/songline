@@ -14,6 +14,8 @@ import {
   isFlipped,
   yearForPosition,
   ranking,
+  overwriteRevealedYear,
+  overwriteCardYear,
 } from './logic'
 import type { GameSettings, Song } from './types'
 
@@ -130,6 +132,32 @@ describe('game flow', () => {
     g = endTurn(reveal(g))
     expect(g.players[0].timeline).toHaveLength(1)
     expect(g.currentPlayer).toBe(1)
+  })
+
+  it('works the points out again when the revealed year is overwritten', () => {
+    let g = drawSong(newGame(['Ann', 'Bob'], settings, songs, () => 0.5))
+    const start = g.players[0].timeline[0].year
+    // Guessed after the starting card, but Spotify says it's older: wrong spot.
+    g = { ...g, turn: { ...g.turn!, song: { ...g.turn!.song, year: start - 5 }, yearGuess: start + 3 } }
+    g = reveal(g)
+    expect(g.turn!.result).toMatchObject({ placementCorrect: false, exactYear: false })
+    g = { ...g, turn: { ...g.turn!, result: { ...g.turn!.result!, titleCorrect: true } } }
+    const fixed = overwriteRevealedYear(g, start + 3)
+    expect(fixed.turn!.song).toMatchObject({ year: start + 3, yearSource: 'manual' })
+    expect(fixed.turn!.result).toEqual({ placementCorrect: true, exactYear: true, titleCorrect: true, artistCorrect: false })
+    // And back: an exact hit that turns out wrong loses both.
+    expect(overwriteRevealedYear(fixed, start - 1).turn!.result).toMatchObject({ placementCorrect: false, exactYear: false })
+    // The won card goes into the timeline with the new year.
+    expect(endTurn(fixed).players[0].timeline.map((s) => s.year)).toEqual([start, start + 3])
+  })
+
+  it('moves a timeline card when its year is overwritten', () => {
+    const g = newGame(['Ann', 'Bob'], settings, songs)
+    const timeline = [song(1960, 'A'), song(1980, 'B'), song(2000, 'C')]
+    const players = g.players.map((p, i) => (i === 0 ? { ...p, timeline } : p))
+    const moved = overwriteCardYear({ ...g, players }, timeline[0].id, 1990).players[0].timeline
+    expect(moved.map((s) => `${s.title} ${s.year}`)).toEqual(['B 1980', 'A 1990', 'C 2000'])
+    expect(moved[1].yearSource).toBe('manual')
   })
 
   it('breaks a tie on points with bonus coins when the game ends early', () => {

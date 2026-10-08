@@ -233,6 +233,38 @@ export function reveal(state: GameState): GameState {
   }
 }
 
+/**
+ * Overwrites the revealed song's year (e.g. Spotify had a reissue's date) and
+ * works the card and exact-year points out again. Title and artist stay.
+ */
+export function overwriteRevealedYear(state: GameState, year: number): GameState {
+  const turn = state.turn
+  if (!turn || turn.phase !== 'reveal' || !turn.result || !turn.slot) return state
+  return {
+    ...state,
+    turn: {
+      ...turn,
+      song: { ...turn.song, year, yearSource: 'manual' },
+      result: {
+        ...turn.result,
+        placementCorrect: isPlacementCorrect(turn.slot, year),
+        exactYear: turn.yearGuess === year,
+      },
+    },
+  }
+}
+
+/** Overwrites the year of a card already in a timeline; it moves to its new spot. */
+export function overwriteCardYear(state: GameState, songId: string, year: number): GameState {
+  const players = state.players.map((p) => {
+    const card = p.timeline.find((s) => s.id === songId)
+    if (!card) return p
+    const others = p.timeline.filter((s) => s.id !== songId)
+    return { ...p, timeline: insertSorted(others, { ...card, year, yearSource: 'manual' as const }) }
+  })
+  return { ...state, players }
+}
+
 export function endTurn(state: GameState): GameState {
   const turn = state.turn
   if (!turn?.result) return state

@@ -3,15 +3,38 @@ import { OpenSong, useOpenSong } from './openSong'
 import type { Song } from '../game/types'
 import { LikeButton } from './LikeButton'
 import { Artwork, IconButton } from './ui'
-
+import { useYearEditor } from './YearEdit'
 
 /** Lets the cards inside open a sheet about their song (see HoldToOpen). */
-export function SongDetailsProvider({ playlistId, children }: { playlistId: string; children: ReactNode }) {
+export function SongDetailsProvider({
+  playlistId,
+  onEditYear,
+  children,
+}: {
+  playlistId: string
+  /** Overwrites a timeline card's year; without it the year can only be looked up. */
+  onEditYear?: (songId: string, year: number) => void
+  children: ReactNode
+}) {
   const [song, setSong] = useState<Song | null>(null)
   return (
     <OpenSong value={setSong}>
       {children}
-      {song && <SongSheet song={song} playlistId={playlistId} onClose={() => setSong(null)} />}
+      {song && (
+        <SongSheet
+          key={song.id}
+          song={song}
+          playlistId={playlistId}
+          onEditYear={
+            onEditYear &&
+            ((year) => {
+              onEditYear(song.id, year)
+              setSong({ ...song, year, yearSource: 'manual' })
+            })
+          }
+          onClose={() => setSong(null)}
+        />
+      )}
     </OpenSong>
   )
 }
@@ -70,7 +93,18 @@ export function HoldToOpen({ song, children }: { song: Song; children: ReactNode
   )
 }
 
-function SongSheet({ song, playlistId, onClose }: { song: Song; playlistId: string; onClose: () => void }) {
+function SongSheet({
+  song,
+  playlistId,
+  onEditYear,
+  onClose,
+}: {
+  song: Song
+  playlistId: string
+  onEditYear?: (year: number) => void
+  onClose: () => void
+}) {
+  const editor = useYearEditor(song, onEditYear)
   return (
     <div className="@container fixed inset-0 z-[35] flex items-end bg-black/60 text-left" onClick={onClose}>
       <div
@@ -87,9 +121,14 @@ function SongSheet({ song, playlistId, onClose }: { song: Song; playlistId: stri
         <div className="flex min-w-0 flex-1 flex-col gap-3">
           <div className="flex items-start gap-2">
             <div className="flex min-w-0 flex-1 flex-col">
-              <span className="text-[2.6rem] leading-none font-black tabular-nums">{song.year}</span>
+              {editor.editing ? (
+                editor.input
+              ) : (
+                <span className="text-[2.6rem] leading-none font-black tabular-nums">{song.year}</span>
+              )}
               <span className="mt-1 text-xl font-bold [overflow-wrap:anywhere]">{song.title}</span>
               <span className="text-muted">{song.artists.join(', ')}</span>
+              <span className="mt-2 self-start">{editor.pills}</span>
             </div>
             <IconButton aria-label="Close" onClick={onClose}>
               ✕
