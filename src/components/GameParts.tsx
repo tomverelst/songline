@@ -12,8 +12,9 @@ import { canFullscreen, enterFullscreen, exitFullscreen, useFullscreen } from '.
 
 /** The time left to guess; red in the last seconds, dimmed while paused. */
 /**
- * The time left to guess: the seconds, big, in a ring that runs down (in the
- * player's colour, from --team). The last 10 seconds turn red and beat.
+ * The time left to guess: the seconds, big, in a ring that runs down clockwise
+ * from 12 o'clock like a clock hand (in the player's colour, from --team). The
+ * last 10 seconds turn red and beat.
  */
 export function GuessTimer({ ms, totalMs, running, className }: { ms: number; totalMs: number; running: boolean; className?: string }) {
   const seconds = Math.ceil(ms / 1000)
@@ -43,7 +44,7 @@ export function GuessTimer({ ms, totalMs, running, className }: { ms: number; to
           strokeWidth="4"
           strokeLinecap="round"
           strokeDasharray={around}
-          strokeDashoffset={around * (1 - left)}
+          strokeDashoffset={-around * (1 - left)}
           className={cx('transition-[stroke-dashoffset] duration-200 ease-linear', hurry ? 'stroke-bad' : 'stroke-[var(--team,var(--color-accent))]')}
         />
       </svg>
