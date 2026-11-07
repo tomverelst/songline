@@ -57,3 +57,13 @@ export function requestMotionAccess() {
   const motion = window.DeviceMotionEvent as unknown as { requestPermission?: () => Promise<string> } | undefined
   motion?.requestPermission?.().catch(() => {})
 }
+
+/**
+ * Where to turn the screen to show `angle`, going the shortest way round from
+ * where it is now (`from`, which can be past 360° or below 0°): from 270° to
+ * 0° goes on to 360°, a quarter turn, not three quarters back.
+ */
+export function shortestTurn(from: number, angle: number): number {
+  const delta = ((((angle - from) % 360) + 540) % 360) - 180
+  return from + delta
+}

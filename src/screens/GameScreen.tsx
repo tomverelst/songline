@@ -31,7 +31,7 @@ import { ScreenRotation } from '../components/rotation'
 import { useCardsOnly } from '../components/scale'
 import { RecordButton } from '../components/RecordButton'
 import { SeatingPicker } from '../components/SeatingPicker'
-import { requestMotionAccess, useDeviceTurn, useScreenAngle } from '../motion'
+import { requestMotionAccess, shortestTurn, useDeviceTurn, useScreenAngle } from '../motion'
 import { useTurnSession } from './useTurnSession'
 
 interface Props {
@@ -118,6 +118,10 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
   // it faces the player's side of the table whatever the screen.
   if (angle % 180 !== 0 && !(tablePhase && tableViewEnabled)) angle = flipAngle
   const turned = angle % 180 !== 0
+  // The frame turns the shortest way round to it.
+  const [shownAngle, setShownAngle] = useState(angle)
+  const nextShownAngle = shortestTurn(shownAngle, angle)
+  if (nextShownAngle !== shownAngle) setShownAngle(nextShownAngle)
   const landscape = useLandscape()
   const sideways = tablePhase && tableViewEnabled && (turned || landscape)
   const scoreboard = (
@@ -409,7 +413,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
         )}
         // --frame-h: the frame's height, which is the phone's width when turned.
         // The current player's colour for the guess card, Lock in and the timer.
-        style={{ ...playerVars, transform: `translate(-50%, -50%) rotate(${angle}deg)`, '--frame-h': turned ? '100dvw' : '100dvh' } as CSSProperties}
+        style={{ ...playerVars, transform: `translate(-50%, -50%) rotate(${shownAngle}deg)`, '--frame-h': turned ? '100dvw' : '100dvh' } as CSSProperties}
       >
         <ScreenRotation value={angle}>
           {/* Hold a card to open its song. */}
