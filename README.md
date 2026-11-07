@@ -93,7 +93,11 @@ For two players, or two teams, on one phone lying between them.
 - Once a side locks in, its guess is hidden from the other side. **Change**
   unlocks it again. When both sides have locked in, the song is revealed.
 - Everyone who places the song right in their own timeline wins a copy of the
-  card. Exact year, title and artist each earn a coin per side.
+  card, and an exact year earns each side a coin.
+- **Title and artist are a race:** shout them out loud, and only the side that
+  names one first gets its coin. On the reveal, **Who named it first?** has a
+  button per side for the title and for the artist. Tap a side to give it the
+  coin (that takes it away from the other side), or tap it again for nobody.
 - If one side reaches the points to win, it wins. If both reach it in the same
   turn, the higher score wins, then the most coins, and a full tie is shared.
 - **Same options as Standard:** points to win, time to guess (both sides

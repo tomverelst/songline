@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { allLockedIn, endBattleTurn, revealBattle, setBattleGuess, setBattleLocked, updateBattleResult } from './battle'
+import { allLockedIn, endBattleTurn, revealBattle, setBattleGuess, setBattleLocked, setFirstToName, updateBattleResult } from './battle'
 import { drawSong, newGame, overwriteRevealedYear } from './logic'
 import type { GameSettings, GameState, Song } from './types'
 
@@ -86,5 +86,19 @@ describe('battle mode', () => {
     expect(shared.winnerIds).toEqual(['p0', 'p1'])
     g = updateBattleResult(g, 1, { artistCorrect: true })
     expect(endBattleTurn(g).winnerIds).toEqual(['p1'])
+  })
+
+  it('gives title and artist only to the side that named it first', () => {
+    let g = revealBattle(guess(battle(), 1975, 1990))
+    g = setFirstToName(g, 'titleCorrect', 0)
+    g = setFirstToName(g, 'titleCorrect', 1)
+    g = setFirstToName(g, 'artistCorrect', 0)
+    expect(g.turn!.guesses!.map((x) => [x.result!.titleCorrect, x.result!.artistCorrect])).toEqual([
+      [false, true],
+      [true, false],
+    ])
+    g = setFirstToName(g, 'artistCorrect', null)
+    expect(g.turn!.guesses!.some((x) => x.result!.artistCorrect)).toBe(false)
+    expect(endBattleTurn(g).players.map((p) => p.bonus)).toEqual([0, 1])
   })
 })

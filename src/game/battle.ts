@@ -58,6 +58,21 @@ export function updateBattleResult(state: GameState, index: number, patch: Parti
 }
 
 /**
+ * Title and artist are a race, said out loud: only the side that named it
+ * first gets the coin. `index` null means nobody did.
+ */
+export function setFirstToName(
+  state: GameState,
+  field: 'titleCorrect' | 'artistCorrect',
+  index: number | null,
+): GameState {
+  const turn = state.turn
+  if (turn?.phase !== 'reveal' || !turn.guesses) return state
+  const guesses = turn.guesses.map((g, i) => ({ ...g, result: { ...(g.result ?? NOTHING), [field]: i === index } }))
+  return { ...state, turn: { ...turn, guesses } }
+}
+
+/**
  * Hands out the cards and coins. When someone reaches the target, the best
  * of those who did wins (coins break a tie on points; a full tie is shared).
  */

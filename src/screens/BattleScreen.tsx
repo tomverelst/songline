@@ -7,6 +7,7 @@ import {
   revealBattle,
   setBattleGuess,
   setBattleLocked,
+  setFirstToName,
   updateBattleResult,
 } from '../game/battle'
 import { celebrateCard, celebrateExact } from '../party'
@@ -18,7 +19,7 @@ import { TimerButton } from '../components/TimerButton'
 import { Coins } from '../components/Coins'
 import { GameMenu, GuessTimer, PointChip, RevealYear } from '../components/GameParts'
 import { guessText, medianYear } from '../components/format'
-import { Artwork, BottomBar, Button, Card, IconButton, Muted, Screen, Switch, Toast } from '../components/ui'
+import { Artwork, BottomBar, Button, Card, CardTitle, IconButton, Muted, Screen, Switch, Toast } from '../components/ui'
 import { cx } from '../components/classes'
 import { ScreenRotation } from '../components/rotation'
 import { useTurnSession } from './useTurnSession'
@@ -132,6 +133,7 @@ export function BattleScreen({ game, onChange, onQuit }: Props) {
         game={game}
         onEditYear={(year) => onChange((g) => overwriteRevealedYear(g, year))}
         onResult={(index, patch) => onChange((g) => updateBattleResult(g, index, patch))}
+        onFirstToName={(field, index) => onChange((g) => setFirstToName(g, field, index))}
         onContinue={session.nextTurn}
         menuButton={menuButton}
       />
@@ -206,7 +208,7 @@ function BattleIntro({
             <ScoreChip player={p} settings={game.settings} />
           </div>
         ))}
-        <p className="text-lg text-muted">Guess at the same time. Both right? Both win the card!</p>
+        <p className="text-lg text-muted">Guess at the same time. Both right? Both win the card! Shout the title and artist first for coins.</p>
       </section>
       <BottomBar>
         <TimerButton variant="primary" block onClick={onStart} timerMs={timerMs}>
@@ -275,12 +277,14 @@ function BattleReveal({
   game,
   onEditYear,
   onResult,
+  onFirstToName,
   onContinue,
   menuButton,
 }: {
   game: GameState
   onEditYear: (year: number) => void
   onResult: (index: number, patch: Partial<TurnResult>) => void
+  onFirstToName: (field: 'titleCorrect' | 'artistCorrect', index: number | null) => void
   onContinue: () => void
   menuButton: ReactNode
 }) {
@@ -313,6 +317,37 @@ function BattleReveal({
         </div>
       </section>
 
+      {/* Title and artist are a race: whoever says it out loud first gets the coin. */}
+      <Card className="gap-2">
+        <div className="flex items-baseline justify-between gap-2">
+          <CardTitle>Who named it first?</CardTitle>
+          <Muted>Tap again to clear</Muted>
+        </div>
+        {(
+          [
+            ['titleCorrect', 'Title', turn.song.title],
+            ['artistCorrect', 'Artist', turn.song.artists.join(', ')],
+          ] as const
+        ).map(([field, label, answer]) => (
+          <div key={field} className="flex flex-col gap-1.5">
+            <Muted className="truncate">
+              {label}: <span className="font-semibold text-ink">{answer}</span>
+            </Muted>
+            <div className="grid grid-cols-2 gap-1.5">
+              {game.players.map((player, index) => (
+                <PointChip
+                  key={player.id}
+                  coin
+                  label={player.name}
+                  value={!!turn.guesses![index]?.result?.[field]}
+                  onChange={(on) => onFirstToName(field, on ? index : null)}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </Card>
+
       {game.players.map((player, index) => {
         const guess = turn.guesses![index]
         const result = guess?.result
@@ -339,8 +374,6 @@ function BattleReveal({
             <div className="grid grid-cols-2 gap-1.5">
               <PointChip label="Card" value={result.placementCorrect} onChange={(placementCorrect) => set({ placementCorrect })} />
               <PointChip coin label={`Exact ${turn.song.year}`} value={result.exactYear} onChange={(exactYear) => set({ exactYear })} />
-              <PointChip coin label="Title" value={result.titleCorrect} onChange={(titleCorrect) => set({ titleCorrect })} />
-              <PointChip coin label="Artist" value={result.artistCorrect} onChange={(artistCorrect) => set({ artistCorrect })} />
             </div>
           </Card>
         )
