@@ -26,6 +26,7 @@ import { cx } from '../components/classes'
 import { teamColor, teamVars } from '../game/teams'
 import { ScreenRotation } from '../components/rotation'
 import { useCardsOnly } from '../components/scale'
+import { RecordButton } from '../components/RecordButton'
 import { requestMotionAccess, useDeviceTurn, useScreenAngle } from '../motion'
 import { useTurnSession } from './useTurnSession'
 
@@ -143,17 +144,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
   // The guessing screen's parts, laid out upright or sideways.
   const songControls = turn?.phase === 'guess' && (
     <section className="flex items-center gap-3">
-      <div
-        className={cx(
-          'vinyl-grooves grid size-16 flex-none place-items-center rounded-full ring-2 ring-line',
-          playing && 'animate-vinyl',
-        )}
-        aria-hidden
-      >
-        <div className="grid size-7 place-items-center rounded-full bg-accent-gradient text-sm font-extrabold text-on-accent">
-          ?
-        </div>
-      </div>
+      <RecordButton playing={playing} onToggle={togglePause} size="lg" />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex items-center justify-between gap-2">
           <Muted className="truncate">
@@ -165,9 +156,6 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
           {clock}
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
-          <Button size="sm" className="px-3" onClick={togglePause}>
-            {playing ? '❚❚ Pause' : '▶ Play'}
-          </Button>
           <Button size="sm" variant="ghost" className="px-3" onClick={session.restart}>
             ↺ Restart
           </Button>

@@ -12,6 +12,7 @@ import {
 } from '../game/battle'
 import { celebrateCard, celebrateExact, celebrationOf, type CelebrationStyle } from '../party'
 import { CardRow } from '../components/CardRow'
+import { RecordButton } from '../components/RecordButton'
 import { LikeButton } from '../components/LikeButton'
 import { SongDetailsProvider } from '../components/SongDetails'
 import { TimerButton } from '../components/TimerButton'
@@ -128,18 +129,7 @@ export function BattleScreen({ game, onChange, onQuit }: Props) {
       <div className="flex h-full flex-col select-none">
         {panel(1, faceToFace)}
         <div className="flex flex-none items-center gap-2 border-y border-line bg-surface px-3 py-2">
-          <div
-            className={cx(
-              'vinyl-grooves grid size-10 flex-none place-items-center rounded-full ring-2 ring-line',
-              session.playing && 'animate-vinyl',
-            )}
-            aria-hidden
-          >
-            <div className="size-3.5 rounded-full bg-accent-gradient" />
-          </div>
-          <Button size="sm" className="px-3" onClick={session.togglePause}>
-            {session.playing ? '❚❚' : '▶'}
-          </Button>
+          <RecordButton playing={session.playing} onToggle={session.togglePause} size="sm" />
           <Button size="sm" variant="ghost" className="px-3" aria-label="Restart" onClick={session.restart}>
             ↺
           </Button>

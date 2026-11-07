@@ -3,6 +3,7 @@ import { MAX_YEAR, MIN_YEAR } from '../game/logic'
 import type { Song } from '../game/types'
 import { cx } from './classes'
 import { CardRow } from './CardRow'
+import { RecordButton } from './RecordButton'
 import { teamVars, type TeamColor } from '../game/teams'
 import { useCardsOnly, useUiScale } from './scale'
 import { PointChip } from './GameParts'
@@ -46,15 +47,7 @@ export function TableView(props: Props) {
   return (
     <div className="flex h-full flex-col select-none bg-[radial-gradient(ellipse_at_50%_55%,rgb(255_255_255/0.06),transparent_70%)]">
       <header className="flex items-center gap-3 px-4 pt-3">
-        <div
-          className={cx(
-            'vinyl-grooves grid size-11 flex-none place-items-center rounded-full ring-2 ring-line',
-            playing && 'animate-vinyl',
-          )}
-          aria-hidden
-        >
-          <div className="size-4 rounded-full bg-accent-gradient" />
-        </div>
+        <RecordButton playing={playing} onToggle={props.onTogglePause} size="md" />
         <div className="flex min-w-0 flex-col leading-tight">
           <span className="text-xs text-muted">guessing</span>
           <span className="truncate text-2xl font-black text-(--team)" style={teamVars(props.playerColor)}>
@@ -62,9 +55,6 @@ export function TableView(props: Props) {
           </span>
         </div>
         <div className="flex gap-1.5">
-          <RoundButton label={playing ? 'Pause' : 'Play'} onClick={props.onTogglePause}>
-            {playing ? '❚❚' : '▶'}
-          </RoundButton>
           <RoundButton label="Restart" onClick={props.onRestart}>
             ↺
           </RoundButton>

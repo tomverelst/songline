@@ -73,6 +73,15 @@
   }
 
   /* Draws a stroke whose length is in --perimeter (see TimerButton). */
+  @keyframes record-ping {
+    0% {
+      box-shadow: 0 0 0 0 rgb(255 93 143 / 0.55);
+    }
+    100% {
+      box-shadow: 0 0 0 12px rgb(255 93 143 / 0);
+    }
+  }
+
   @keyframes timer-fill {
     from {
       stroke-dashoffset: var(--perimeter);

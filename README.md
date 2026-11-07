@@ -161,7 +161,9 @@ its year and who won it. **Missed** shows the ones nobody got, **All** shows
 every one. ▶ plays a song again from the start (on the device picked for
 the game) and ⊕ saves it to Liked Songs or a playlist.
 
-**Skip** next to Pause and Restart throws away a song with a wrong year or one
+**The record** spins while the mystery song plays: tap it to pause or play
+(▶/❚❚ in its middle; it pulses while paused). **Skip** next to it and Restart
+throws away a song with a wrong year or one
 that won't play. The ☰ menu lets you switch the playback device, end the game
 early, or quit.
 
