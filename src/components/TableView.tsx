@@ -3,6 +3,7 @@ import { MAX_YEAR, MIN_YEAR } from '../game/logic'
 import type { Song } from '../game/types'
 import { cx } from './classes'
 import { CardRow } from './CardRow'
+import { teamVars, type TeamColor } from '../game/teams'
 import { useUiScale } from './scale'
 import { PointChip } from './GameParts'
 import { useYearEditor } from './YearEdit'
@@ -12,6 +13,7 @@ interface Props {
   /** The scores and menu button, shown along the top. */
   scoreboard: ReactNode
   playerName: string
+  playerColor: TeamColor
   timeline: Song[]
   /** The guess, if any. */
   yearGuess: number | undefined
@@ -54,7 +56,9 @@ export function TableView(props: Props) {
         </div>
         <div className="flex min-w-0 flex-col leading-tight">
           <span className="text-xs text-muted">guessing</span>
-          <span className="text-accent-gradient truncate text-2xl font-black">{playerName}</span>
+          <span className="truncate text-2xl font-black text-(--team)" style={teamVars(props.playerColor)}>
+            {playerName}
+          </span>
         </div>
         <div className="flex gap-1.5">
           <RoundButton label={playing ? 'Pause' : 'Play'} onClick={props.onTogglePause}>
@@ -127,6 +131,7 @@ interface Points {
 export function TableReveal({
   scoreboard,
   playerName,
+  playerColor,
   timeline,
   yearGuess,
   verdict,
@@ -140,6 +145,7 @@ export function TableReveal({
 }: {
   scoreboard: ReactNode
   playerName: string
+  playerColor: TeamColor
   timeline: Song[]
   yearGuess: number | undefined
   verdict: 'correct' | 'wrong'
@@ -159,7 +165,9 @@ export function TableReveal({
     <div className="flex h-full flex-col select-none bg-[radial-gradient(ellipse_at_50%_55%,rgb(255_255_255/0.06),transparent_70%)]">
       <header className="flex items-center gap-3 px-4 pt-3">
         <div className="flex min-w-0 flex-col leading-tight">
-          <span className="text-xs text-muted">{playerName}</span>
+          <span className="text-xs font-semibold text-(--team)" style={teamVars(playerColor)}>
+            {playerName}
+          </span>
           <span
             className={cx(
               'truncate text-2xl font-black',

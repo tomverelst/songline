@@ -6,6 +6,7 @@ import { Timeline } from '../components/Timeline'
 import { SongDetailsProvider } from '../components/SongDetails'
 import { Coins } from '../components/Coins'
 import { PlayedSongs } from '../components/PlayedSongs'
+import { teamColor, teamVars } from '../game/teams'
 import { BottomBar, Button, Card, CardTitle, Logo, Screen } from '../components/ui'
 
 export function FinishedScreen({ game, onNewGame }: { game: GameState; onNewGame: () => void }) {
@@ -30,7 +31,10 @@ export function FinishedScreen({ game, onNewGame }: { game: GameState; onNewGame
             <Card key={p.id} className="gap-2">
               <div className="flex items-center justify-between gap-2">
                 <CardTitle>
-                  {i + 1}. {p.name}
+                  {i + 1}.{' '}
+                  <span className="text-(--team)" style={teamVars(teamColor(p, game.players.indexOf(p)))}>
+                    {p.name}
+                  </span>
                 </CardTitle>
                 <span className="inline-flex items-center font-extrabold tabular-nums">
                   {points} {points === 1 ? 'pt' : 'pts'}

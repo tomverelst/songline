@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import type { GameState, Player, Song } from '../game/types'
+import { freeColor, TEAM_COLORS, teamColor, teamVars, type TeamColor } from '../game/teams'
 import { finish } from '../game/logic'
 import { useYearEditor } from './YearEdit'
 import { DevicePicker } from './DevicePicker'
@@ -167,6 +168,9 @@ export function GameMenu({
           onChange={(index, celebration) =>
             onChange((g) => ({ ...g, players: g.players.map((p, i) => (i === index ? { ...p, celebration } : p)) }))
           }
+          onColor={(index, color) =>
+            onChange((g) => ({ ...g, players: g.players.map((p, i) => (i === index ? { ...p, color } : p)) }))
+          }
         />
         {/* Pull-to-refresh can't reach the turned game screen; the game is saved, so this is safe. */}
         <Button onClick={() => window.location.reload()}>↻ Reload</Button>
@@ -262,14 +266,29 @@ export function CelebrationButton({
   )
 }
 
-/** Every player's celebration, to change mid-game. Picking one shows it. */
-export function PlayerCelebrations({ players, onChange }: { players: Player[]; onChange: (index: number, style: CelebrationStyle) => void }) {
+/** Every player's colour and celebration, to change mid-game. Picking a celebration shows it. */
+export function PlayerCelebrations({
+  players,
+  onChange,
+  onColor,
+}: {
+  players: Player[]
+  onChange: (index: number, style: CelebrationStyle) => void
+  onColor: (index: number, color: string) => void
+}) {
   return (
     <div className="mt-2 flex flex-col gap-1.5">
-      <span className="font-semibold">Celebrations</span>
+      <span className="font-semibold">Colours and celebrations</span>
       {players.map((p, index) => (
         <div key={p.id} className="grid grid-cols-3 gap-1.5">
-          <span className="col-span-3 truncate font-semibold">{p.name}</span>
+          <span className="col-span-3 flex min-w-0 items-center gap-2" style={teamVars(teamColor(p, index))}>
+            <ColorButton
+              value={teamColor(p, index)}
+              taken={players.filter((_, j) => j !== index).map((o, j) => teamColor(o, j >= index ? j + 1 : j).id)}
+              onChange={(color) => onColor(index, color)}
+            />
+            <span className="truncate font-semibold text-(--team)">{p.name}</span>
+          </span>
           {CELEBRATIONS.map((c) => (
             <button
               key={c.id}
@@ -289,5 +308,27 @@ export function PlayerCelebrations({ players, onChange }: { players: Player[]; o
         </div>
       ))}
     </div>
+  )
+}
+
+/** A swatch of a player's colour; a tap moves on to the next colour nobody else has. */
+export function ColorButton({
+  value,
+  taken,
+  onChange,
+}: {
+  value: TeamColor
+  /** Colours of the other players. */
+  taken: string[]
+  onChange: (id: string) => void
+}) {
+  return (
+    <IconButton
+      aria-label={`Colour: ${value.name}. Tap to change.`}
+      title={value.name}
+      onClick={() => onChange(freeColor(TEAM_COLORS.indexOf(value) + 1, taken).id)}
+    >
+      <span className="size-6 rounded-full border-2 border-white/80 bg-(--team)" style={teamVars(value)} />
+    </IconButton>
   )
 }

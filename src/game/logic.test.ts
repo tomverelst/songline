@@ -400,3 +400,14 @@ describe('songs played this game', () => {
     ])
   })
 })
+
+describe('team colours', () => {
+  it('hands out a colour nobody uses yet, and falls back to one by place', async () => {
+    const { freeColor, teamColor, TEAM_COLORS } = await import('./teams')
+    expect(freeColor(0, ['pink', 'cyan']).id).toBe('yellow')
+    expect(freeColor(7, ['red']).id).toBe('pink')
+    expect(freeColor(2, TEAM_COLORS.map((c) => c.id)).id).toBe('yellow')
+    expect(teamColor({}, 1).id).toBe('cyan')
+    expect(teamColor({ color: 'green' }, 1).id).toBe('green')
+  })
+})

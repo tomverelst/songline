@@ -24,6 +24,8 @@ export interface Player {
   name: string
   /** Unset: the phone's default (confetti, unless fireworks were picked before). */
   celebration?: CelebrationStyle
+  /** Team colour (an id from TEAM_COLORS); unset in older games: one by their place. */
+  color?: string
   timeline: Song[]
   /** Bonus coins: exact year, title and artist. */
   bonus: number

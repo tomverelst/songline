@@ -122,6 +122,12 @@ For two players, or two teams, on one phone lying between them.
   earlier games. The table view and flip-between-turns options are Standard
   only.
 
+**Team colours:** every player (or team) has a colour: tap the swatch next to
+a name on the setup screen to move on to the next colour nobody has yet (8 to
+choose from), or change it in the ☰ menu. It colours their name on the turn
+screen, a dot and outline on the scoreboard, their half in Battle and their
+name on the reveal and the final scores.
+
 **Celebrations:** every player (or team) picks their own: confetti,
 fireworks with rockets that climb, burst and crackle out, or lasers: the
 screen dims like a club and fans of laser beams sweep from the corners to a

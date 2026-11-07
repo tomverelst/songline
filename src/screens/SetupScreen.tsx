@@ -19,7 +19,8 @@ import { KEYS, load, save } from '../storage'
 import { GAME_MODES } from '../game/modes'
 import { BATTLE_PLAYERS } from '../game/battle'
 import { Coin } from '../components/Coins'
-import { CelebrationButton } from '../components/GameParts'
+import { CelebrationButton, ColorButton } from '../components/GameParts'
+import { freeColor, teamColorById } from '../game/teams'
 import { defaultCelebration, type CelebrationStyle } from '../party'
 import {
   Artwork,
@@ -45,6 +46,8 @@ interface SetupDraft {
   names: string[]
   /** Each player's celebration, by the same index as `names`. */
   celebrations: (CelebrationStyle | null)[]
+  /** Each player's team colour id, by the same index as `names`. */
+  colors: (string | null)[]
   mode: GameMode
   targetPoints: number
   bonusCountsTowardsGoal: boolean
@@ -70,6 +73,7 @@ interface SetupDraft {
 const DEFAULT_DRAFT: SetupDraft = {
   names: ['', ''],
   celebrations: [],
+  colors: [],
   mode: 'standard',
   targetPoints: 10,
   bonusCountsTowardsGoal: false,
@@ -109,9 +113,14 @@ export function SetupScreen({ onStart, initialError }: Props) {
   // Battle is always two players (or teams); extra names are kept for later.
   const nameFields = battle ? Array.from({ length: BATTLE_PLAYERS }, (_, i) => draft.names[i] ?? '') : draft.names
   const celebrationAt = (i: number) => draft.celebrations[i] ?? defaultCelebration()
+  // A player's colour: the one they picked, or else the next one nobody picked.
+  const picked = nameFields.map((_, i) => teamColorById(draft.colors[i])?.id ?? null)
+  const colorAt = (i: number) =>
+    teamColorById(picked[i]) ?? freeColor(i, picked.filter((_, j) => j !== i))
+  const othersColors = (i: number) => nameFields.flatMap((_, j) => (j === i ? [] : [colorAt(j).id]))
   // Players are the filled-in names, each with the celebration picked next to it.
   const entries = nameFields
-    .map((name, i) => ({ name: name.trim(), celebration: celebrationAt(i) }))
+    .map((name, i) => ({ name: name.trim(), celebration: celebrationAt(i), color: colorAt(i).id }))
     .filter((e) => e.name)
   const names = entries.map((e) => e.name)
   const enoughPlayers = battle ? names.length === BATTLE_PLAYERS : names.length >= 1
@@ -175,7 +184,10 @@ export function SetupScreen({ onStart, initialError }: Props) {
         Math.random,
         draft.avoidPlayedSongs ? playedSongIds() : new Set(),
       )
-      game = { ...game, players: game.players.map((p, i) => ({ ...p, celebration: entries[i].celebration })) }
+      game = {
+        ...game,
+        players: game.players.map((p, i) => ({ ...p, celebration: entries[i].celebration, color: entries[i].color })),
+      }
       const checks: StartingCardCheck[] = game.players.map((p) => ({
         player: p.name,
         title: p.timeline[0].title,
@@ -243,6 +255,16 @@ export function SetupScreen({ onStart, initialError }: Props) {
                 update({ names: next })
               }}
             />
+            <ColorButton
+              value={colorAt(i)}
+              taken={othersColors(i)}
+              onChange={(color) => {
+                const next = [...draft.colors]
+                while (next.length <= i) next.push(null)
+                next[i] = color
+                update({ colors: next })
+              }}
+            />
             <CelebrationButton
               value={celebrationAt(i)}
               onChange={(style) => {
@@ -259,6 +281,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
                   update({
                     names: draft.names.filter((_, j) => j !== i),
                     celebrations: draft.celebrations.filter((_, j) => j !== i),
+                    colors: draft.colors.filter((_, j) => j !== i),
                   })
                 }
               >

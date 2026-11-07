@@ -23,6 +23,7 @@ import { BonusToggle, GameMenu, GuessTimer, RevealYear, YearSource } from '../co
 import { guessText, medianYear } from '../components/format'
 import { Artwork, BottomBar, Button, Card, CardTitle, IconButton, Muted, Screen, Switch, Toast } from '../components/ui'
 import { cx } from '../components/classes'
+import { teamColor, teamVars } from '../game/teams'
 import { ScreenRotation } from '../components/rotation'
 import { requestMotionAccess, useDeviceTurn, useScreenAngle } from '../motion'
 import { useTurnSession } from './useTurnSession'
@@ -46,6 +47,8 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
   const { startTurn, skip, togglePause, lockIn, nextTurn } = session
 
   const player = game.players[game.currentPlayer]
+  const playerColor = teamColor(player, game.currentPlayer)
+  const playerVars = teamVars(playerColor)
   const turn = game.turn
 
   // Party when the answer is revealed (once per song, not on later corrections).
@@ -102,12 +105,16 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
         {game.players.map((p, i) => (
           <div
             key={p.id}
+            style={teamVars(teamColor(p, i))}
             className={cx(
               'flex flex-none flex-col rounded-xl border px-3 py-1.5 text-[0.8rem]',
-              i === game.currentPlayer ? 'border-accent bg-accent/15' : 'border-line bg-surface',
+              i === game.currentPlayer ? 'border-(--team) bg-(--team)/15' : 'border-line bg-surface',
             )}
           >
-            <span className="max-w-[10ch] truncate">{p.name}</span>
+            <span className="flex max-w-[10ch] items-center gap-1.5 truncate">
+              <span className="size-2 flex-none rounded-full bg-(--team)" />
+              <span className="truncate">{p.name}</span>
+            </span>
             <span className="inline-flex items-center text-base font-extrabold tabular-nums">
               {score(p, game.settings)}
               <Coins count={p.bonus} />
@@ -136,7 +143,12 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex items-center justify-between gap-2">
-          <Muted className="truncate">{player.name} is guessing</Muted>
+          <Muted className="truncate">
+            <span className="font-semibold text-(--team)" style={playerVars}>
+              {player.name}
+            </span>{' '}
+            is guessing
+          </Muted>
           {clock}
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
@@ -182,7 +194,10 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
         <>
           <section className="flex min-h-[calc(100dvh-260px)] flex-col justify-center gap-3 text-center">
             <p className="text-lg text-muted">Round {game.round}</p>
-            <h1 className="text-accent-gradient text-[clamp(3.5rem,18vw,6rem)] leading-none font-bold [overflow-wrap:anywhere]">
+            <h1
+              className="text-[clamp(3.5rem,18vw,6rem)] leading-none font-bold text-(--team) [overflow-wrap:anywhere]"
+              style={playerVars}
+            >
               {player.name}
             </h1>
             <p className="text-lg text-muted">It's your turn — grab the phone!</p>
@@ -325,6 +340,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
       <TableReveal
         scoreboard={scoreboard}
         playerName={player.name}
+        playerColor={playerColor}
         timeline={player.timeline}
         yearGuess={turn.yearGuess}
         verdict={turn.result.placementCorrect ? 'correct' : 'wrong'}
@@ -347,6 +363,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
       <TableView
         scoreboard={scoreboard}
         playerName={player.name}
+        playerColor={playerColor}
         timeline={player.timeline}
         yearGuess={turn.yearGuess}
         startYear={medianYear(player.timeline)}

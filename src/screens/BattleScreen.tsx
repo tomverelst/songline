@@ -21,6 +21,7 @@ import { GameMenu, GuessTimer, PointChip, RevealYear } from '../components/GameP
 import { guessText, medianYear } from '../components/format'
 import { Artwork, BottomBar, Button, Card, CardTitle, IconButton, Muted, Screen, Switch, Toast } from '../components/ui'
 import { cx } from '../components/classes'
+import { teamColor, teamVars, type TeamColor } from '../game/teams'
 import { ScreenRotation } from '../components/rotation'
 import { useTurnSession } from './useTurnSession'
 
@@ -98,6 +99,7 @@ export function BattleScreen({ game, onChange, onQuit }: Props) {
     const panel = (index: number, upsideDown: boolean) => (
       <GuessPanel
         player={game.players[index]}
+        color={teamColor(game.players[index], index)}
         settings={game.settings}
         guess={turn.guesses![index] ?? {}}
         upsideDown={upsideDown}
@@ -184,7 +186,8 @@ export function BattleScreen({ game, onChange, onQuit }: Props) {
 
 function ScoreChip({ player, settings }: { player: Player; settings: GameSettings }) {
   return (
-    <span className="inline-flex flex-none items-center rounded-full border border-line bg-surface px-2.5 py-0.5 text-sm font-extrabold tabular-nums">
+    // Sits inside an element with the player's --team colour.
+    <span className="inline-flex flex-none items-center rounded-full border border-(--team)/60 bg-surface px-2.5 py-0.5 text-sm font-extrabold tabular-nums">
       {score(player, settings)}
       <Coins count={player.bonus} />
     </span>
@@ -209,9 +212,9 @@ function BattleIntro({
       <section className="flex min-h-[calc(100dvh-220px)] flex-col justify-center gap-4 text-center">
         <p className="text-lg text-muted">Round {game.round} · first to {game.settings.targetPoints}</p>
         {[a, b].map((p, i) => (
-          <div key={p.id} className="flex flex-col items-center gap-1">
+          <div key={p.id} className="flex flex-col items-center gap-1" style={teamVars(teamColor(p, i))}>
             {i === 1 && <span className="mb-2 text-xl font-black text-muted">vs</span>}
-            <h1 className="text-accent-gradient text-[clamp(2.5rem,13vw,4.5rem)] leading-none font-bold [overflow-wrap:anywhere]">
+            <h1 className="text-[clamp(2.5rem,13vw,4.5rem)] leading-none font-bold text-(--team) [overflow-wrap:anywhere]">
               {p.name}
             </h1>
             <ScoreChip player={p} settings={game.settings} />
@@ -233,6 +236,7 @@ function GuessPanel({
   player,
   settings,
   guess,
+  color,
   upsideDown,
   checkingYear,
   onYear,
@@ -241,6 +245,8 @@ function GuessPanel({
   player: Player
   settings: GameSettings
   guess: BattleGuess
+  /** The team's colour: their name, score and a tint of their half. */
+  color: TeamColor
   upsideDown: boolean
   checkingYear: boolean
   onYear: (year: number | undefined) => void
@@ -250,14 +256,15 @@ function GuessPanel({
   return (
     <ScreenRotation value={upsideDown ? 180 : 0}>
       <section
+        style={teamVars(color)}
         className={cx(
           // On a tablet the controls stay a comfortable width; the cards still run edge to edge.
-          'flex min-h-0 flex-1 flex-col gap-2 px-3 pt-3 pb-1 [&>*:not(:last-child)]:mx-auto [&>*:not(:last-child)]:w-full [&>*:not(:last-child)]:max-w-[40rem]',
+          'flex min-h-0 flex-1 flex-col gap-2 bg-(--team)/[0.07] px-3 pt-3 pb-1 [&>*:not(:last-child)]:mx-auto [&>*:not(:last-child)]:w-full [&>*:not(:last-child)]:max-w-[40rem]',
           upsideDown && 'rotate-180',
         )}
       >
         <div className="flex min-h-10 items-center gap-2">
-          <span className="text-accent-gradient min-w-0 truncate text-2xl font-black">{player.name}</span>
+          <span className="min-w-0 truncate text-2xl font-black text-(--team)">{player.name}</span>
           <ScoreChip player={player} settings={settings} />
           {guess.locked ? (
             <Button size="sm" variant="ghost" className="ml-auto px-4" disabled={checkingYear} onClick={() => onLock(false)}>
@@ -369,9 +376,13 @@ function BattleReveal({
         if (!result) return null
         const set = (patch: Partial<TurnResult>) => onResult(index, patch)
         return (
-          <Card key={player.id} className={cx('gap-2 border-2', result.placementCorrect ? 'border-good' : 'border-bad')}>
+          <Card
+            key={player.id}
+            style={teamVars(teamColor(player, index))}
+            className={cx('gap-2 border-2', result.placementCorrect ? 'border-good' : 'border-bad')}
+          >
             <div className="flex items-center gap-2">
-              <span className="text-accent-gradient min-w-0 truncate text-xl font-black">{player.name}</span>
+              <span className="min-w-0 truncate text-xl font-black text-(--team)">{player.name}</span>
               <ScoreChip player={player} settings={game.settings} />
               <span className={cx('ml-auto font-extrabold', result.placementCorrect ? 'text-good' : 'text-bad')}>
                 {result.placementCorrect ? '✓ Wins the card' : '✗ Wrong spot'}
