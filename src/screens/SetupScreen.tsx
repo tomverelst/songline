@@ -161,8 +161,10 @@ export function SetupScreen({ onStart, initialError }: Props) {
     const id = ++run.current
     const alive = () => run.current === id
     const playlistName = draft.playlist.name
+    // The players' colours, for the shuffling cards and their first cards.
+    const colors = entries.map((e) => teamColorById(e.color) ?? colorAt(e.index))
     setError(null)
-    setLoading({ phase: 'playlist', playlistName, art: [], checks: [] })
+    setLoading({ phase: 'playlist', playlistName, art: [], checks: [], colors })
     try {
       const songs = await getPlaylistSongs(draft.playlist.id)
       if (!alive()) return
@@ -184,7 +186,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
         }
       }
       const art = shuffle(songs.flatMap((s) => (s.albumArt ? [s.albumArt] : []))).slice(0, 5)
-      setLoading({ phase: 'shuffle', playlistName, songCount: songs.length, art, checks: [] })
+      setLoading({ phase: 'shuffle', playlistName, songCount: songs.length, art, checks: [], colors })
       await sleep(SHUFFLE_SHOW_MS)
       if (!alive()) return
 
@@ -221,12 +223,13 @@ export function SetupScreen({ onStart, initialError }: Props) {
           ...(screenTurn === 'seats' && { seat: seatedEntries[i].seat }),
         })),
       }
-      const checks: StartingCardCheck[] = game.players.map((p) => ({
+      const checks: StartingCardCheck[] = game.players.map((p, i) => ({
         player: p.name,
+        color: colors[i],
         title: p.timeline[0].title,
         artist: p.timeline[0].artists.join(', '),
       }))
-      setLoading({ phase: 'years', playlistName, songCount: songs.length, art, checks })
+      setLoading({ phase: 'years', playlistName, songCount: songs.length, art, checks, colors })
 
       // Look up every starting card's original year, giving up on cards that
       // take too long or when the players tap "Start anyway".

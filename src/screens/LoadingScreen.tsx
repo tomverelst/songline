@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { Artwork, Button, IconButton, Spinner } from '../components/ui'
 import { cx } from '../components/classes'
+import { teamVars, type TeamColor } from '../game/teams'
 
 export type LoadingPhase = 'playlist' | 'shuffle' | 'years' | 'ready'
 
@@ -11,6 +12,7 @@ export interface StartingCardCheck {
   /** Set once the year check finished. */
   year?: number
   fromMusicBrainz?: boolean
+  color?: TeamColor
 }
 
 export interface LoadingState {
@@ -19,6 +21,8 @@ export interface LoadingState {
   songCount?: number
   /** Album art to riffle through while shuffling. */
   art: string[]
+  /** The players' (or teams') colours: the shuffling cards take turns in them. */
+  colors?: TeamColor[]
   checks: StartingCardCheck[]
 }
 
@@ -59,7 +63,7 @@ export function LoadingScreen({ state, onCancel, onSkipYears }: Props) {
       </div>
 
       <div className="mx-auto flex w-full max-w-[420px] flex-1 flex-col items-center justify-center gap-5">
-        <CardStack art={state.art} shuffling={state.phase !== 'ready'} />
+        <CardStack art={state.art} colors={state.colors ?? []} shuffling={state.phase !== 'ready'} />
 
         <h1 className="text-accent-gradient text-center text-2xl font-black">{headline}</h1>
 
@@ -84,10 +88,16 @@ export function LoadingScreen({ state, onCancel, onSkipYears }: Props) {
             {state.checks.map((c) => (
               <li
                 key={c.player}
-                className="flex animate-pop items-center gap-3 rounded-xl border border-line bg-surface px-3 py-2"
+                style={c.color && teamVars(c.color)}
+                className={cx(
+                  'flex animate-pop items-center gap-3 rounded-xl border bg-surface px-3 py-2',
+                  c.color ? 'border-(--team)/60 bg-(--team)/[0.08]' : 'border-line',
+                )}
               >
                 <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="text-xs text-muted">{c.player}'s first card</span>
+                  <span className="text-xs text-muted">
+                    <span className={cx(c.color && 'font-semibold text-(--team)')}>{c.player}</span>'s first card
+                  </span>
                   <span className="truncate text-sm font-semibold">
                     {c.title} <span className="font-normal text-muted">· {c.artist}</span>
                   </span>
@@ -96,7 +106,9 @@ export function LoadingScreen({ state, onCancel, onSkipYears }: Props) {
                   <Spinner />
                 ) : (
                   <span className="flex-none text-right">
-                    <span className="block font-extrabold text-accent-2 tabular-nums">{c.year}</span>
+                    <span className={cx('block font-extrabold tabular-nums', c.color ? 'text-(--team)' : 'text-accent-2')}>
+                      {c.year}
+                    </span>
                     <span className="block text-[0.65rem] text-muted">{c.fromMusicBrainz ? 'original' : 'Spotify'}</span>
                   </span>
                 )}
@@ -144,8 +156,8 @@ function StepRow({ label, state }: { label: string; state: 'done' | 'active' | '
   )
 }
 
-/** A stack of album covers that riffles while shuffling. */
-function CardStack({ art, shuffling }: { art: string[]; shuffling: boolean }) {
+/** A stack of album covers that riffles while shuffling, the cards edged in the players' colours in turn. */
+function CardStack({ art, colors, shuffling }: { art: string[]; colors: TeamColor[]; shuffling: boolean }) {
   const covers = Array.from({ length: 5 }, (_, i) => art[i])
   return (
     <div className="relative h-32 w-24">
@@ -153,11 +165,15 @@ function CardStack({ art, shuffling }: { art: string[]; shuffling: boolean }) {
         <div
           key={i}
           className={cx(
-            'absolute inset-0 overflow-hidden rounded-2xl border-2 border-line bg-surface-2 shadow-[0_10px_30px_rgb(0_0_0/0.45)]',
+            'absolute inset-0 overflow-hidden rounded-2xl bg-surface-2',
+            colors.length
+              ? 'border-[3px] border-(--team) shadow-[0_10px_30px_rgb(0_0_0/0.45),0_0_18px_color-mix(in_srgb,var(--team)_45%,transparent)]'
+              : 'border-2 border-line shadow-[0_10px_30px_rgb(0_0_0/0.45)]',
             shuffling && (i % 2 ? 'animate-riffle-right' : 'animate-riffle-left'),
           )}
           style={
             {
+              ...(colors.length && teamVars(colors[i % colors.length])),
               '--tilt': `${(i - 2) * 3}deg`,
               transform: `rotate(${(i - 2) * 3}deg)`,
               animationDelay: `${i * 0.18}s`,
@@ -168,7 +184,7 @@ function CardStack({ art, shuffling }: { art: string[]; shuffling: boolean }) {
           {src ? (
             <Artwork src={src} className="size-full" />
           ) : (
-            <div className="grid size-full place-items-center bg-accent-gradient text-3xl text-on-accent">♪</div>
+            <div className="grid size-full place-items-center bg-team-gradient text-3xl text-on-accent">♪</div>
           )}
         </div>
       ))}
