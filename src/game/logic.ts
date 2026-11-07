@@ -289,12 +289,12 @@ export function withOriginalYear(song: Song, year: number | null): Song {
     : { ...song, year, yearSource: 'musicbrainz' }
 }
 
-/** How many songs from the top of the deck get their year looked up ahead of time. */
-export const LOOK_AHEAD = 3
-
-/** The songs that could be drawn next, whose original year should be ready by then. */
-export function upcomingSongs(deck: Song[]): Song[] {
-  return deck.slice(-LOOK_AHEAD).reverse()
+/**
+ * Deck songs whose original year hasn't been looked up yet, in the order
+ * they'll be drawn (cards are drawn from the end of the deck).
+ */
+export function songsToLookUp(deck: Song[]): Song[] {
+  return deck.filter((s) => !s.yearSource).reverse()
 }
 
 /**

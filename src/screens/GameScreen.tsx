@@ -188,7 +188,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
           </section>
           <BottomBar>
             <TimerButton variant="primary" block onClick={startTurn} timerMs={autoplayActive ? session.autoplayMs : undefined}>
-              {session.preparing ? '⏳ Getting the song ready…' : '▶ Play mystery song'}
+              ▶ Play mystery song
             </TimerButton>
           </BottomBar>
         </>

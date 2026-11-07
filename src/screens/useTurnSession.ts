@@ -10,7 +10,7 @@ import {
   stopClock,
   timeLeftMs,
   timeLimitMs,
-  upcomingSongs,
+  songsToLookUp,
   withKnownYears,
 } from '../game/logic'
 import { originalYear } from '../musicbrainz'
@@ -41,8 +41,6 @@ export function useTurnSession({ game, onChange, reveal, endTurn, holdAutoplay }
   const [playing, setPlaying] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [checkingYear, setCheckingYear] = useState(false)
-  /** Getting the next song ready: waiting for its original year. */
-  const [preparing, setPreparing] = useState(false)
   const turn = game.turn
   const gameRef = useRef(game)
   useEffect(() => {
@@ -50,7 +48,8 @@ export function useTurnSession({ game, onChange, reveal, endTurn, holdAutoplay }
   })
 
   // Original years from MusicBrainz, by song id (null: nothing found, keep
-  // Spotify's). Each song is looked up once; the lookups queue up politely.
+  // Spotify's). Each song is looked up once; MusicBrainz takes about one
+  // request a second, and the lookups queue up for that.
   const knownYears = useRef(new Map<string, number | null>())
   const lookups = useRef(new Map<string, Promise<number | null>>())
   const lookUp = useCallback((song: Song) => {
@@ -96,12 +95,23 @@ export function useTurnSession({ game, onChange, reveal, endTurn, holdAutoplay }
     lookUp(songToCheck).then((year) => onChange((g) => setTurnSongYear(g, id, year)))
   }, [songToCheck, onChange, lookUp])
 
-  // Look ahead: find the original years of the next songs in the deck while
-  // this turn is still going, so the next song is ready before it plays.
-  const deck = game.deck
+  // In the background, work through the deck in the order it will be drawn,
+  // one song at a time (so the song playing can jump the queue), and save
+  // each year in the game. Songs then usually start with their real year.
   useEffect(() => {
-    for (const song of upcomingSongs(deck)) if (!song.yearSource) lookUp(song)
-  }, [deck, lookUp])
+    let stopped = false
+    ;(async () => {
+      while (!stopped) {
+        const song = songsToLookUp(gameRef.current.deck).find((s) => !lookups.current.has(s.id))
+        if (!song) return
+        const year = await lookUp(song)
+        if (!stopped) onChange((g) => withKnownYears(g, new Map([[song.id, year]])))
+      }
+    })()
+    return () => {
+      stopped = true
+    }
+  }, [onChange, lookUp])
 
   async function play(uri: string, positionMs?: number) {
     setError(null)
@@ -139,30 +149,11 @@ export function useTurnSession({ game, onChange, reveal, endTurn, holdAutoplay }
     if (turn) play(turn.song.uri, turn.startMs)
   }
 
-  /**
-   * Draws the next song once the years of the songs it could be are known
-   * (waiting a few seconds at most), so it plays with its real year.
-   */
-  const drawing = useRef(false)
-  async function drawNext(draw: (game: GameState) => GameState): Promise<boolean> {
-    if (drawing.current) return false
-    drawing.current = true
-    try {
-      const pending = upcomingSongs(gameRef.current.deck)
-        .filter((s) => !s.yearSource && !knownYears.current.has(s.id))
-        .map(lookUp)
-      if (pending.length) {
-        setPreparing(true)
-        await Promise.race([Promise.all(pending), new Promise((r) => setTimeout(r, NEXT_SONG_WAIT_MS))])
-        setPreparing(false)
-      }
-      const next = draw(withKnownYears(gameRef.current, knownYears.current))
-      onChange(next)
-      if (next.turn) play(next.turn.song.uri, next.turn.startMs)
-      return true
-    } finally {
-      drawing.current = false
-    }
+  /** Draws the next song, with every year found so far, and plays it. Never waits. */
+  function drawNext(draw: (game: GameState) => GameState) {
+    const next = draw(withKnownYears(game, knownYears.current))
+    onChange(next)
+    if (next.turn) play(next.turn.song.uri, next.turn.startMs)
   }
 
   function startTurn() {
@@ -184,11 +175,11 @@ export function useTurnSession({ game, onChange, reveal, endTurn, holdAutoplay }
     if (doubleYearSong) redrawRef.current()
   }, [doubleYearSong])
 
-  async function redraw() {
+  function redraw() {
     const year = turn?.song.year
+    drawNext(redrawSong)
     // After play(), which clears old messages as it starts.
-    if (await drawNext(redrawSong))
-      setError(`That song is from ${year}, a year that's already in the timeline. Here's another one.`)
+    setError(`That song is from ${year}, a year that's already in the timeline. Here's another one.`)
   }
 
   /** Reveals the turn, waiting a moment for the original year if it's still being looked up. */
@@ -247,7 +238,6 @@ export function useTurnSession({ game, onChange, reveal, endTurn, holdAutoplay }
     error,
     setError,
     checkingYear,
-    preparing,
     autoplayActive,
     autoplayMs: AUTOPLAY_MS,
     introKey,
@@ -280,6 +270,4 @@ export function scrollToTop() {
 }
 
 const YEAR_CHECK_WAIT_MS = 4000
-/** At most this long to get the next song's year before playing it anyway. */
-const NEXT_SONG_WAIT_MS = 4000
 const AUTOPLAY_MS = 2500

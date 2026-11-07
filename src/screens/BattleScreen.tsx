@@ -83,7 +83,6 @@ export function BattleScreen({ game, onChange, onQuit }: Props) {
         menuButton={menuButton}
         onStart={session.startTurn}
         timerMs={session.autoplayActive ? session.autoplayMs : undefined}
-        preparing={session.preparing}
       />
     )
   } else if (turn.phase === 'guess' && turn.guesses) {
@@ -188,14 +187,11 @@ function BattleIntro({
   menuButton,
   onStart,
   timerMs,
-  preparing,
 }: {
   game: GameState
   menuButton: ReactNode
   onStart: () => void
   timerMs?: number
-  /** Waiting for the song's year before it plays. */
-  preparing: boolean
 }) {
   const [a, b] = game.players
   return (
@@ -216,7 +212,7 @@ function BattleIntro({
       </section>
       <BottomBar>
         <TimerButton variant="primary" block onClick={onStart} timerMs={timerMs}>
-          {preparing ? '⏳ Getting the song ready…' : '▶ Play mystery song'}
+          ▶ Play mystery song
         </TimerButton>
       </BottomBar>
     </Screen>

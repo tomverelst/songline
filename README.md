@@ -173,12 +173,11 @@ Requirements and limitations:
 - **Release years.** Spotify only knows the release date of the *album* a track is
   on, which is wrong for remasters and compilations. The game looks up each
   song's original release year in [MusicBrainz](https://musicbrainz.org), first
-  by ISRC and then by title and artist. It does this ahead of time for the next
-  few songs in the deck, while the current turn is still going, so a song
-  starts with its real year already known. If those lookups aren't done yet
-  when the next song is due, **Play mystery song** shows "Getting the song
-  ready…" for up to 4 seconds. A song that still isn't ready plays anyway and
-  gets its year while it plays. If MusicBrainz is slow (4 s at
+  by ISRC and then by title and artist. This runs in the background during
+  the game, working through the deck in the order the songs will come up, so
+  a song usually starts with its real year already known. Nobody waits for
+  it: a song whose lookup isn't done yet plays straight away and gets its year
+  while it plays. If MusicBrainz is slow (4 s at
   lock-in), unreachable, or has no answer, the Spotify year is used. The reveal
   card shows which source the year came from. MusicBrainz data is mostly but not
   always right, so every point on the reveal screen (card, exact year, title,

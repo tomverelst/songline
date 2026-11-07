@@ -23,7 +23,7 @@ import {
   timeUp,
   isDoubleYear,
   redrawSong,
-  upcomingSongs,
+  songsToLookUp,
   withKnownYears,
 } from './logic'
 import type { GameSettings, GameState, Song } from './types'
@@ -382,8 +382,10 @@ describe('looking up years ahead', () => {
     return { ...g, players: [{ ...g.players[0], timeline: [song(1980, 'A')] }], deck: [1970, 1971, 1972, 2001].map((y) => song(y)) }
   }
 
-  it('looks ahead at the next songs to be drawn', () => {
-    expect(upcomingSongs(game().deck).map((s) => s.year)).toEqual([2001, 1972, 1971])
+  it('looks up the deck in draw order, skipping songs already looked up', () => {
+    const g = game()
+    const deck = [...g.deck.slice(0, 3), { ...g.deck[3], yearSource: 'musicbrainz' as const }]
+    expect(songsToLookUp(deck).map((s) => s.year)).toEqual([1972, 1971, 1970])
   })
 
   it('applies known years to the deck, so the draw sees the real year', () => {
