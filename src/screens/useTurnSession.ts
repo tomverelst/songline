@@ -95,23 +95,21 @@ export function useTurnSession({ game, onChange, reveal, endTurn, holdAutoplay }
     lookUp(songToCheck).then((year) => onChange((g) => setTurnSongYear(g, id, year)))
   }, [songToCheck, onChange, lookUp])
 
-  // In the background, work through the deck in the order it will be drawn,
-  // one song at a time (so the song playing can jump the queue), and save
-  // each year in the game. Songs then usually start with their real year.
+  // In the background, look up the next few songs that can come up while
+  // this turn goes on, and save their years in the game. The next song then
+  // usually starts with its real year. Nothing ever waits for this.
+  const toLookUp = songsToLookUp(game)
+  const toLookUpKey = toLookUp.map((s) => s.id).join()
+  const toLookUpRef = useRef(toLookUp)
   useEffect(() => {
-    let stopped = false
-    ;(async () => {
-      while (!stopped) {
-        const song = songsToLookUp(gameRef.current.deck).find((s) => !lookups.current.has(s.id))
-        if (!song) return
-        const year = await lookUp(song)
-        if (!stopped) onChange((g) => withKnownYears(g, new Map([[song.id, year]])))
-      }
-    })()
-    return () => {
-      stopped = true
+    toLookUpRef.current = toLookUp
+  })
+  useEffect(() => {
+    for (const song of toLookUpRef.current) {
+      if (lookups.current.has(song.id)) continue
+      lookUp(song).then((year) => onChange((g) => withKnownYears(g, new Map([[song.id, year]]))))
     }
-  }, [onChange, lookUp])
+  }, [toLookUpKey, onChange, lookUp])
 
   async function play(uri: string, positionMs?: number) {
     setError(null)

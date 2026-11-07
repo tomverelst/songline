@@ -289,12 +289,26 @@ export function withOriginalYear(song: Song, year: number | null): Song {
     : { ...song, year, yearSource: 'musicbrainz' }
 }
 
+/** How many songs ahead the original year is looked up. */
+export const LOOK_AHEAD = 3
+
 /**
- * Deck songs whose original year hasn't been looked up yet, in the order
- * they'll be drawn (cards are drawn from the end of the deck).
+ * Of the next few songs that can come up, those whose original year hasn't
+ * been looked up yet, in the order they'll be drawn (cards are drawn from the
+ * end of the deck). Songs known to be passed over by "no double years" don't
+ * count as coming up.
  */
-export function songsToLookUp(deck: Song[]): Song[] {
-  return deck.filter((s) => !s.yearSource).reverse()
+export function songsToLookUp(state: GameState, count = LOOK_AHEAD): Song[] {
+  const blocked = blockedYears(state)
+  const unknown: Song[] = []
+  let ahead = 0
+  for (let i = state.deck.length - 1; i >= 0 && ahead < count; i--) {
+    const song = state.deck[i]
+    if (song.yearSource && blocked.has(song.year)) continue
+    ahead++
+    if (!song.yearSource) unknown.push(song)
+  }
+  return unknown
 }
 
 /**

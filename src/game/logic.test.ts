@@ -382,10 +382,20 @@ describe('looking up years ahead', () => {
     return { ...g, players: [{ ...g.players[0], timeline: [song(1980, 'A')] }], deck: [1970, 1971, 1972, 2001].map((y) => song(y)) }
   }
 
-  it('looks up the deck in draw order, skipping songs already looked up', () => {
+  it('looks up the next few songs in draw order, not more', () => {
     const g = game()
-    const deck = [...g.deck.slice(0, 3), { ...g.deck[3], yearSource: 'musicbrainz' as const }]
-    expect(songsToLookUp(deck).map((s) => s.year)).toEqual([1972, 1971, 1970])
+    expect(songsToLookUp(g).map((s) => s.year)).toEqual([2001, 1972, 1971])
+    // Once those are known, nothing more until a song is drawn.
+    const known = (s: Song) => ({ ...s, yearSource: 'musicbrainz' as const })
+    const deck = [g.deck[0], ...g.deck.slice(1).map(known)]
+    expect(songsToLookUp({ ...g, deck })).toEqual([])
+  })
+
+  it("doesn't count songs that no double years will pass over", () => {
+    const g = game()
+    // The top song is really from 1980, which Ann has: the next three are behind it.
+    const deck = [...g.deck.slice(0, 3), { ...g.deck[3], year: 1980, yearSource: 'musicbrainz' as const }]
+    expect(songsToLookUp({ ...g, deck }).map((s) => s.year)).toEqual([1972, 1971, 1970])
   })
 
   it('applies known years to the deck, so the draw sees the real year', () => {
