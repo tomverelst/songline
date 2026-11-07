@@ -23,7 +23,7 @@ const settings: GameSettings = {
 /** Ann starts with 1960, Bob with 2000; the mystery song is from 1980. */
 function battle(overrides: Partial<GameSettings> = {}): GameState {
   const g = newGame(['Ann', 'Bob'], { ...settings, ...overrides }, [song(1990), song(1980), song(2000), song(1960)], () => 0)
-  const deck = [song(1990), song(1980)]
+  const deck = [song(1980), song(1990)]
   return drawSong({ ...g, players: [{ ...g.players[0], timeline: [song(1960)] }, { ...g.players[1], timeline: [song(2000)] }], deck })
 }
 

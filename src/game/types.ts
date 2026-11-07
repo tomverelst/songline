@@ -110,6 +110,7 @@ export interface GameState {
   players: Player[]
   currentPlayer: number
   round: number
+  /** The songs still to come, in the order they'll be drawn. */
   deck: Song[]
   turn?: Turn
   winnerIds?: string[]

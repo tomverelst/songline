@@ -1,4 +1,9 @@
 import type { GameSettings, GameState, Player, Slot, Song, Turn } from './types'
+import { AvoidDoubleYearsDeck, FreshFirstDeck, SourceDeck, type Deck } from './deck'
+import { withOriginalYear } from './songs'
+
+export { shuffle } from './deck'
+export { withOriginalYear } from './songs'
 
 /** Points towards the target: one per card, plus coins if the rules say so. */
 export function score(player: Player, settings: Pick<GameSettings, 'bonusCountsTowardsGoal'>): number {
@@ -143,35 +148,23 @@ export function slotForYear(timeline: Song[], year: number): Slot {
 
 // ---------- Game lifecycle ----------
 
-export function shuffle<T>(items: T[], random: () => number = Math.random): T[] {
-  const copy = [...items]
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1))
-    ;[copy[i], copy[j]] = [copy[j], copy[i]]
-  }
-  return copy
-}
-
 /**
- * Starts a game. Songs in `alreadyPlayed` go to the bottom of the deck, so
- * they only come up (and are only dealt) once the fresh songs run out.
+ * Starts a game: shuffles the playlist and deals everyone a starting card.
+ * Songs in `alreadyPlayed` come up (and are dealt) only once the fresh ones
+ * run out.
  */
 export function newGame(
   names: string[],
   settings: GameSettings,
   songs: Song[],
   random: () => number = Math.random,
-  alreadyPlayed: Set<string> = new Set(),
+  alreadyPlayed: ReadonlySet<string> = new Set(),
 ): GameState {
-  // Cards are drawn from the end of the deck.
-  const deck = [
-    ...shuffle(songs.filter((s) => alreadyPlayed.has(s.id)), random),
-    ...shuffle(songs.filter((s) => !alreadyPlayed.has(s.id)), random),
-  ]
+  const deck = new FreshFirstDeck(SourceDeck.shuffled(songs, random), alreadyPlayed)
   const players: Player[] = names.map((name, i) => ({
     id: `p${i}`,
     name,
-    timeline: [deck.pop()!],
+    timeline: [deck.draw()!],
     bonus: 0,
   }))
   return {
@@ -180,7 +173,7 @@ export function newGame(
     players,
     currentPlayer: 0,
     round: 1,
-    deck,
+    deck: deck.remaining(),
   }
 }
 
@@ -205,22 +198,27 @@ export function isDoubleYear(state: GameState): boolean {
   return blocked.has(turn.song.year) && state.deck.some((s) => !blocked.has(s.year))
 }
 
-export function drawSong(state: GameState, random: () => number = Math.random): GameState {
-  if (state.deck.length === 0) return finish(state)
-  // Cards are drawn from the end. Skip songs from a blocked year (they stay in
-  // the deck for later turns); when every song is blocked, take the next one anyway.
-  const blocked = blockedYears(state)
-  let index = state.deck.length - 1
-  while (index >= 0 && blocked.has(state.deck[index].year)) index--
-  if (index < 0) index = state.deck.length - 1
-  const song = state.deck[index]
-  const deck = state.deck.filter((_, i) => i !== index)
+/**
+ * The deck to draw from when the caller keeps none of its own: what's left
+ * of the game's songs, with no double years when chosen.
+ */
+export function deckOf(state: GameState): Deck {
+  return new AvoidDoubleYearsDeck(new SourceDeck(state.deck), () => blockedYears(state))
+}
+
+/**
+ * Draws the next mystery song from `deck` and starts the turn. The game's
+ * saved deck becomes whatever is left in it.
+ */
+export function drawSong(state: GameState, random: () => number = Math.random, deck: Deck = deckOf(state)): GameState {
+  const song = deck.draw()
+  if (!song) return finish({ ...state, deck: [] })
   const turn: Turn = { song, phase: 'guess' }
   if (state.settings.randomStart) turn.startMs = randomStartMs(song.durationMs, state.settings.guessTimeLimit, random)
   const limitMs = timeLimitMs(state.settings)
   if (limitMs) turn.clock = { leftMs: limitMs }
   if (state.settings.mode === 'battle') turn.guesses = state.players.map(() => ({}))
-  return { ...state, deck, turn }
+  return { ...state, deck: deck.remaining(), turn }
 }
 
 /** Never start in the first bit of a song (intros all sound alike)… */
@@ -279,48 +277,6 @@ export function stopClock(state: GameState, now: number): GameState {
   return { ...state, turn: { ...turn, clock: { leftMs: Math.max(0, turn.clock.deadline - now) } } }
 }
 
-/**
- * Records the outcome of the original-year lookup for a song. `year` is null
- * when the lookup found nothing, in which case the Spotify year stays.
- */
-export function withOriginalYear(song: Song, year: number | null): Song {
-  return year === null
-    ? { ...song, year: song.spotifyYear ?? song.year, yearSource: 'spotify' }
-    : { ...song, year, yearSource: 'musicbrainz' }
-}
-
-/** How many songs ahead the original year is looked up. */
-export const LOOK_AHEAD = 3
-
-/**
- * Of the next few songs that can come up, those whose original year hasn't
- * been looked up yet, in the order they'll be drawn (cards are drawn from the
- * end of the deck). Songs known to be passed over by "no double years" don't
- * count as coming up.
- */
-export function songsToLookUp(state: GameState, count = LOOK_AHEAD): Song[] {
-  const blocked = blockedYears(state)
-  const unknown: Song[] = []
-  let ahead = 0
-  for (let i = state.deck.length - 1; i >= 0 && ahead < count; i--) {
-    const song = state.deck[i]
-    if (song.yearSource && blocked.has(song.year)) continue
-    ahead++
-    if (!song.yearSource) unknown.push(song)
-  }
-  return unknown
-}
-
-/**
- * Fills in original years looked up ahead of time (song id → year, null when
- * the lookup found nothing) for the songs still in the deck.
- */
-export function withKnownYears(state: GameState, years: ReadonlyMap<string, number | null>): GameState {
-  if (!state.deck.some((s) => !s.yearSource && years.has(s.id))) return state
-  const deck = state.deck.map((s) => (!s.yearSource && years.has(s.id) ? withOriginalYear(s, years.get(s.id)!) : s))
-  return { ...state, deck }
-}
-
 /** Applies a looked-up year to the song being guessed, if it is still in play. */
 export function setTurnSongYear(state: GameState, songId: string, year: number | null): GameState {
   const turn = state.turn
@@ -330,18 +286,18 @@ export function setTurnSongYear(state: GameState, songId: string, year: number |
 
 /**
  * The song turned out to be from a year that's already in the timeline (its
- * original year came in after it was drawn): put it back at the bottom of the
- * deck and draw another.
+ * original year came in after it was drawn): put it back and draw another.
  */
-export function redrawSong(state: GameState, random: () => number = Math.random): GameState {
+export function redrawSong(state: GameState, random: () => number = Math.random, deck: Deck = deckOf(state)): GameState {
   const turn = state.turn
   if (!turn) return state
-  return drawSong({ ...state, deck: [turn.song, ...state.deck], turn: undefined }, random)
+  deck.putBack(turn.song)
+  return drawSong({ ...state, turn: undefined }, random, deck)
 }
 
 /** Throw away the current song (e.g. wrong release year) and draw another. */
-export function skipSong(state: GameState, random: () => number = Math.random): GameState {
-  return drawSong({ ...state, turn: undefined }, random)
+export function skipSong(state: GameState, random: () => number = Math.random, deck: Deck = deckOf(state)): GameState {
+  return drawSong({ ...state, turn: undefined }, random, deck)
 }
 
 export function reveal(state: GameState): GameState {

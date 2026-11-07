@@ -213,6 +213,12 @@ Every push to `main` is tested, built and published to GitHub Pages at
 - `src/game/`: pure game rules (slots, placement, scoring, guess matching), with tests
 - `src/spotify/`: PKCE login, playlists and Connect playback
 - `src/musicbrainz.ts`: original release year lookup, with fallback
+- `src/game/deck.ts`: the songs as a stream of cards, built from small decks
+  that each wrap the next: `SourceDeck` (the shuffled playlist) →
+  `FreshFirstDeck` (songs from earlier games last) → `LookupDeck` (original
+  year, looked up as a card passes through) → `BufferDeck` (pulls 3 cards
+  ahead, so their lookups run early) → `AvoidDoubleYearsDeck` (holds back
+  blocked years for later). `GameState.deck` saves what's left, in draw order.
 - `src/game/battle.ts`: Battle mode's rules (simultaneous guesses, shared wins), with tests
 - `src/screens/`: the setup, results and game screens. Each game mode has its
   own screen (`GameScreen` for Standard, `BattleScreen` for Battle); what they

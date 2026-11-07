@@ -23,8 +23,6 @@ import {
   timeUp,
   isDoubleYear,
   redrawSong,
-  songsToLookUp,
-  withKnownYears,
 } from './logic'
 import type { GameSettings, GameState, Song } from './types'
 
@@ -330,8 +328,9 @@ describe('no double years', () => {
     }
   }
 
+  // Decks are listed in draw order: the first song comes up next.
   it("skips songs from a year in the guessing player's timeline, keeping them in the deck", () => {
-    const g = drawSong(game('standard', [2000, 1980]))
+    const g = drawSong(game('standard', [1980, 2000]))
     expect(g.turn!.song.year).toBe(2000)
     expect(g.deck.map((s) => s.year)).toEqual([1980])
     // Bob's 1990 doesn't count on Ann's turn.
@@ -339,7 +338,7 @@ describe('no double years', () => {
   })
 
   it("in Battle, skips years from either side's timeline", () => {
-    expect(drawSong(game('battle', [2000, 1980, 1990])).turn!.song.year).toBe(2000)
+    expect(drawSong(game('battle', [1980, 1990, 2000])).turn!.song.year).toBe(2000)
   })
 
   it('takes the next song anyway when every song is blocked', () => {
@@ -347,12 +346,12 @@ describe('no double years', () => {
   })
 
   it('is off unless chosen', () => {
-    const g = game('standard', [2000, 1980])
+    const g = game('standard', [1980, 2000])
     expect(drawSong({ ...g, settings: { ...g.settings, noDoubleYears: false } }).turn!.song.year).toBe(1980)
   })
 
   it('puts a song whose looked-up year clashes back in the deck and draws another', () => {
-    let g = drawSong(game('standard', [1980, 2005, 2000]))
+    let g = drawSong(game('standard', [2000, 2005, 1980]))
     g = { ...g, turn: { ...g.turn!, song: { ...g.turn!.song, year: 1980, yearSource: 'musicbrainz' } } }
     expect(isDoubleYear(g)).toBe(true)
     g = redrawSong(g)
@@ -362,50 +361,8 @@ describe('no double years', () => {
   })
 
   it("doesn't swap when every song left clashes too", () => {
-    let g = drawSong(game('standard', [1980, 2000]))
+    let g = drawSong(game('standard', [2000, 1980]))
     g = { ...g, turn: { ...g.turn!, song: { ...g.turn!.song, year: 1980 } } }
     expect(isDoubleYear(g)).toBe(false)
-  })
-})
-
-describe('looking up years ahead', () => {
-  const settings: GameSettings = {
-    mode: 'standard',
-    targetPoints: 5,
-    bonusCountsTowardsGoal: false,
-    noDoubleYears: true,
-    playlistId: 'x',
-    playlistName: 'x',
-  }
-  const game = (): GameState => {
-    const g = newGame(['Ann'], settings, [song(1960)], () => 0)
-    return { ...g, players: [{ ...g.players[0], timeline: [song(1980, 'A')] }], deck: [1970, 1971, 1972, 2001].map((y) => song(y)) }
-  }
-
-  it('looks up the next few songs in draw order, not more', () => {
-    const g = game()
-    expect(songsToLookUp(g).map((s) => s.year)).toEqual([2001, 1972, 1971])
-    // Once those are known, nothing more until a song is drawn.
-    const known = (s: Song) => ({ ...s, yearSource: 'musicbrainz' as const })
-    const deck = [g.deck[0], ...g.deck.slice(1).map(known)]
-    expect(songsToLookUp({ ...g, deck })).toEqual([])
-  })
-
-  it("doesn't count songs that no double years will pass over", () => {
-    const g = game()
-    // The top song is really from 1980, which Ann has: the next three are behind it.
-    const deck = [...g.deck.slice(0, 3), { ...g.deck[3], year: 1980, yearSource: 'musicbrainz' as const }]
-    expect(songsToLookUp({ ...g, deck }).map((s) => s.year)).toEqual([1972, 1971, 1970])
-  })
-
-  it('applies known years to the deck, so the draw sees the real year', () => {
-    // Spotify says 2001 (a remaster); it's really from 1980, which Ann has.
-    const known = new Map<string, number | null>([['Song 2001-2001', 1980], ['Song 1972-1972', null]])
-    const g = withKnownYears(game(), known)
-    expect(g.deck.slice(-2).map((s) => [s.year, s.yearSource])).toEqual([
-      [1972, 'spotify'],
-      [1980, 'musicbrainz'],
-    ])
-    expect(drawSong(g).turn!.song.year).toBe(1972)
   })
 })
