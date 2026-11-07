@@ -142,8 +142,13 @@ export function CardPainter({
     stopSpray()
   }
 
+  /** Closing without Done: a drawing in progress isn't thrown away by a stray tap. */
+  const leave = () => {
+    if (!drawn.current || confirm('Throw away your drawing?')) onClose()
+  }
+
   return (
-    <div className="fixed inset-0 z-30 flex items-end bg-black/60" onClick={onClose}>
+    <div className="fixed inset-0 z-30 flex items-end bg-black/60" onClick={leave}>
       <div
         role="dialog"
         aria-label={`${playerName || 'Player'}'s card`}
@@ -152,7 +157,7 @@ export function CardPainter({
       >
         <div className="flex items-center justify-between gap-2">
           <CardTitle>{playerName ? `${playerName}'s card` : 'Your card'}</CardTitle>
-          <IconButton aria-label="Close" onClick={onClose}>
+          <IconButton aria-label="Close" onClick={leave}>
             ✕
           </IconButton>
         </div>

@@ -149,8 +149,16 @@ export function PlayerEditor({
   }
   const preview: RosterPlayer = { ...profile, name: trimmed || 'Your name', created: 0, games: player?.games ?? 0, wins: player?.wins ?? 0 }
 
+  // Anything changed since it opened, not saved yet.
+  const [initial] = useState(() => JSON.stringify({ name, profile }))
+  const changed = JSON.stringify({ name, profile }) !== initial
+  /** Closing without saving: changes aren't thrown away by a stray tap. */
+  const leave = () => {
+    if (!changed || confirm(player ? `Throw away your changes to ${player.name}?` : 'Throw away this new player?')) onClose()
+  }
+
   return (
-    <div className="fixed inset-0 z-30 flex items-end bg-black/60" onClick={onClose}>
+    <div className="fixed inset-0 z-30 flex items-end bg-black/60" onClick={leave}>
       <div
         role="dialog"
         aria-label={player ? `Edit ${player.name}` : 'New player'}
@@ -159,7 +167,7 @@ export function PlayerEditor({
       >
         <div className="flex items-center justify-between gap-2">
           <CardTitle>{player ? `Edit ${player.name}` : 'New player'}</CardTitle>
-          <IconButton aria-label="Close" onClick={onClose}>
+          <IconButton aria-label="Close" onClick={leave}>
             ✕
           </IconButton>
         </div>
