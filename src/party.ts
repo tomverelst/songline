@@ -4,6 +4,7 @@ import { lasers } from './lasers'
 import { emojiRain } from './emojiRain'
 import { bravas } from './bravas'
 import { tofu } from './tofu'
+import { knitting } from './knitting'
 import { KEYS, load } from './storage'
 import type { CelebrationStyle, Player } from './game/types'
 
@@ -32,6 +33,7 @@ export const CELEBRATIONS: { id: CelebrationStyle; emoji?: string; name: string 
   { id: 'emoji', emoji: '🌧️', name: 'Emoji rain' },
   { id: 'bravas', emoji: '🥔', name: 'Patatas bravas' },
   { id: 'tofu', name: 'Tofu' },
+  { id: 'knitting', emoji: '🧶', name: 'Knitting' },
 ]
 
 /** The style for players who haven't picked one: what this phone used before. */
@@ -50,6 +52,8 @@ const GOLD = ['#ffcc33', '#ffe680', '#f5b700', '#fff1a8', '#d99a00']
 const PARTY = ['#ff5d8f', '#ffb347', '#3ddc97', '#7aa2ff', '#f4f1fb']
 const CLUB = ['#39ff14', '#ff2bd6', '#00e5ff', '#3b5bff', '#ff1744']
 const GOLD_LASERS = ['#ffd23f', '#ffffff', '#ffb000']
+/** Cosy yarn: stripes of rose, cream, mustard and teal. */
+const YARN = ['#ff6f91', '#f6ead2', '#f2b33d', '#3fb8af']
 
 /** You won the card. */
 export function celebrateCard({ style, emoji }: Celebration) {
@@ -57,6 +61,7 @@ export function celebrateCard({ style, emoji }: Celebration) {
   if (style === 'fireworks') return fireworks({ shells: 7, overMs: 1200, colors: PARTY })
   if (style === 'lasers') return lasers({ durationMs: 2400, colors: CLUB })
   if (style === 'bravas') return bravas({ cubes: 28, overMs: 400, minSize: 26, maxSize: 40, sauces: 1, holdMs: 700 })
+  if (style === 'knitting') return knitting({ scarves: 1, cols: 10, rows: 22, knitMs: 1600, colors: YARN, holdMs: 700 })
   if (style === 'tofu') return tofu({ blocks: 7, overMs: 500, minSize: 60, maxSize: 95, hops: 2, holdMs: 300 })
   confetti({ ...base, particleCount: 80, spread: 70, startVelocity: 40, origin: { y: 0.35 }, colors: PARTY })
 }
@@ -69,6 +74,8 @@ export function celebrateExact({ style, emoji }: Celebration) {
   if (style === 'lasers') return lasers({ durationMs: 3500, colors: GOLD_LASERS, big: true })
   // Exact year: a bigger plate, with pimentón on top.
   if (style === 'bravas') return bravas({ cubes: 55, overMs: 700, minSize: 30, maxSize: 52, sauces: 1, pimenton: true, holdMs: 900 })
+  // Exact year: a wider scarf with a gold heart knitted in.
+  if (style === 'knitting') return knitting({ scarves: 1, cols: 15, rows: 24, knitMs: 2300, colors: ['#ffcc33', '#f6ead2'], heart: true, holdMs: 1100 })
   if (style === 'tofu') return tofu({ blocks: 14, overMs: 800, minSize: 70, maxSize: 130, hops: 3, holdMs: 400 })
   const shot = (x: number, angle: number) =>
     confetti({
@@ -93,6 +100,7 @@ export function celebrateWin({ style, emoji }: Celebration) {
   if (style === 'fireworks') return fireworks({ shells: 34, overMs: 6000, colors: [...PARTY, ...GOLD], sparks: 110, glitter: true })
   if (style === 'lasers') return lasers({ durationMs: 6000, colors: CLUB, big: true })
   if (style === 'bravas') return bravas({ cubes: 110, overMs: 2000, minSize: 28, maxSize: 58, sauces: 2, pimenton: true, holdMs: 1500 })
+  if (style === 'knitting') return knitting({ scarves: 3, cols: 8, rows: 36, knitMs: 4000, colors: YARN, holdMs: 1500 })
   if (style === 'tofu') return tofu({ blocks: 32, overMs: 2500, minSize: 50, maxSize: 140, hops: 4, holdMs: 600 })
   const end = Date.now() + 3500
   const burst = () => {

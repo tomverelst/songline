@@ -17,7 +17,7 @@ export interface Song {
 }
 
 /** How a player's wins are celebrated. */
-export type CelebrationStyle = 'confetti' | 'fireworks' | 'lasers' | 'emoji' | 'bravas' | 'tofu'
+export type CelebrationStyle = 'confetti' | 'fireworks' | 'lasers' | 'emoji' | 'bravas' | 'tofu' | 'knitting'
 
 /**
  * A side of the phone lying flat in the middle of the table. 'bottom' is the

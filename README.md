@@ -156,7 +156,11 @@ zigzag of brava sauce and a white one of aioli (a bigger plate with pimentón
 for an exact year, two rounds of sauce for the winner). Or **tofu**: wobbly
 blocks of tofu with happy little faces drop in, land with a squish, jiggle
 and hop about along the bottom (bigger ones hopping more for an exact year, a
-whole crowd for the winner). Tap the celebration button next to a name on the
+whole crowd for the winner). Or **knitting**: a striped scarf is knitted down
+from the top of the screen, row by row, with two wooden needles clicking at the
+working row and a ball of yarn at the bottom that turns as the yarn is pulled
+(a scarf with a gold heart knitted in for an exact year, three long scarves
+for the winner). Tap the celebration button next to a name on the
 setup screen to pick one (each shows itself off); for emoji rain pick one of
 24 emoji or type any other. It can't be changed mid-game. It plays when that player wins a card or hits the
 exact year, and for the winner at the end. In Battle, each side that wins
