@@ -192,6 +192,7 @@ export function drawSong(state: GameState, random: () => number = Math.random): 
   if (state.settings.randomStart) turn.startMs = randomStartMs(song.durationMs, state.settings.guessTimeLimit, random)
   const limitMs = timeLimitMs(state.settings)
   if (limitMs) turn.clock = { leftMs: limitMs }
+  if (state.settings.mode === 'battle') turn.guesses = state.players.map(() => ({}))
   return { ...state, deck, turn }
 }
 
@@ -322,18 +323,30 @@ export function timeUp(state: GameState): GameState {
  */
 export function overwriteRevealedYear(state: GameState, year: number): GameState {
   const turn = state.turn
-  if (!turn || turn.phase !== 'reveal' || !turn.result) return state
+  if (!turn || turn.phase !== 'reveal' || !(turn.result || turn.guesses)) return state
   return {
     ...state,
     turn: {
       ...turn,
       song: { ...turn.song, year, yearSource: 'manual' },
-      result: {
+      result: turn.result && {
         ...turn.result,
         // Without a slot, nobody guessed before the time ran out.
         placementCorrect: turn.slot ? isPlacementCorrect(turn.slot, year) : false,
         exactYear: turn.yearGuess === year,
       },
+      guesses: turn.guesses?.map((g) =>
+        g.result
+          ? {
+              ...g,
+              result: {
+                ...g.result,
+                placementCorrect: g.slot ? isPlacementCorrect(g.slot, year) : false,
+                exactYear: g.yearGuess === year,
+              },
+            }
+          : g,
+      ),
     },
   }
 }

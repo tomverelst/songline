@@ -1,43 +1,31 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import type { GameState, Song, TurnResult } from '../game/types'
+import type { GameState, TurnResult } from '../game/types'
 import {
-  drawSong,
   endTurn,
-  finish,
   isFlipped,
   isValidYear,
   overwriteCardYear,
   overwriteRevealedYear,
   reveal,
   score,
-  setTurnSongYear,
-  skipSong,
   slotForYear,
-  startClock,
-  stopClock,
-  timeLeftMs,
-  timeLimitMs,
   timeUp,
 } from '../game/logic'
-import { originalYear } from '../musicbrainz'
-import { rememberSongs } from '../history'
 import { celebrateCard, celebrateExact } from '../party'
-import { describePlaybackError, pause, playSong, resume, SpotifyError } from '../spotify/api'
 import { TimelineCards } from '../components/TimelineCards'
 import { TableReveal, TableView } from '../components/TableView'
 import { LikeButton } from '../components/LikeButton'
 import { SongDetailsProvider } from '../components/SongDetails'
-import { useYearEditor } from '../components/YearEdit'
-import { DevicePicker } from '../components/DevicePicker'
 import { YearInput } from '../components/YearInput'
 import { TimerButton } from '../components/TimerButton'
-import { Coin, Coins } from '../components/Coins'
-import { KEYS, load, save } from '../storage'
+import { Coins } from '../components/Coins'
+import { BonusToggle, GameMenu, GuessTimer, RevealYear, YearSource } from '../components/GameParts'
+import { guessText, medianYear } from '../components/format'
 import { Artwork, BottomBar, Button, Card, CardTitle, IconButton, Muted, Screen, Switch, Toast } from '../components/ui'
 import { cx } from '../components/classes'
 import { ScreenRotation } from '../components/rotation'
 import { requestMotionAccess, useDeviceTurn, useScreenAngle } from '../motion'
-import { canFullscreen, enterFullscreen, exitFullscreen, useFullscreen } from '../fullscreen'
+import { useTurnSession } from './useTurnSession'
 
 interface Props {
   game: GameState
@@ -46,12 +34,16 @@ interface Props {
 }
 
 export function GameScreen({ game, onChange, onQuit }: Props) {
-  const [deviceId, setDeviceId] = useState<string | null>(() => load(KEYS.device, null))
-  const [playing, setPlaying] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [checkingYear, setCheckingYear] = useState(false)
-  const yearLookups = useRef(new Map<string, Promise<void>>())
+  const session = useTurnSession({
+    game,
+    onChange,
+    reveal: (g, timedOut) => (timedOut ? timeUp(g) : reveal(g)),
+    endTurn,
+    holdAutoplay: menuOpen,
+  })
+  const { playing, error, setError, checkingYear, autoplayActive, introKey } = session
+  const { startTurn, skip, togglePause, lockIn, nextTurn } = session
 
   const player = game.players[game.currentPlayer]
   const turn = game.turn
@@ -68,118 +60,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
     else if (wonCard) celebrateCard()
   }, [revealedSong, wonCard, exactHit])
 
-  // Autoplay: start the mystery song by itself a few seconds after the
-  // "whose turn" screen appears, unless the menu is open.
-  const autoplayActive = !turn && game.settings.autoplay !== false && !menuOpen
-  const startTurnRef = useRef(startTurn)
-  useEffect(() => {
-    startTurnRef.current = startTurn
-  })
-  const introKey = `${game.round}-${game.currentPlayer}`
-  useEffect(() => {
-    if (!autoplayActive) return
-    const timer = setTimeout(() => startTurnRef.current(), AUTOPLAY_MS)
-    return () => clearTimeout(timer)
-  }, [autoplayActive, introKey])
-
-  // Remember every song that comes up, so later games can play fresh ones first.
-  const drawnSongId = turn?.song.id
-  useEffect(() => {
-    if (drawnSongId) rememberSongs([drawnSongId])
-  }, [drawnSongId])
-
-  // Look up the original release year while the song is playing.
-  const songToCheck = turn?.phase === 'guess' && !turn.song.yearSource ? turn.song : null
-  useEffect(() => {
-    if (!songToCheck || yearLookups.current.has(songToCheck.id)) return
-    const id = songToCheck.id
-    yearLookups.current.set(
-      id,
-      originalYear(songToCheck).then((year) => onChange((g) => setTurnSongYear(g, id, year))),
-    )
-  }, [songToCheck, onChange])
-
-  async function play(uri: string, positionMs?: number) {
-    setError(null)
-    try {
-      try {
-        await playSong(uri, deviceId ?? undefined, positionMs)
-      } catch (e) {
-        // The saved device may have gone to sleep — fall back to the active one.
-        if (deviceId && e instanceof SpotifyError && e.status === 404) await playSong(uri, undefined, positionMs)
-        else throw e
-      }
-      setPlaying(true)
-      // The guess clock only runs once the song can be heard.
-      onChange((g) => (g.turn?.song.uri === uri ? startClock(g, Date.now()) : g))
-    } catch (e) {
-      setPlaying(false)
-      setError(describePlaybackError(e))
-    }
-  }
-
-  async function togglePause() {
-    setError(null)
-    try {
-      if (playing) await pause(deviceId ?? undefined)
-      else await resume(deviceId ?? undefined)
-      onChange((g) => (playing ? stopClock(g, Date.now()) : startClock(g, Date.now())))
-      setPlaying(!playing)
-    } catch (e) {
-      setError(describePlaybackError(e))
-    }
-  }
-
-  function startTurn() {
-    const next = drawSong(game)
-    onChange(next)
-    if (next.turn) play(next.turn.song.uri, next.turn.startMs)
-  }
-
-  function skip() {
-    const next = skipSong(game)
-    onChange(next)
-    if (next.turn) play(next.turn.song.uri, next.turn.startMs)
-  }
-
-  /** Reveals the guess; `timedOut` when the time limit ran out first. */
-  async function lockIn(timedOut = false) {
-    const pending = turn && !turn.song.yearSource ? yearLookups.current.get(turn.song.id) : undefined
-    if (pending && turn) {
-      setCheckingYear(true)
-      const timedOut = await Promise.race([
-        pending.then(() => false),
-        new Promise<boolean>((r) => setTimeout(() => r(true), YEAR_CHECK_WAIT_MS)),
-      ])
-      // Too slow: settle on the Spotify year rather than keep the table waiting.
-      if (timedOut) onChange((g) => setTurnSongYear(g, turn.song.id, null))
-      setCheckingYear(false)
-    }
-    scrollToTop()
-    onChange(timedOut ? timeUp : reveal)
-  }
-
-  // The time limit: lock in whatever is guessed when the clock runs out.
-  const now = useNow(!!turn?.clock?.deadline && turn.phase === 'guess')
-  const left = turn?.phase === 'guess' ? timeLeftMs(turn, now) : undefined
-  // `now` can lag behind for a tick just after the clock starts.
-  const timeLeft = left === undefined ? undefined : Math.min(left, timeLimitMs(game.settings))
-  const lockInRef = useRef(lockIn)
-  useEffect(() => {
-    lockInRef.current = lockIn
-  })
-  const timeIsUp = timeLeft === 0 && !checkingYear
-  useEffect(() => {
-    if (timeIsUp) lockInRef.current(true)
-  }, [timeIsUp])
-  const clock = timeLeft !== undefined && <GuessTimer ms={timeLeft} running={!!turn?.clock?.deadline} />
-
-  function nextTurn() {
-    if (playing) pause(deviceId ?? undefined).catch(() => {})
-    setPlaying(false)
-    scrollToTop()
-    onChange(endTurn(game))
-  }
+  const clock = session.timeLeft !== undefined && <GuessTimer ms={session.timeLeft} running={session.clockRunning} />
 
   const guessSlot = turn?.phase === 'guess' && isValidYear(turn.yearGuess)
     ? slotForYear(player.timeline, turn.yearGuess)
@@ -199,7 +80,6 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
   }
 
   const flipEnabled = !!game.settings.flipBetweenTurns
-  const fullscreen = useFullscreen()
   const tableViewEnabled = game.settings.tableView !== false
   // The guess and the reveal have a table view for a phone on its side.
   const tablePhase = turn?.phase === 'guess' || turn?.phase === 'reveal'
@@ -262,7 +142,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
           <Button size="sm" className="px-3" onClick={togglePause}>
             {playing ? '❚❚ Pause' : '▶ Play'}
           </Button>
-          <Button size="sm" variant="ghost" className="px-3" onClick={() => play(turn.song.uri, turn.startMs)}>
+          <Button size="sm" variant="ghost" className="px-3" onClick={session.restart}>
             ↺ Restart
           </Button>
           <Button size="sm" variant="ghost" className="px-3" onClick={skip}>
@@ -307,7 +187,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
             <p className="text-lg text-muted">It's your turn — grab the phone!</p>
           </section>
           <BottomBar>
-            <TimerButton variant="primary" block onClick={startTurn} timerMs={autoplayActive ? AUTOPLAY_MS : undefined}>
+            <TimerButton variant="primary" block onClick={startTurn} timerMs={autoplayActive ? session.autoplayMs : undefined}>
               ▶ Play mystery song
             </TimerButton>
           </BottomBar>
@@ -402,85 +282,39 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
       {error && <Toast onDismiss={() => setError(null)}>{error}</Toast>}
 
       {menuOpen && (
-        <div className="fixed inset-0 z-30 flex items-end bg-black/60" onClick={() => setMenuOpen(false)}>
-          <div
-            className="mx-auto flex max-h-[85%] w-full max-w-[560px] animate-slide-up flex-col gap-3 overflow-y-auto rounded-t-[20px] bg-surface px-4 pt-5 pb-[calc(env(safe-area-inset-bottom)+20px)]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <CardTitle>Game menu</CardTitle>
-              <IconButton aria-label="Close" onClick={() => setMenuOpen(false)}>
-                ✕
-              </IconButton>
-            </div>
-            <Muted>
-              Playlist: {game.settings.playlistName} · {game.deck.length} songs left
-            </Muted>
-            <DevicePicker
-              deviceId={deviceId}
-              onChange={(id) => {
-                setDeviceId(id)
-                save(KEYS.device, id)
-              }}
-            />
-            {canFullscreen() ? (
-              <Switch
-                title="Full screen"
-                description="Hides the address bar."
-                checked={fullscreen}
-                onChange={(on) => (on ? enterFullscreen() : exitFullscreen())}
-              />
-            ) : (
-              <Muted>To hide the address bar, add Songline to your Home Screen (Share → Add to Home Screen) and play from there.</Muted>
-            )}
+        <GameMenu
+          game={game}
+          onChange={onChange}
+          deviceId={session.deviceId}
+          onDeviceChange={session.changeDevice}
+          onClose={() => setMenuOpen(false)}
+          onQuit={onQuit}
+          stopMusic={session.stopMusic}
+        >
+          <Switch
+            title="Table view when turned sideways"
+            description="Turn the phone on its side while guessing or revealing to lay your cards out in a row and pick the year on a ruler."
+            checked={tableViewEnabled}
+            onChange={(tableView) => {
+              if (tableView) requestMotionAccess()
+              onChange((g) => ({ ...g, settings: { ...g.settings, tableView } }))
+            }}
+          />
+          {tableViewEnabled && (
             <Switch
-              title="Table view when turned sideways"
-              description="Turn the phone on its side while guessing or revealing to lay your cards out in a row and pick the year on a ruler."
-              checked={tableViewEnabled}
-              onChange={(tableView) => {
-                if (tableView) requestMotionAccess()
-                onChange((g) => ({ ...g, settings: { ...g.settings, tableView } }))
-              }}
+              title="Guess card stays in the middle"
+              description="In the table view, swipe anywhere on the cards to change the year; they slide past your guess."
+              checked={!!game.settings.swipeCards}
+              onChange={(swipeCards) => onChange((g) => ({ ...g, settings: { ...g.settings, swipeCards } }))}
             />
-            {tableViewEnabled && (
-              <Switch
-                title="Guess card stays in the middle"
-                description="In the table view, swipe anywhere on the cards to change the year; they slide past your guess."
-                checked={!!game.settings.swipeCards}
-                onChange={(swipeCards) => onChange((g) => ({ ...g, settings: { ...g.settings, swipeCards } }))}
-              />
-            )}
-            <Switch
-              title="Flip screen between turns"
-              description="Upside down every other turn, for players across the table."
-              checked={flipEnabled}
-              onChange={(flipBetweenTurns) => onChange((g) => ({ ...g, settings: { ...g.settings, flipBetweenTurns } }))}
-            />
-            {/* Pull-to-refresh can't reach the turned game screen; the game is saved, so this is safe. */}
-            <Button onClick={() => window.location.reload()}>↻ Reload</Button>
-            <Button
-              onClick={() => {
-                if (confirm('End the game now? The highest score wins.')) {
-                  pause(deviceId ?? undefined).catch(() => {})
-                  onChange(finish(game))
-                }
-              }}
-            >
-              🏁 End game now
-            </Button>
-            <Button
-              variant="danger"
-              onClick={() => {
-                if (confirm('Quit without a winner?')) {
-                  pause(deviceId ?? undefined).catch(() => {})
-                  onQuit()
-                }
-              }}
-            >
-              Quit to setup
-            </Button>
-          </div>
-        </div>
+          )}
+          <Switch
+            title="Flip screen between turns"
+            description="Upside down every other turn, for players across the table."
+            checked={flipEnabled}
+            onChange={(flipBetweenTurns) => onChange((g) => ({ ...g, settings: { ...g.settings, flipBetweenTurns } }))}
+          />
+        </GameMenu>
       )}
     </>
   )
@@ -518,7 +352,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
         onSelectYear={setYearGuess}
         playing={playing}
         onTogglePause={togglePause}
-        onRestart={() => play(turn.song.uri, turn.startMs)}
+        onRestart={session.restart}
         clock={clock}
         onSkip={skip}
         lockLabel={checkingYear ? 'Checking…' : guessSlot ? 'Lock in' : 'Pick a year'}
@@ -567,130 +401,5 @@ function useLandscape() {
       return () => query.removeEventListener('change', onChange)
     },
     () => window.matchMedia('(orientation: landscape)').matches,
-  )
-}
-
-/** The current time, ticking a few times a second while `active`. */
-function useNow(active: boolean) {
-  const [now, setNow] = useState(Date.now)
-  useEffect(() => {
-    if (!active) return
-    const timer = setInterval(() => setNow(Date.now()), 200)
-    return () => clearInterval(timer)
-  }, [active])
-  return now
-}
-
-/** The time left to guess; red in the last seconds, dimmed while paused. */
-function GuessTimer({ ms, running }: { ms: number; running: boolean }) {
-  const seconds = Math.ceil(ms / 1000)
-  const hurry = seconds <= 5
-  return (
-    <span
-      role="timer"
-      aria-label={`${seconds} seconds left`}
-      className={cx(
-        'flex-none rounded-full border px-2.5 py-0.5 text-sm font-extrabold tabular-nums',
-        hurry ? 'border-bad bg-bad/15 text-bad' : 'border-line bg-surface-2',
-        hurry && running && 'animate-pulse',
-        !running && 'opacity-60',
-      )}
-    >
-      ⏱ {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}
-    </span>
-  )
-}
-
-function guessText(yearGuess: number | undefined) {
-  return yearGuess === undefined ? 'no guess in time' : `guessed ${yearGuess}`
-}
-
-function scrollToTop() {
-  window.scrollTo(0, 0)
-  document.querySelector('[data-scroller]')?.scrollTo(0, 0)
-}
-
-const YEAR_CHECK_WAIT_MS = 4000
-const AUTOPLAY_MS = 2500
-
-/** The revealed year, which can be looked up and overwritten in place. */
-function RevealYear({ song, exact, onSave }: { song: Song; exact: boolean; onSave: (year: number) => void }) {
-  const editor = useYearEditor(song, onSave)
-  return (
-    <>
-      {editor.editing ? (
-        <div className="mt-2 w-full">{editor.input}</div>
-      ) : (
-        <>
-          <div className={cx('mt-2 text-[3.5rem] leading-none font-black tabular-nums', exact && 'text-gold')}>
-            {song.year}
-          </div>
-          <YearSource song={song} />
-        </>
-      )}
-      {editor.pills}
-    </>
-  )
-}
-
-function YearSource({ song }: { song: Song }) {
-  // An overwritten year speaks for itself.
-  if (song.yearSource === 'manual') return null
-  if (song.yearSource === 'musicbrainz') {
-    return (
-      <Muted>
-        Original release (MusicBrainz)
-        {song.spotifyYear !== song.year && ` · Spotify album says ${song.spotifyYear}`}
-      </Muted>
-    )
-  }
-  return <Muted>Album release date (Spotify) · could be a later reissue</Muted>
-}
-
-function medianYear(timeline: Song[]): number {
-  const years = timeline.map((s) => s.year).sort((a, b) => a - b)
-  return years[Math.floor(years.length / 2)] ?? 2000
-}
-
-function BonusToggle({
-  label,
-  answer,
-  value,
-  onChange,
-  coin = false,
-}: {
-  /** Rewards a bonus coin instead of a point. */
-  coin?: boolean
-  label: string
-  answer: string
-  value: boolean
-  onChange: (v: boolean) => void
-}) {
-  return (
-    <button
-      className={cx(
-        'flex min-h-16 w-full items-center gap-3 rounded-xl border px-3 py-2 text-left',
-        value ? 'border-good bg-good/12' : 'border-line bg-bg',
-      )}
-      aria-pressed={value}
-      onClick={() => onChange(!value)}
-    >
-      <span
-        className={cx(
-          'grid size-8 flex-none place-items-center rounded-lg border-2 font-black',
-          value ? 'border-good bg-good text-[#04130a]' : 'border-line',
-        )}
-      >
-        {value ? '✓' : ''}
-      </span>
-      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-sm text-muted">{label}</span>
-        <span className="font-semibold">{answer}</span>
-      </span>
-      <span className={cx('inline-flex flex-none items-center gap-1 font-extrabold', value ? 'text-good' : 'text-muted')}>
-        {value ? '+1' : '+0'}
-        {coin && <Coin />}
-      </span>
-    </button>
   )
 }

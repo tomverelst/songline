@@ -4,6 +4,7 @@ import { handleRedirect } from './spotify/auth'
 import { KEYS, load, save } from './storage'
 import { SetupScreen } from './screens/SetupScreen'
 import { GameScreen } from './screens/GameScreen'
+import { BattleScreen } from './screens/BattleScreen'
 import { FinishedScreen } from './screens/FinishedScreen'
 
 export default function App() {
@@ -28,11 +29,6 @@ export default function App() {
 
   if (!game) return <SetupScreen onStart={setGame} initialError={authError} />
   if (game.status === 'finished') return <FinishedScreen game={game} onNewGame={() => setGame(null)} />
-  return (
-    <GameScreen
-      game={game}
-      onChange={updateGame}
-      onQuit={() => setGame(null)}
-    />
-  )
+  const Screen = game.settings.mode === 'battle' ? BattleScreen : GameScreen
+  return <Screen game={game} onChange={updateGame} onQuit={() => setGame(null)} />
 }

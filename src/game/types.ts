@@ -55,6 +55,18 @@ export interface Turn {
   clock?: GuessClock
   /** The time limit ran out before the guess was locked in. */
   timedOut?: boolean
+  /** Battle mode: every player's guess, by player index. */
+  guesses?: BattleGuess[]
+}
+
+/** One player's (or team's) guess in a battle turn. */
+export interface BattleGuess {
+  yearGuess?: number
+  /** Locked in; the turn is revealed once every player locked in. */
+  locked?: boolean
+  /** Where the guessed year falls in this player's timeline; set on reveal. */
+  slot?: Slot
+  result?: TurnResult
 }
 
 export interface GuessClock {
@@ -64,7 +76,7 @@ export interface GuessClock {
   leftMs: number
 }
 
-export type GameMode = 'standard'
+export type GameMode = 'standard' | 'battle'
 
 export interface GameSettings {
   mode: GameMode
@@ -84,6 +96,8 @@ export interface GameSettings {
   guessTimeLimit?: number
   /** Start each mystery song at a random point, not at the beginning. */
   randomStart?: boolean
+  /** Battle: the second player's half of the screen is upside down. Unset means on. */
+  faceToFace?: boolean
   playlistId: string
   playlistName: string
 }

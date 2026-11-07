@@ -16,6 +16,7 @@ import {
 import { DevicePicker } from '../components/DevicePicker'
 import { KEYS, load, save } from '../storage'
 import { GAME_MODES } from '../game/modes'
+import { BATTLE_PLAYERS } from '../game/battle'
 import { Coin } from '../components/Coins'
 import {
   Artwork,
@@ -49,6 +50,8 @@ interface SetupDraft {
   /** Seconds to guess; 0 means no limit. */
   guessTimeLimit: number
   randomStart: boolean
+  /** Battle: the second player's half is upside down. */
+  faceToFace: boolean
   avoidPlayedSongs: boolean
   playlist: PlaylistSummary | null
 }
@@ -64,6 +67,7 @@ const DEFAULT_DRAFT: SetupDraft = {
   swipeCards: false,
   guessTimeLimit: 0,
   randomStart: false,
+  faceToFace: true,
   avoidPlayedSongs: true,
   playlist: null,
 }
@@ -85,8 +89,12 @@ export function SetupScreen({ onStart, initialError }: Props) {
   useEffect(() => save(KEYS.device, deviceId), [deviceId])
 
   const update = (patch: Partial<SetupDraft>) => setDraft((d) => ({ ...d, ...patch }))
-  const names = draft.names.map((n) => n.trim()).filter(Boolean)
-  const canStart = names.length >= 1 && !!draft.playlist && loggedIn && !loading
+  const battle = draft.mode === 'battle'
+  // Battle is always two players (or teams); extra names are kept for later.
+  const nameFields = battle ? Array.from({ length: BATTLE_PLAYERS }, (_, i) => draft.names[i] ?? '') : draft.names
+  const names = nameFields.map((n) => n.trim()).filter(Boolean)
+  const enoughPlayers = battle ? names.length === BATTLE_PLAYERS : names.length >= 1
+  const canStart = enoughPlayers && !!draft.playlist && loggedIn && !loading
 
   // Each start gets an id; cancelling bumps it so late results are ignored.
   const run = useRef(0)
@@ -124,6 +132,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
           swipeCards: draft.swipeCards,
           guessTimeLimit: draft.guessTimeLimit,
           randomStart: draft.randomStart,
+          ...(battle && { faceToFace: draft.faceToFace }),
           playlistId: draft.playlist.id,
           playlistName,
         },
@@ -183,17 +192,22 @@ export function SetupScreen({ onStart, initialError }: Props) {
       </header>
 
       <Card>
-        <CardTitle>Players</CardTitle>
-        {draft.names.map((name, i) => (
+        <CardTitle>{battle ? 'Players or teams' : 'Players'}</CardTitle>
+        {nameFields.map((name, i) => (
           <div className="flex items-center gap-2" key={i}>
             <TextInput
-              placeholder={`Player ${i + 1}`}
+              placeholder={battle ? `Player or team ${i + 1}` : `Player ${i + 1}`}
               value={name}
               autoComplete="off"
               enterKeyHint="next"
-              onChange={(e) => update({ names: draft.names.map((n, j) => (j === i ? e.target.value : n)) })}
+              onChange={(e) => {
+                const next = [...draft.names]
+                while (next.length <= i) next.push('')
+                next[i] = e.target.value
+                update({ names: next })
+              }}
             />
-            {draft.names.length > 1 && (
+            {!battle && draft.names.length > 1 && (
               <IconButton
                 aria-label={`Remove player ${i + 1}`}
                 onClick={() => update({ names: draft.names.filter((_, j) => j !== i) })}
@@ -203,9 +217,13 @@ export function SetupScreen({ onStart, initialError }: Props) {
             )}
           </div>
         ))}
-        <Button variant="ghost" onClick={() => update({ names: [...draft.names, ''] })}>
-          + Add player
-        </Button>
+        {battle ? (
+          <Muted>Battle is for two: one player or one team on each side of the phone.</Muted>
+        ) : (
+          <Button variant="ghost" onClick={() => update({ names: [...draft.names, ''] })}>
+            + Add player
+          </Button>
+        )}
       </Card>
 
       <Card>
@@ -281,13 +299,23 @@ export function SetupScreen({ onStart, initialError }: Props) {
             checked={draft.autoplay}
             onChange={(autoplay) => update({ autoplay })}
           />
-          <Switch
-            title="Table view when turned sideways"
-            description="Turn the phone on its side while guessing or revealing to lay your cards out in a row and pick the year on a ruler."
-            checked={draft.tableView}
-            onChange={(tableView) => update({ tableView })}
-          />
-          {draft.tableView && (
+          {battle && (
+            <Switch
+              title="Face each other"
+              description="The top half of the screen is upside down, for players across the table. Off for players side by side."
+              checked={draft.faceToFace}
+              onChange={(faceToFace) => update({ faceToFace })}
+            />
+          )}
+          {!battle && (
+            <Switch
+              title="Table view when turned sideways"
+              description="Turn the phone on its side while guessing or revealing to lay your cards out in a row and pick the year on a ruler."
+              checked={draft.tableView}
+              onChange={(tableView) => update({ tableView })}
+            />
+          )}
+          {!battle && draft.tableView && (
             <Switch
               title="Guess card stays in the middle"
               description="In the table view, swipe anywhere on the cards to change the year; they slide past your guess."
@@ -295,12 +323,14 @@ export function SetupScreen({ onStart, initialError }: Props) {
               onChange={(swipeCards) => update({ swipeCards })}
             />
           )}
-          <Switch
-            title="Flip screen between turns"
-            description="Turns the screen upside down every other turn, for players sitting across the table."
-            checked={draft.flipBetweenTurns}
-            onChange={(flipBetweenTurns) => update({ flipBetweenTurns })}
-          />
+          {!battle && (
+            <Switch
+              title="Flip screen between turns"
+              description="Turns the screen upside down every other turn, for players sitting across the table."
+              checked={draft.flipBetweenTurns}
+              onChange={(flipBetweenTurns) => update({ flipBetweenTurns })}
+            />
+          )}
           <Switch
             title="Avoid songs from earlier games"
             description={

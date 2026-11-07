@@ -6,7 +6,7 @@ in their personal timeline of songs.
 
 ## How to play
 
-1. **Setup:** add the players, pick a **game mode** and the number of points
+1. **Setup:** add the players, pick a **game mode** (Standard, or Battle for two) and the number of points
    needed to win, connect Spotify, pick a playlist and choose the device the
    music plays on.
 2. Every player starts with one random song card (the year is shown).
@@ -79,6 +79,28 @@ in their personal timeline of songs.
   phone remembers every song that came up (mystery songs, skipped songs and
   starting cards). New games deal and play fresh songs first; songs you already
   heard only come up once those run out. **Forget played songs** clears the list.
+
+### Game mode: Battle
+
+For two players, or two teams, on one phone lying between them.
+
+- Every turn, **both sides guess the same song at the same time**. The screen
+  is split in two: each half has its own name and score, year buttons, its
+  own row of cards and a **Lock in** button. Tap a card to guess its year.
+  With **Face each other** (on by default; Advanced options or the ☰ menu)
+  the top half is upside down for the player across the table. Switch it off
+  for players sitting side by side.
+- Once a side locks in, its guess is hidden from the other side. **Change**
+  unlocks it again. When both sides have locked in, the song is revealed.
+- Everyone who places the song right in their own timeline wins a copy of the
+  card. Exact year, title and artist each earn a coin per side.
+- If one side reaches the points to win, it wins. If both reach it in the same
+  turn, the higher score wins, then the most coins, and a full tie is shared.
+- **Same options as Standard:** points to win, time to guess (both sides
+  share one clock, and when it runs out each guess counts as it stands), start
+  somewhere in the song, coins count as points, autoplay and avoid songs from
+  earlier games. The table view and flip-between-turns options are Standard
+  only.
 
 **Year looks off?** On the reveal, **🔍 Look up** searches the song's release
 year on DuckDuckGo, and **✎ Edit** lets you overwrite it right there; the card
@@ -168,6 +190,10 @@ Every push to `main` is tested, built and published to GitHub Pages at
 - `src/game/`: pure game rules (slots, placement, scoring, guess matching), with tests
 - `src/spotify/`: PKCE login, playlists and Connect playback
 - `src/musicbrainz.ts`: original release year lookup, with fallback
-- `src/screens/`: the setup, game and results screens
+- `src/game/battle.ts`: Battle mode's rules (simultaneous guesses, shared wins), with tests
+- `src/screens/`: the setup, results and game screens. Each game mode has its
+  own screen (`GameScreen` for Standard, `BattleScreen` for Battle); what they
+  share lives in `useTurnSession.ts` (playback, autoplay, year lookup, guess
+  clock) and `components/GameParts.tsx` (clock, reveal year, points, menu)
 - `src/components/`: shared UI (`ui.tsx`: buttons, cards, inputs, switches), the timeline and the device picker
 - Styling is Tailwind CSS v4: theme colours live in `@theme` in `src/index.css`; use utility classes and the components in `ui.tsx` rather than new CSS

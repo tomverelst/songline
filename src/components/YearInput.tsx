@@ -5,10 +5,12 @@ interface Props {
   /** Where the +/- buttons start counting from when nothing is entered yet. */
   startYear: number
   onChange: (year: number | undefined) => void
+  /** Off: the year only changes with the buttons (no on-screen keyboard). */
+  typing?: boolean
 }
 
 /** The guess: −10 −1 [year] +1 +10 in one row. */
-export function YearInput({ value, startYear, onChange }: Props) {
+export function YearInput({ value, startYear, onChange, typing = true }: Props) {
   const step = (delta: number) => {
     const base = value ?? startYear
     onChange(Math.min(MAX_YEAR, Math.max(MIN_YEAR, base + delta)))
@@ -18,13 +20,14 @@ export function YearInput({ value, startYear, onChange }: Props) {
     <input
       className="w-full min-w-0 rounded-2xl border-2 border-line bg-bg text-center text-[clamp(1.9rem,9vw,2.6rem)] leading-[1.1] font-black text-ink tabular-nums caret-accent placeholder:text-line focus:border-accent focus:outline-none"
       type="text"
-      inputMode="numeric"
+      inputMode={typing ? 'numeric' : 'none'}
+      readOnly={!typing}
       pattern="[0-9]*"
       maxLength={4}
       placeholder="????"
       aria-label="Year"
       value={value ?? ''}
-      onFocus={(e) => e.target.select()}
+      onFocus={(e) => typing && e.target.select()}
       onChange={(e) => {
         const digits = e.target.value.replace(/\D/g, '').slice(0, 4)
         onChange(digits ? Number(digits) : undefined)
