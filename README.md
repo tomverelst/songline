@@ -122,8 +122,11 @@ For two players, or two teams, on one phone lying between them.
   earlier games. The table view and flip-between-turns options are Standard
   only.
 
-**Celebrations:** every player (or team) picks their own: confetti, or
-fireworks with rockets that climb, burst and crackle out. Tap the 🎉/🎆 button
+**Celebrations:** every player (or team) picks their own: confetti,
+fireworks with rockets that climb, burst and crackle out, or lasers: the
+screen dims like a club and fans of laser beams sweep from the corners to a
+128 BPM beat (gold for an exact year, the full rig for the winner). Tap the
+🎉/🎆/🪩 button
 next to a name on the setup screen to switch (it shows it off), or change it
 mid-game in the ☰ menu. It plays when that player wins a card or hits the
 exact year, and for the winner at the end. In Battle, each side that wins

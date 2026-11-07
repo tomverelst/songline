@@ -268,14 +268,14 @@ export function PlayerCelebrations({ players, onChange }: { players: Player[]; o
     <div className="mt-2 flex flex-col gap-1.5">
       <span className="font-semibold">Celebrations</span>
       {players.map((p, index) => (
-        <div key={p.id} className="flex items-center gap-2">
-          <span className="min-w-0 flex-1 truncate font-semibold">{p.name}</span>
+        <div key={p.id} className="grid grid-cols-3 gap-1.5">
+          <span className="col-span-3 truncate font-semibold">{p.name}</span>
           {CELEBRATIONS.map((c) => (
             <button
               key={c.id}
               aria-pressed={celebrationOf(p) === c.id}
               className={cx(
-                'flex min-h-10 flex-none items-center gap-1 rounded-full border px-3 text-sm font-semibold',
+                'flex min-h-10 items-center justify-center gap-1 rounded-full border px-2 text-sm font-semibold',
                 celebrationOf(p) === c.id ? 'border-accent bg-accent/12' : 'border-line bg-bg text-muted',
               )}
               onClick={() => {

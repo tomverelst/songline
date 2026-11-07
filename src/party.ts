@@ -1,5 +1,6 @@
 import confetti from 'canvas-confetti'
 import { fireworks } from './fireworks'
+import { lasers } from './lasers'
 import { KEYS, load } from './storage'
 import type { CelebrationStyle, Player } from './game/types'
 
@@ -8,11 +9,13 @@ export type { CelebrationStyle }
 export const CELEBRATIONS: { id: CelebrationStyle; emoji: string; name: string }[] = [
   { id: 'confetti', emoji: '🎉', name: 'Confetti' },
   { id: 'fireworks', emoji: '🎆', name: 'Fireworks' },
+  { id: 'lasers', emoji: '🪩', name: 'Lasers' },
 ]
 
 /** The style for players who haven't picked one: what this phone used before. */
 export function defaultCelebration(): CelebrationStyle {
-  return load<CelebrationStyle>(KEYS.celebration, 'confetti') === 'fireworks' ? 'fireworks' : 'confetti'
+  const saved = load<CelebrationStyle>(KEYS.celebration, 'confetti')
+  return CELEBRATIONS.some((c) => c.id === saved) ? saved : 'confetti'
 }
 
 export function celebrationOf(player: Pick<Player, 'celebration'>): CelebrationStyle {
@@ -23,16 +26,20 @@ export function celebrationOf(player: Pick<Player, 'celebration'>): CelebrationS
 const base = { disableForReducedMotion: true, zIndex: 50 }
 const GOLD = ['#ffcc33', '#ffe680', '#f5b700', '#fff1a8', '#d99a00']
 const PARTY = ['#ff5d8f', '#ffb347', '#3ddc97', '#7aa2ff', '#f4f1fb']
+const CLUB = ['#39ff14', '#ff2bd6', '#00e5ff', '#3b5bff', '#ff1744']
+const GOLD_LASERS = ['#ffd23f', '#ffffff', '#ffb000']
 
 /** You won the card. */
 export function celebrateCard(style: CelebrationStyle) {
   if (style === 'fireworks') return fireworks({ shells: 3, overMs: 700, colors: PARTY })
+  if (style === 'lasers') return lasers({ durationMs: 2400, colors: CLUB })
   confetti({ ...base, particleCount: 80, spread: 70, startVelocity: 40, origin: { y: 0.35 }, colors: PARTY })
 }
 
 /** Exact year: a shower of gold coins from both sides. */
 export function celebrateExact(style: CelebrationStyle) {
   if (style === 'fireworks') return fireworks({ shells: 6, overMs: 1400, colors: GOLD, sparks: 110, glitter: true })
+  if (style === 'lasers') return lasers({ durationMs: 3500, colors: GOLD_LASERS, big: true })
   const shot = (x: number, angle: number) =>
     confetti({
       ...base,
@@ -53,6 +60,7 @@ export function celebrateExact(style: CelebrationStyle) {
 /** Game over: bursts for a few seconds. */
 export function celebrateWin(style: CelebrationStyle) {
   if (style === 'fireworks') return fireworks({ shells: 14, overMs: 4000, colors: [...PARTY, ...GOLD], sparks: 100, glitter: true })
+  if (style === 'lasers') return lasers({ durationMs: 6000, colors: CLUB, big: true })
   const end = Date.now() + 3500
   const burst = () => {
     confetti({
