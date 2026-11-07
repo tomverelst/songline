@@ -59,6 +59,15 @@ in their personal timeline of songs.
   started before its year was known and the year clashes, the game puts that
   song back and plays another.
   When every song left clashes, they play anyway.
+- **Decades** (in Standard and Battle): play only songs from a range of
+  decades, e.g. the 1960s to the 1980s. Each end can also be **Any**. Starting
+  cards are from the range too. A song whose original year turns out to be
+  outside the range is dropped before it plays (if its year is known by then).
+  Songs are picked by Spotify's year first, so a remaster that Spotify dates
+  after the range is left out even if the original fits.
+- **Spread the years**: deals by picking a decade at random, then a song from
+  it, so every decade in the playlist comes up about equally often. A playlist
+  that's mostly 80s still gives you the 60s and the 2000s regularly.
 - **Advanced options** → **Coins count as points**: makes coins count towards
   the target as well, so a perfect turn is worth 4 points.
 - **Advanced options** → **Autoplay** (on by default): the "whose turn" screen
@@ -215,10 +224,13 @@ Every push to `main` is tested, built and published to GitHub Pages at
 - `src/musicbrainz.ts`: original release year lookup, with fallback
 - `src/game/deck.ts`: the songs as a stream of cards, built from small decks
   that each wrap the next: `SourceDeck` (the shuffled playlist) →
-  `FreshFirstDeck` (songs from earlier games last) → `LookupDeck` (original
-  year, looked up as a card passes through) → `BufferDeck` (pulls 3 cards
-  ahead, so their lookups run early) → `AvoidDoubleYearsDeck` (holds back
-  blocked years for later). `GameState.deck` saves what's left, in draw order.
+  `YearRangeDeck` (the chosen decades) → `SpreadDecadesDeck` (a random decade
+  each time) → `FreshFirstDeck` (songs from earlier games last) when a game is
+  set up. While playing: `LookupDeck` (original year, looked up as a card
+  passes through) → `BufferDeck` (pulls 3 cards ahead, so their lookups run
+  early) → `YearRangeDeck` (on the real year) → `AvoidDoubleYearsDeck` (holds
+  back blocked years for later). `GameState.deck` saves what's left, in draw
+  order.
 - `src/game/battle.ts`: Battle mode's rules (simultaneous guesses, shared wins), with tests
 - `src/screens/`: the setup, results and game screens. Each game mode has its
   own screen (`GameScreen` for Standard, `BattleScreen` for Battle); what they

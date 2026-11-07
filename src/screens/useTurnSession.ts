@@ -62,7 +62,11 @@ export function useTurnSession({ game, onChange, reveal, endTurn, holdAutoplay }
   // cards ahead in the background, and no double years holds songs back.
   // Built once from what's left of the deck; every draw goes through it.
   const [{ deck, lookup }] = useState(() =>
-    playingDeck(game.deck, { lookUp: cachedOriginalYear, blockedYears: () => blockedYears(gameRef.current) }),
+    playingDeck(game.deck, {
+      lookUp: cachedOriginalYear,
+      blockedYears: () => blockedYears(gameRef.current),
+      yearRange: game.settings.yearRange,
+    }),
   )
 
   // Autoplay: start the mystery song by itself a few seconds after the

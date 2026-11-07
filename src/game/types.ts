@@ -98,6 +98,10 @@ export interface GameSettings {
   randomStart?: boolean
   /** Never play a song from a year already in the guessing timeline(s). */
   noDoubleYears?: boolean
+  /** Only songs from these years (whole decades, e.g. 1960–1989). Unset ends mean no limit. */
+  yearRange?: { from?: number; to?: number }
+  /** Every decade in the playlist comes up about equally often. */
+  spreadDecades?: boolean
   /** Battle: the second player's half of the screen is upside down. Unset means on. */
   faceToFace?: boolean
   playlistId: string

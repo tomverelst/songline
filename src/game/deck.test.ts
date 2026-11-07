@@ -1,5 +1,16 @@
 import { describe, expect, it, vi } from 'vitest'
-import { AvoidDoubleYearsDeck, BufferDeck, FreshFirstDeck, LookupDeck, playingDeck, SourceDeck, type Deck } from './deck'
+import {
+  AvoidDoubleYearsDeck,
+  BufferDeck,
+  FreshFirstDeck,
+  LookupDeck,
+  newGameDeck,
+  playingDeck,
+  SourceDeck,
+  SpreadDecadesDeck,
+  YearRangeDeck,
+  type Deck,
+} from './deck'
 import type { Song } from './types'
 
 const song = (year: number, id = `s${year}`): Song => ({
@@ -101,5 +112,46 @@ describe('playingDeck', () => {
       ['s1970', 1970],
       ['s1960', 1960],
     ])
+  })
+})
+
+describe('YearRangeDeck', () => {
+  it('only deals the chosen years', () => {
+    const deck = new YearRangeDeck(new SourceDeck([1955, 1960, 1975, 1989, 1990].map((y) => song(y))), { from: 1960, to: 1989 })
+    expect(deck.remaining().map((s) => s.year)).toEqual([1960, 1975, 1989])
+    expect(drawAll(deck)).toEqual([1960, 1975, 1989])
+  })
+
+  it("filters a new game's deck on Spotify's year, so out-of-range songs are never looked up", () => {
+    const fresh = newGameDeck([1950, 1960, 1970, 1995].map((y) => song(y)), { yearRange: { from: 1960, to: 1989 }, random: () => 0 })
+    expect(fresh.remaining().map((s) => s.year).sort()).toEqual([1960, 1970])
+    const lookUp = vi.fn((s: Song) => Promise.resolve(s.year))
+    playingDeck(fresh.remaining(), { lookUp, blockedYears: () => new Set(), yearRange: { from: 1960, to: 1989 } })
+    expect(lookUp.mock.calls.map(([s]) => s.year).sort()).toEqual([1960, 1970])
+  })
+
+  it('drops a song whose real year turns out to be outside the range', async () => {
+    const lookUp = (s: Song) => Promise.resolve(s.year === 1975 ? 1969 : s.year)
+    const { deck } = playingDeck([song(1975), song(1980)], { lookUp, blockedYears: () => new Set(), yearRange: { from: 1970 } })
+    await flush()
+    expect(drawAll(deck)).toEqual([1980])
+  })
+})
+
+describe('SpreadDecadesDeck', () => {
+  it('deals every decade about equally often, however many songs each has', () => {
+    // 90 songs from the 1980s, 10 from the 1960s.
+    const songs = [...Array.from({ length: 90 }, (_, i) => song(1980 + (i % 10), `a${i}`)), ...Array.from({ length: 10 }, (_, i) => song(1960 + i, `b${i}`))]
+    let seed = 1
+    const random = () => ((seed = (seed * 16807) % 2147483647) / 2147483647)
+    const first20 = new SpreadDecadesDeck(new SourceDeck(songs), random).remaining().slice(0, 20)
+    const sixties = first20.filter((s) => s.year < 1970).length
+    expect(sixties).toBeGreaterThanOrEqual(6) // about half, not 2 in 20
+    expect(sixties).toBeLessThanOrEqual(14)
+  })
+
+  it('keeps every card', () => {
+    const deck = new SpreadDecadesDeck(new SourceDeck([1960, 1961, 1980].map((y) => song(y))), () => 0.5)
+    expect(drawAll(deck).sort()).toEqual([1960, 1961, 1980])
   })
 })

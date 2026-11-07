@@ -366,3 +366,20 @@ describe('no double years', () => {
     expect(isDoubleYear(g)).toBe(false)
   })
 })
+
+describe('decades', () => {
+  it('deals starting cards and the deck only from the chosen years', () => {
+    const settings: GameSettings = {
+      mode: 'standard',
+      targetPoints: 5,
+      bonusCountsTowardsGoal: false,
+      yearRange: { from: 1960, to: 1989 },
+      playlistId: 'x',
+      playlistName: 'x',
+    }
+    const songs = [1950, 1955, 1962, 1971, 1984, 1995, 2010].map((y) => song(y))
+    const g = newGame(['Ann', 'Bob'], settings, songs, () => 0.3)
+    const years = [...g.players.map((p) => p.timeline[0].year), ...g.deck.map((s) => s.year)]
+    expect(years.sort()).toEqual([1962, 1971, 1984])
+  })
+})

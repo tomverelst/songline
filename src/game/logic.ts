@@ -1,5 +1,5 @@
 import type { GameSettings, GameState, Player, Slot, Song, Turn } from './types'
-import { AvoidDoubleYearsDeck, FreshFirstDeck, SourceDeck, type Deck } from './deck'
+import { AvoidDoubleYearsDeck, newGameDeck, SourceDeck, YearRangeDeck, type Deck } from './deck'
 import { withOriginalYear } from './songs'
 
 export { shuffle } from './deck'
@@ -149,9 +149,9 @@ export function slotForYear(timeline: Song[], year: number): Slot {
 // ---------- Game lifecycle ----------
 
 /**
- * Starts a game: shuffles the playlist and deals everyone a starting card.
- * Songs in `alreadyPlayed` come up (and are dealt) only once the fresh ones
- * run out.
+ * Starts a game: shuffles the playlist (keeping the chosen years, spread over
+ * the decades when wanted) and deals everyone a starting card. Songs in
+ * `alreadyPlayed` come up (and are dealt) only once the fresh ones run out.
  */
 export function newGame(
   names: string[],
@@ -160,7 +160,12 @@ export function newGame(
   random: () => number = Math.random,
   alreadyPlayed: ReadonlySet<string> = new Set(),
 ): GameState {
-  const deck = new FreshFirstDeck(SourceDeck.shuffled(songs, random), alreadyPlayed)
+  const deck = newGameDeck(songs, {
+    yearRange: settings.yearRange,
+    spreadDecades: settings.spreadDecades,
+    heard: alreadyPlayed,
+    random,
+  })
   const players: Player[] = names.map((name, i) => ({
     id: `p${i}`,
     name,
@@ -200,10 +205,11 @@ export function isDoubleYear(state: GameState): boolean {
 
 /**
  * The deck to draw from when the caller keeps none of its own: what's left
- * of the game's songs, with no double years when chosen.
+ * of the game's songs, in the chosen years, with no double years when chosen.
  */
 export function deckOf(state: GameState): Deck {
-  return new AvoidDoubleYearsDeck(new SourceDeck(state.deck), () => blockedYears(state))
+  const inRange = new YearRangeDeck(new SourceDeck(state.deck), state.settings.yearRange ?? {})
+  return new AvoidDoubleYearsDeck(inRange, () => blockedYears(state))
 }
 
 /**

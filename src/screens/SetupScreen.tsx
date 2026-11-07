@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import type { GameMode, GameState } from '../game/types'
 import { newGame, shuffle, withOriginalYear } from '../game/logic'
+import { inYearRange } from '../game/deck'
 import { LoadingScreen, type LoadingState, type StartingCardCheck } from './LoadingScreen'
 import { originalYear } from '../musicbrainz'
 import { forgetPlayedSongs, playedSongIds, rememberSongs } from '../history'
@@ -52,6 +53,11 @@ interface SetupDraft {
   guessTimeLimit: number
   randomStart: boolean
   noDoubleYears: boolean
+  /** First decade to play (e.g. 1960), or null for no limit. */
+  decadeFrom: number | null
+  /** Last decade to play (e.g. 1980 for up to 1989), or null for no limit. */
+  decadeTo: number | null
+  spreadDecades: boolean
   /** Battle: the second player's half is upside down. */
   faceToFace: boolean
   avoidPlayedSongs: boolean
@@ -70,6 +76,9 @@ const DEFAULT_DRAFT: SetupDraft = {
   guessTimeLimit: 0,
   randomStart: false,
   noDoubleYears: false,
+  decadeFrom: null,
+  decadeTo: null,
+  spreadDecades: false,
   faceToFace: true,
   avoidPlayedSongs: true,
   playlist: null,
@@ -103,6 +112,11 @@ export function SetupScreen({ onStart, initialError }: Props) {
   const run = useRef(0)
   const skipYears = useRef<() => void>(() => {})
 
+  const yearRange =
+    draft.decadeFrom === null && draft.decadeTo === null
+      ? undefined
+      : { from: draft.decadeFrom ?? undefined, to: draft.decadeTo === null ? undefined : draft.decadeTo + 9 }
+
   async function start() {
     requestMotionAccess()
     enterFullscreen()
@@ -117,6 +131,12 @@ export function SetupScreen({ onStart, initialError }: Props) {
       if (!alive()) return
       if (songs.length < names.length + 1) {
         throw new Error(`This playlist only has ${songs.length} usable songs — pick a bigger one.`)
+      }
+      const inRange = songs.filter((s) => inYearRange(s.year, yearRange)).length
+      if (inRange < names.length + 1) {
+        throw new Error(
+          `Only ${inRange} ${inRange === 1 ? 'song' : 'songs'} in this playlist ${inRange === 1 ? 'is' : 'are'} ${decadesLabel(draft.decadeFrom, draft.decadeTo)}. Pick more decades or another playlist.`,
+        )
       }
       const art = shuffle(songs.flatMap((s) => (s.albumArt ? [s.albumArt] : []))).slice(0, 5)
       setLoading({ phase: 'shuffle', playlistName, songCount: songs.length, art, checks: [] })
@@ -136,6 +156,8 @@ export function SetupScreen({ onStart, initialError }: Props) {
           guessTimeLimit: draft.guessTimeLimit,
           randomStart: draft.randomStart,
           noDoubleYears: draft.noDoubleYears,
+          ...(yearRange && { yearRange }),
+          spreadDecades: draft.spreadDecades,
           ...(battle && { faceToFace: draft.faceToFace }),
           playlistId: draft.playlist.id,
           playlistName,
@@ -292,6 +314,37 @@ export function SetupScreen({ onStart, initialError }: Props) {
           onChange={(noDoubleYears) => update({ noDoubleYears })}
         />
 
+        <h3 className="mt-1 text-[0.95rem] font-bold">Decades</h3>
+        <div className="grid grid-cols-2 gap-2">
+          <DecadeStepper
+            label="From"
+            value={draft.decadeFrom}
+            options={[null, ...DECADES]}
+            onChange={(decadeFrom) =>
+              update({ decadeFrom, decadeTo: decadeFrom !== null && (draft.decadeTo ?? Infinity) < decadeFrom ? decadeFrom : draft.decadeTo })
+            }
+          />
+          <DecadeStepper
+            label="To"
+            value={draft.decadeTo}
+            options={[...DECADES, null]}
+            onChange={(decadeTo) =>
+              update({ decadeTo, decadeFrom: decadeTo !== null && (draft.decadeFrom ?? -Infinity) > decadeTo ? decadeTo : draft.decadeFrom })
+            }
+          />
+        </div>
+        <Muted>
+          {draft.decadeFrom === null && draft.decadeTo === null
+            ? 'Songs from any year in the playlist.'
+            : `Only songs ${decadesLabel(draft.decadeFrom, draft.decadeTo)}, starting cards included.`}
+        </Muted>
+        <Switch
+          title="Spread the years"
+          description="Every decade in the playlist comes up about equally often, instead of mostly the decades the playlist has the most songs from."
+          checked={draft.spreadDecades}
+          onChange={(spreadDecades) => update({ spreadDecades })}
+        />
+
         <details className="group border-t border-line pt-3">
           <summary className="flex min-h-8 list-none items-center font-semibold text-accent-2 [&::-webkit-details-marker]:hidden">
             <span className="mr-2 inline-block transition-transform group-open:rotate-90">▸</span>
@@ -400,6 +453,49 @@ export function SetupScreen({ onStart, initialError }: Props) {
 }
 
 const TIME_LIMITS = [0, 15, 30, 45, 60]
+/** The decades to choose from, by their first year. */
+const DECADES = Array.from({ length: Math.floor(new Date().getFullYear() / 10) - 195 + 1 }, (_, i) => 1950 + i * 10)
+
+/** "from the 1960s to the 1980s", "from the 1960s on", "up to the 1980s". */
+function decadesLabel(from: number | null, to: number | null) {
+  if (from !== null && to !== null) return from === to ? `from the ${from}s` : `from the ${from}s to the ${to}s`
+  if (from !== null) return `from the ${from}s on`
+  return `up to the ${to}s`
+}
+
+/** − 1960s + : steps through the decades; null is "Any" (no limit on that end). */
+function DecadeStepper({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string
+  value: number | null
+  options: (number | null)[]
+  onChange: (value: number | null) => void
+}) {
+  const index = Math.max(0, options.indexOf(value))
+  return (
+    <div className="flex min-w-0 flex-col items-center gap-1 rounded-xl border border-line bg-bg px-1.5 py-2">
+      <Muted>{label}</Muted>
+      <div className="flex w-full items-center justify-between">
+        <IconButton aria-label={`${label}: earlier`} className="disabled:opacity-35" disabled={index === 0} onClick={() => onChange(options[index - 1])}>
+          −
+        </IconButton>
+        <span className="text-base font-extrabold tabular-nums">{value === null ? 'Any' : `${value}s`}</span>
+        <IconButton
+          aria-label={`${label}: later`}
+          className="disabled:opacity-35"
+          disabled={index === options.length - 1}
+          onClick={() => onChange(options[index + 1])}
+        >
+          +
+        </IconButton>
+      </div>
+    </div>
+  )
+}
 const NO_DOUBLE_YEARS: Record<GameMode, string> = {
   standard: 'Never play a song from a year that’s already in your timeline.',
   battle: 'Never play a song from a year that’s already in either timeline.',
