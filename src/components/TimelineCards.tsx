@@ -473,10 +473,10 @@ export function CardFace({ song, highlight }: { song: Song; highlight: boolean }
   )
 }
 
-/** The mystery song, face down: the card back from the loading screen. */
+/** The mystery song, face down, in the player's colour (from --team; the accent without one). */
 export function CardBack({ year, ring }: { year: number; ring: string }) {
   return (
-    <div className={cx(CARD, 'grid place-items-center bg-accent-gradient text-on-accent', ring)}>
+    <div className={cx(CARD, 'grid place-items-center bg-team-gradient text-on-accent', ring)}>
       <div className="absolute inset-2.5 rounded-xl border-2 border-dashed border-on-accent/25" />
       <div className="relative flex flex-col items-center">
         <span className="text-[1.875em]">♪</span>

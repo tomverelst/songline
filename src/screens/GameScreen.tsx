@@ -3,6 +3,7 @@ import type { GameState, TurnResult } from '../game/types'
 import {
   endTurn,
   screenTurnOf,
+  timeLimitMs,
   seatOf,
   tableAngle,
   isValidYear,
@@ -81,7 +82,9 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
     else if (wonCard) celebrateCard(style)
   }, [revealedSong, wonCard, exactHit, style])
 
-  const clock = session.timeLeft !== undefined && <GuessTimer ms={session.timeLeft} running={session.clockRunning} />
+  const clock = session.timeLeft !== undefined && (
+    <GuessTimer ms={session.timeLeft} totalMs={timeLimitMs(game.settings)} running={session.clockRunning} />
+  )
 
   const guessSlot = turn?.phase === 'guess' && isValidYear(turn.yearGuess)
     ? slotForYear(player.timeline, turn.yearGuess)
@@ -157,7 +160,6 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
             </span>{' '}
             is guessing
           </Muted>
-          {clock}
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <Button size="sm" variant="ghost" className="px-3" onClick={session.restart}>
@@ -168,6 +170,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
           </Button>
         </div>
       </div>
+      {clock}
     </section>
   )
   const yearInput = turn?.phase === 'guess' && (
@@ -187,7 +190,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
     />
   )
   const lockButton = turn?.phase === 'guess' && (
-    <Button variant="primary" block disabled={!guessSlot || checkingYear} onClick={() => lockIn()}>
+    <Button variant="team" block disabled={!guessSlot || checkingYear} onClick={() => lockIn()}>
       {checkingYear ? 'Checking the year…' : guessSlot ? 'Lock in' : 'Enter a year'}
     </Button>
   )
@@ -405,7 +408,8 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
           turned ? 'h-[100dvw] w-[100dvh]' : 'size-full',
         )}
         // --frame-h: the frame's height, which is the phone's width when turned.
-        style={{ transform: `translate(-50%, -50%) rotate(${angle}deg)`, '--frame-h': turned ? '100dvw' : '100dvh' } as CSSProperties}
+        // The current player's colour for the guess card, Lock in and the timer.
+        style={{ ...playerVars, transform: `translate(-50%, -50%) rotate(${angle}deg)`, '--frame-h': turned ? '100dvw' : '100dvh' } as CSSProperties}
       >
         <ScreenRotation value={angle}>
           {/* Hold a card to open its song. */}

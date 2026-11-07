@@ -42,9 +42,10 @@ in their personal timeline of songs.
 - **Coins:** bonus coins are shown next to the points. They don't count towards
   winning, but if the deck runs out (or the game is ended early) they break a
   tie on points.
-- **Time to guess** (Off, 15, 30, 45 or 60 seconds): a clock next to the
-  play controls counts down once the mystery song plays, and stops while it's
-  paused. It turns red for the last 5 seconds. When it runs out, the guess is
+- **Time to guess** (Off, 15, 30, 45 or 60 seconds): a big countdown next to
+  the play controls, the seconds in a ring (in the player's colour) that runs
+  down once the mystery song plays, and stops while it's paused. It turns red
+  and beats for the last 10 seconds. When it runs out, the guess is
   locked in as it stands; with no year picked yet the card is lost (title and
   artist coins can still be ticked on the reveal).
 - **Start somewhere in the song**: the mystery song starts at a random point
@@ -184,11 +185,14 @@ that won't play. The ☰ menu lets you switch the playback device, end the game
 early, or quit.
 
 **Tablets:** on a tablet-sized screen (768×600 or bigger, either way round)
-the whole game is drawn bigger, and the cards bigger still. There are no year
-buttons or ruler on a tablet: the guess starts on the middle card of your
+the whole game is drawn bigger, and the cards bigger still. Upright, there
+are no year buttons on a tablet: the guess starts on the middle card of your
 timeline, and you pick the year with the cards (drag the guess card or tap a
-card upright; swipe the cards under the guess card sideways). Phones keep
-the year buttons and ruler in Standard.
+card). On its side, the table view has the ruler, as on a phone. Phones keep
+the year buttons upright in Standard.
+
+The guess card, Lock in, the ruler's needle and the timer's ring are in the
+colour of the player (or team) whose turn it is.
 
 The game state is saved in the browser, so a refresh or an accidental tab
 close doesn't lose the game.

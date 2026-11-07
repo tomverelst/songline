@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { BattleGuess, GameSettings, GameState, Player, TurnResult } from '../game/types'
-import { isValidYear, overwriteCardYear, overwriteRevealedYear, score } from '../game/logic'
+import { isValidYear, overwriteCardYear, overwriteRevealedYear, score, timeLimitMs } from '../game/logic'
 import {
   allLockedIn,
   endBattleTurn,
@@ -138,7 +138,9 @@ export function BattleScreen({ game, onChange, onQuit }: Props) {
             ⏭
           </Button>
           <div className="ml-auto flex items-center gap-2">
-            {session.timeLeft !== undefined && <GuessTimer ms={session.timeLeft} running={session.clockRunning} />}
+            {session.timeLeft !== undefined && (
+              <GuessTimer ms={session.timeLeft} totalMs={timeLimitMs(game.settings)} running={session.clockRunning} className="size-12" />
+            )}
             {menuButton}
           </div>
         </div>
@@ -300,7 +302,7 @@ function GuessPanel({
           ) : (
             <Button
               size="sm"
-              variant="primary"
+              variant="team"
               className="ml-auto flex-none px-4 tablet:min-h-14 tablet:px-8 tablet:text-lg"
               disabled={!valid}
               onClick={() => onLock(true)}

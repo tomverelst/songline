@@ -5,7 +5,7 @@ import { cx } from './classes'
 import { CardRow } from './CardRow'
 import { RecordButton } from './RecordButton'
 import { teamVars, type TeamColor } from '../game/teams'
-import { useCardsOnly, useUiScale } from './scale'
+import { useUiScale } from './scale'
 import { PointChip } from './GameParts'
 import { useYearEditor } from './YearEdit'
 import { Artwork } from './ui'
@@ -41,11 +41,14 @@ interface Props {
  */
 export function TableView(props: Props) {
   const { scoreboard, playerName, timeline, yearGuess, startYear, onSelectYear, playing } = props
-  const cardsOnly = useCardsOnly()
   // Moves the ruler along with a swipe on the cards.
   const followRuler = useRef<((year: number) => void) | null>(null)
   return (
-    <div className="flex h-full flex-col select-none bg-[radial-gradient(ellipse_at_50%_55%,rgb(255_255_255/0.06),transparent_70%)]">
+    <div
+      className="flex h-full flex-col select-none bg-[radial-gradient(ellipse_at_50%_55%,rgb(255_255_255/0.06),transparent_70%)]"
+      // The player's colour for the guess card, Lock in and the timer.
+      style={teamVars(props.playerColor)}
+    >
       <header className="flex items-center gap-3 px-4 pt-3">
         <RecordButton playing={playing} onToggle={props.onTogglePause} size="md" />
         <div className="flex min-w-0 flex-col leading-tight">
@@ -70,12 +73,11 @@ export function TableView(props: Props) {
         timeline={timeline}
         guessYear={yearGuess}
         onSelectYear={onSelectYear}
-        // Tablets have no ruler: the cards always slide under the guess card.
-        swipe={props.swipeCards || cardsOnly ? { startYear, onMove: (year) => followRuler.current?.(year) } : undefined}
+        swipe={props.swipeCards ? { startYear, onMove: (year) => followRuler.current?.(year) } : undefined}
       />
 
       {/* The ruler runs the full width so its needle lines up under the guess card. */}
-      <footer className="relative pb-3 tablet:hidden">
+      <footer className="relative pb-3">
         <YearRuler
           followRef={followRuler}
           value={yearGuess}
@@ -84,17 +86,7 @@ export function TableView(props: Props) {
           onChange={onSelectYear}
         />
         <button
-          className="absolute top-[calc(50%-0.375rem)] right-4 h-14 -translate-y-1/2 rounded-full bg-accent-gradient px-6 text-lg font-extrabold text-on-accent shadow-[0_8px_24px_rgb(255_77_141/0.35)] disabled:bg-none disabled:bg-surface-2 disabled:text-muted disabled:shadow-none"
-          disabled={props.lockDisabled}
-          onClick={props.onLock}
-        >
-          {props.lockLabel}
-        </button>
-      </footer>
-      {/* Tablets: no ruler, just Lock in at the bottom right. */}
-      <footer className="hidden justify-end px-4 pb-4 tablet:flex">
-        <button
-          className="h-14 rounded-full bg-accent-gradient px-8 text-lg font-extrabold text-on-accent shadow-[0_8px_24px_rgb(255_77_141/0.35)] disabled:bg-none disabled:bg-surface-2 disabled:text-muted disabled:shadow-none"
+          className="absolute top-[calc(50%-0.375rem)] right-4 h-14 -translate-y-1/2 rounded-full bg-team-gradient px-6 text-lg font-extrabold text-on-accent shadow-[0_8px_24px_color-mix(in_srgb,var(--team)_35%,transparent)] disabled:bg-none disabled:bg-surface-2 disabled:text-muted disabled:shadow-none"
           disabled={props.lockDisabled}
           onClick={props.onLock}
         >
@@ -372,7 +364,7 @@ function YearRuler({
         </div>
       </div>
       {/* The needle. */}
-      <div className="pointer-events-none absolute inset-y-1 left-1/2 w-0.5 -translate-x-1/2 rounded-full bg-accent shadow-[0_0_10px_var(--color-accent)]" />
+      <div className="pointer-events-none absolute inset-y-1 left-1/2 w-0.5 -translate-x-1/2 rounded-full bg-(--team) shadow-[0_0_10px_var(--team)]" />
     </div>
   )
 }

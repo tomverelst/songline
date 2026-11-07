@@ -11,21 +11,45 @@ import { canFullscreen, enterFullscreen, exitFullscreen, useFullscreen } from '.
 // Pieces of the game screens that every game mode shares.
 
 /** The time left to guess; red in the last seconds, dimmed while paused. */
-export function GuessTimer({ ms, running }: { ms: number; running: boolean }) {
+/**
+ * The time left to guess: the seconds, big, in a ring that runs down (in the
+ * player's colour, from --team). The last 10 seconds turn red and beat.
+ */
+export function GuessTimer({ ms, totalMs, running, className }: { ms: number; totalMs: number; running: boolean; className?: string }) {
   const seconds = Math.ceil(ms / 1000)
-  const hurry = seconds <= 5
+  const hurry = seconds <= 10
+  const left = totalMs > 0 ? Math.max(0, Math.min(1, ms / totalMs)) : 0
+  const R = 21
+  const around = 2 * Math.PI * R
   return (
     <span
       role="timer"
       aria-label={`${seconds} seconds left`}
       className={cx(
-        'flex-none rounded-full border px-2.5 py-0.5 text-sm font-extrabold tabular-nums',
-        hurry ? 'border-bad bg-bad/15 text-bad' : 'border-line bg-surface-2',
-        hurry && running && 'animate-pulse',
+        'relative grid size-14 flex-none place-items-center rounded-full bg-surface-2 tabular-nums',
+        hurry ? 'text-bad' : 'text-ink',
+        hurry && running && 'animate-[timer-beat_1s_ease-in-out_infinite]',
         !running && 'opacity-60',
+        className,
       )}
     >
-      ⏱ {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}
+      <svg viewBox="0 0 48 48" className="absolute inset-0 size-full -rotate-90" aria-hidden="true">
+        <circle cx="24" cy="24" r={R} fill="none" strokeWidth="4" className="stroke-line" />
+        <circle
+          cx="24"
+          cy="24"
+          r={R}
+          fill="none"
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeDasharray={around}
+          strokeDashoffset={around * (1 - left)}
+          className={cx('transition-[stroke-dashoffset] duration-200 ease-linear', hurry ? 'stroke-bad' : 'stroke-[var(--team,var(--color-accent))]')}
+        />
+      </svg>
+      <span className={cx('relative leading-none font-black', seconds >= 60 ? 'text-base' : 'text-2xl')}>
+        {seconds >= 60 ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` : seconds}
+      </span>
     </span>
   )
 }

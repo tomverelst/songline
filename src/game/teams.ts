@@ -40,7 +40,10 @@ export function teamColor(player: Pick<Player, 'color'>, index: number): TeamCol
   return teamColorById(player.color) ?? TEAM_COLORS[index % TEAM_COLORS.length]
 }
 
-/** Sets --team for an element, so its classes can use text-(--team), bg-(--team)/15 and so on. */
+/**
+ * Sets --team for an element, so its classes can use text-(--team),
+ * bg-(--team)/15 and so on; and --team-2, a lighter shade, for bg-team-gradient.
+ */
 export function teamVars(color: TeamColor): CSSProperties {
-  return { '--team': color.hex } as CSSProperties
+  return { '--team': color.hex, '--team-2': `color-mix(in srgb, ${color.hex} 62%, white)` } as CSSProperties
 }
