@@ -41,6 +41,8 @@ export interface Player {
   emoji?: string
   /** Their own pattern for the 'knitting' celebration (see knitting.ts). */
   knitPattern?: string
+  /** Their own painted guess card (a PNG data URL; see CardPainter). */
+  cardArt?: string
   /** Team colour (an id from TEAM_COLORS); unset in older games: one by their place. */
   color?: string
   /** Where they sit around the phone, when the screen turns to each player's side. */

@@ -19,7 +19,7 @@ import { KEYS, load, save } from '../storage'
 import { GAME_MODES } from '../game/modes'
 import { BATTLE_PLAYERS } from '../game/battle'
 import { Coin } from '../components/Coins'
-import { CelebrationButton, ColorButton } from '../components/PlayerButtons'
+import { CardButton, CelebrationButton, ColorButton } from '../components/PlayerButtons'
 import { SeatingPicker } from '../components/SeatingPicker'
 import { freeColor, teamColorById } from '../game/teams'
 import { DEFAULT_EMOJI, defaultCelebration, type Celebration, type CelebrationStyle } from '../party'
@@ -51,6 +51,8 @@ interface SetupDraft {
   emojis: (string | null)[]
   /** Each player's own knitting pattern, by the same index as `names`. */
   knitPatterns?: (string | null)[]
+  /** Each player's painted guess card (a PNG data URL), by the same index as `names`. */
+  cardArts?: (string | null)[]
   /** Each player's team colour id, by the same index as `names`. */
   colors: (string | null)[]
   mode: GameMode
@@ -223,6 +225,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
           celebration: entries[i].style,
           emoji: entries[i].emoji,
           ...(entries[i].pattern && { knitPattern: entries[i].pattern }),
+          ...(draft.cardArts?.[entries[i].index] && { cardArt: draft.cardArts[entries[i].index]! }),
           color: entries[i].color,
           ...(screenTurn === 'seats' && { seat: seatedEntries[i].seat }),
         })),
@@ -305,6 +308,17 @@ export function SetupScreen({ onStart, initialError }: Props) {
                 update({ colors: next })
               }}
             />
+            <CardButton
+              playerName={name.trim()}
+              art={draft.cardArts?.[i] ?? undefined}
+              color={colorAt(i)}
+              onChange={(art) => {
+                const cardArts = [...(draft.cardArts ?? [])]
+                while (cardArts.length <= i) cardArts.push(null)
+                cardArts[i] = art
+                update({ cardArts })
+              }}
+            />
             <CelebrationButton
               playerName={name.trim()}
               value={celebrationAt(i)}
@@ -330,6 +344,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
                     celebrations: draft.celebrations.filter((_, j) => j !== i),
                     emojis: draft.emojis.filter((_, j) => j !== i),
                     knitPatterns: draft.knitPatterns?.filter((_, j) => j !== i),
+                    cardArts: draft.cardArts?.filter((_, j) => j !== i),
                     colors: draft.colors.filter((_, j) => j !== i),
                     seats: draft.seats?.filter((_, j) => j !== i),
                   })

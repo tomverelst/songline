@@ -3,6 +3,7 @@ import { CELEBRATIONS, celebrateCard, EMOJI_CHOICES, type Celebration, type Cele
 import { firstEmoji } from '../emojiRain'
 import { DEFAULT_KNIT_PATTERN } from '../knitting'
 import { KnitDesigner } from './KnitDesigner'
+import { CardPainter } from './CardPainter'
 import { freeColor, TEAM_COLORS, teamVars, type TeamColor } from '../game/teams'
 import { Button, CardTitle, IconButton, Muted, OptionButton, TextInput } from './ui'
 import { cx } from './classes'
@@ -160,6 +161,38 @@ function CelebrationPicker({
         </Button>
       </div>
     </div>
+  )
+}
+
+/**
+ * A player's guess card: the button shows it in small (their painting, or a
+ * plain card in their colour), and a tap opens the painter.
+ */
+export function CardButton({
+  playerName,
+  art,
+  color,
+  onChange,
+}: {
+  playerName: string
+  art: string | undefined
+  color: TeamColor
+  onChange: (art: string | null) => void
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <IconButton aria-label={`${playerName || 'Player'}'s card: tap to paint it`} title="Paint your card" onClick={() => setOpen(true)}>
+        {art ? (
+          <img src={art} alt="" className="h-7 w-5 rounded-[3px] object-cover [image-rendering:pixelated]" />
+        ) : (
+          <span className="grid h-7 w-5 place-items-center rounded-[3px] bg-team-gradient text-[0.6rem] text-on-accent" style={teamVars(color)}>
+            🎨
+          </span>
+        )}
+      </IconButton>
+      {open && <CardPainter playerName={playerName} art={art} onSave={onChange} onClose={() => setOpen(false)} />}
+    </>
   )
 }
 

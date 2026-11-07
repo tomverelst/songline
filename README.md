@@ -136,6 +136,13 @@ For two players, or two teams, on one phone lying between them.
   earlier games. The table view and turning the screen to each player are
   Standard only.
 
+**Paint your own card:** tap the little card next to a name on the setup
+screen to paint the back of that player's guess card, MS Paint style: pencil,
+brush, spray can, paint bucket and eraser in three sizes, the classic 28-colour
+palette, undo and clear, in chunky pixels. The guess card then shows the
+painting, with the guessed year on it in a dark pill at the bottom (shown while
+you paint, so you can keep it clear). "Back to the plain card" undoes it.
+
 **Team colours:** every player (or team) has a colour: tap the swatch next to
 a name on the setup screen to move on to the next colour nobody has yet (8 to
 choose from). Colours are picked before the game, not during it. It colours their name on the turn

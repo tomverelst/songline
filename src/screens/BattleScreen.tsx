@@ -13,6 +13,7 @@ import {
 import { celebrateCard, celebrateExact, celebrationOf, type Celebration } from '../party'
 import { CardRow } from '../components/CardRow'
 import { RecordButton } from '../components/RecordButton'
+import { CardArtContext } from '../components/cardArt'
 import { LikeButton } from '../components/LikeButton'
 import { SongDetailsProvider } from '../components/SongDetails'
 import { TimerButton } from '../components/TimerButton'
@@ -274,13 +275,15 @@ function GuessPanel({
           upsideDown && 'rotate-180',
         )}
       >
-        <CardRow
-          timeline={player.timeline}
-          // The year stays hidden once locked in, so the other side can't copy it.
-          guessYear={guess.locked ? undefined : guess.yearGuess}
-          onSelectYear={guess.locked ? undefined : onYear}
-          swipe={guess.locked ? undefined : { startYear: medianYear(player.timeline), onMove: () => {} }}
-        />
+        <CardArtContext.Provider value={player.cardArt}>
+          <CardRow
+            timeline={player.timeline}
+            // The year stays hidden once locked in, so the other side can't copy it.
+            guessYear={guess.locked ? undefined : guess.yearGuess}
+            onSelectYear={guess.locked ? undefined : onYear}
+            swipe={guess.locked ? undefined : { startYear: medianYear(player.timeline), onMove: () => {} }}
+          />
+        </CardArtContext.Provider>
         <div className="flex min-h-10 items-center gap-2 tablet:gap-3">
           <span className="min-w-0 truncate text-2xl font-black text-(--team)">{player.name}</span>
           <ScoreChip player={player} settings={settings} />

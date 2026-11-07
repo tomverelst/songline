@@ -1,8 +1,9 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { yearForPosition } from '../game/logic'
 import type { Song } from '../game/types'
 import { cx } from './classes'
 import { HoldToOpen } from './SongDetails'
+import { CardArtContext } from './cardArt'
 import { rotateVector, toLocal, useScreenRotation, type Point } from './rotation'
 import { useCardScale, useUiScale } from './scale'
 
@@ -475,6 +476,18 @@ export function CardFace({ song, highlight }: { song: Song; highlight: boolean }
 
 /** The mystery song, face down, in the player's colour (from --team; the accent without one). */
 export function CardBack({ year, ring }: { year: number; ring: string }) {
+  // The player painted their own: the drawing, with the year on it.
+  const art = useContext(CardArtContext)
+  if (art) {
+    return (
+      <div className={cx(CARD, 'bg-white', ring)}>
+        <img src={art} alt="" draggable={false} className="absolute inset-0 size-full object-cover [image-rendering:pixelated]" />
+        <span className="absolute inset-x-0 bottom-[6%] mx-auto w-fit rounded-full bg-black/65 px-[0.4em] text-[1.9em] leading-snug font-black text-white tabular-nums">
+          {year}
+        </span>
+      </div>
+    )
+  }
   return (
     <div className={cx(CARD, 'grid place-items-center bg-team-gradient text-on-accent', ring)}>
       <div className="absolute inset-2.5 rounded-xl border-2 border-dashed border-on-accent/25" />

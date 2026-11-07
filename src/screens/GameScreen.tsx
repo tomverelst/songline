@@ -31,6 +31,7 @@ import { ScreenRotation } from '../components/rotation'
 import { useCardsOnly } from '../components/scale'
 import { RecordButton } from '../components/RecordButton'
 import { SeatingPicker } from '../components/SeatingPicker'
+import { CardArtContext } from '../components/cardArt'
 import { requestMotionAccess, shortestTurn, useDeviceTurn, useScreenAngle } from '../motion'
 import { useTurnSession } from './useTurnSession'
 
@@ -425,7 +426,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
             onEditYear={(songId, year) => onChange((g) => overwriteCardYear(g, songId, year))}
           >
             <div data-scroller className="h-full overflow-y-auto overscroll-contain">
-              {content}
+              <CardArtContext.Provider value={player.cardArt}>{content}</CardArtContext.Provider>
             </div>
             {overlays}
           </SongDetailsProvider>
