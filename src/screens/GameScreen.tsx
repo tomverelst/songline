@@ -24,7 +24,7 @@ import { TimerButton } from '../components/TimerButton'
 import { Coins } from '../components/Coins'
 import { BonusToggle, GameMenu, GuessTimer, RevealYear, YearSource } from '../components/GameParts'
 import { guessText, medianYear } from '../components/format'
-import { Artwork, BottomBar, Button, Card, CardTitle, IconButton, Muted, Screen, Switch, Toast } from '../components/ui'
+import { Artwork, BottomBar, Button, Card, CardTitle, IconButton, Muted, RestartIcon, Screen, SkipIcon, Switch, Toast } from '../components/ui'
 import { cx } from '../components/classes'
 import { teamColor, teamVars } from '../game/teams'
 import { ScreenRotation } from '../components/rotation'
@@ -163,10 +163,10 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <Button size="sm" variant="ghost" className="px-3" onClick={session.restart}>
-            ↺ Restart
+            <RestartIcon /> Restart
           </Button>
           <Button size="sm" variant="ghost" className="px-3" onClick={skip}>
-            ⏭ Skip
+            <SkipIcon /> Skip
           </Button>
         </div>
       </div>

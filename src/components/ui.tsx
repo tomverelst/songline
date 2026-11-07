@@ -136,6 +136,26 @@ export function Artwork({ src, className }: { src?: string; className: string })
 }
 
 /** Gradient tile with an emoji or symbol, used in screen headers. */
+/** Restart: a circling arrow, drawn so it's as big as the button it's in on every screen. */
+export function RestartIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={cx('size-[1.15em] flex-none', className)}>
+      <path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+      <path d="M4 3.5v5h5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+/** Skip: two triangles and a bar, like ⏭ but the same size everywhere. */
+export function SkipIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={cx('size-[1.15em] flex-none', className)}>
+      <path d="M3.5 5.5v13l8-6.5zM11.5 5.5v13l8-6.5z" fill="currentColor" strokeLinejoin="round" />
+      <rect x="19" y="5.5" width="2.4" height="13" rx="1" fill="currentColor" />
+    </svg>
+  )
+}
+
 export function Logo({ children }: { children: ReactNode }) {
   return (
     <div className="grid size-16 place-items-center rounded-[20px] bg-accent-gradient text-[2rem] text-on-accent">

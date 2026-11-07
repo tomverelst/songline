@@ -19,7 +19,7 @@ import { TimerButton } from '../components/TimerButton'
 import { Coins } from '../components/Coins'
 import { GameMenu, GuessTimer, PointChip, RevealYear } from '../components/GameParts'
 import { guessText, medianYear } from '../components/format'
-import { Artwork, BottomBar, Button, Card, CardTitle, IconButton, Muted, Screen, Switch, Toast } from '../components/ui'
+import { Artwork, BottomBar, Button, Card, CardTitle, IconButton, Muted, RestartIcon, Screen, SkipIcon, Switch, Toast } from '../components/ui'
 import { cx } from '../components/classes'
 import { teamColor, teamVars, type TeamColor } from '../game/teams'
 import { ScreenRotation } from '../components/rotation'
@@ -132,10 +132,10 @@ export function BattleScreen({ game, onChange, onQuit }: Props) {
         <div className="flex flex-none items-center gap-2 border-y border-line bg-surface px-3 py-2">
           <RecordButton playing={session.playing} onToggle={session.togglePause} size="sm" />
           <Button size="sm" variant="ghost" className="px-3" aria-label="Restart" onClick={session.restart}>
-            ↺
+            <RestartIcon className="text-base" />
           </Button>
           <Button size="sm" variant="ghost" className="px-3" aria-label="Skip" onClick={session.skip}>
-            ⏭
+            <SkipIcon className="text-base" />
           </Button>
           <div className="ml-auto flex items-center gap-2">
             {session.timeLeft !== undefined && (

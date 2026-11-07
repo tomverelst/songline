@@ -54,7 +54,7 @@ const GOLD_LASERS = ['#ffd23f', '#ffffff', '#ffb000']
 /** You won the card. */
 export function celebrateCard({ style, emoji }: Celebration) {
   if (style === 'emoji') return emojiRain({ emoji, count: 45, overMs: 1500, minSize: 26, maxSize: 52 })
-  if (style === 'fireworks') return fireworks({ shells: 3, overMs: 700, colors: PARTY })
+  if (style === 'fireworks') return fireworks({ shells: 7, overMs: 1200, colors: PARTY })
   if (style === 'lasers') return lasers({ durationMs: 2400, colors: CLUB })
   if (style === 'bravas') return bravas({ cubes: 28, overMs: 400, minSize: 26, maxSize: 40, sauces: 1, holdMs: 700 })
   if (style === 'tofu') return tofu({ blocks: 7, overMs: 500, minSize: 60, maxSize: 95, hops: 2, holdMs: 300 })
@@ -65,7 +65,7 @@ export function celebrateCard({ style, emoji }: Celebration) {
 export function celebrateExact({ style, emoji }: Celebration) {
   // Exact year: a downpour of big ones.
   if (style === 'emoji') return emojiRain({ emoji, count: 110, overMs: 2200, minSize: 34, maxSize: 84 })
-  if (style === 'fireworks') return fireworks({ shells: 6, overMs: 1400, colors: GOLD, sparks: 110, glitter: true })
+  if (style === 'fireworks') return fireworks({ shells: 14, overMs: 2200, colors: GOLD, sparks: 120, glitter: true })
   if (style === 'lasers') return lasers({ durationMs: 3500, colors: GOLD_LASERS, big: true })
   // Exact year: a bigger plate, with pimentón on top.
   if (style === 'bravas') return bravas({ cubes: 55, overMs: 700, minSize: 30, maxSize: 52, sauces: 1, pimenton: true, holdMs: 900 })
@@ -90,7 +90,7 @@ export function celebrateExact({ style, emoji }: Celebration) {
 /** Game over: bursts for a few seconds. */
 export function celebrateWin({ style, emoji }: Celebration) {
   if (style === 'emoji') return emojiRain({ emoji, count: 220, overMs: 4500, minSize: 26, maxSize: 90 })
-  if (style === 'fireworks') return fireworks({ shells: 14, overMs: 4000, colors: [...PARTY, ...GOLD], sparks: 100, glitter: true })
+  if (style === 'fireworks') return fireworks({ shells: 34, overMs: 6000, colors: [...PARTY, ...GOLD], sparks: 110, glitter: true })
   if (style === 'lasers') return lasers({ durationMs: 6000, colors: CLUB, big: true })
   if (style === 'bravas') return bravas({ cubes: 110, overMs: 2000, minSize: 28, maxSize: 58, sauces: 2, pimenton: true, holdMs: 1500 })
   if (style === 'tofu') return tofu({ blocks: 32, overMs: 2500, minSize: 50, maxSize: 140, hops: 4, holdMs: 600 })

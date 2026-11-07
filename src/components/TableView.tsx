@@ -8,7 +8,7 @@ import { teamVars, type TeamColor } from '../game/teams'
 import { useUiScale } from './scale'
 import { PointChip } from './GameParts'
 import { useYearEditor } from './YearEdit'
-import { Artwork } from './ui'
+import { Artwork, RestartIcon, SkipIcon } from './ui'
 
 interface Props {
   /** The scores and menu button, shown along the top. */
@@ -59,10 +59,10 @@ export function TableView(props: Props) {
         </div>
         <div className="flex gap-1.5">
           <RoundButton label="Restart" onClick={props.onRestart}>
-            ↺
+            <RestartIcon />
           </RoundButton>
           <RoundButton label="Skip" onClick={props.onSkip}>
-            ⏭
+            <SkipIcon />
           </RoundButton>
         </div>
         {props.clock}
@@ -101,7 +101,7 @@ function RoundButton({ label, onClick, children }: { label: string; onClick: () 
   return (
     <button
       aria-label={label}
-      className="grid size-10 place-items-center rounded-full border border-line bg-surface-2 text-sm active:bg-line"
+      className="grid size-10 place-items-center rounded-full border border-line bg-surface-2 text-xl active:bg-line"
       onClick={onClick}
     >
       {children}
