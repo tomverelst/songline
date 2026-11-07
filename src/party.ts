@@ -3,6 +3,7 @@ import { fireworks } from './fireworks'
 import { lasers } from './lasers'
 import { emojiRain } from './emojiRain'
 import { bravas } from './bravas'
+import { tofu } from './tofu'
 import { KEYS, load } from './storage'
 import type { CelebrationStyle, Player } from './game/types'
 
@@ -29,6 +30,7 @@ export const CELEBRATIONS: { id: CelebrationStyle; emoji: string; name: string }
   { id: 'lasers', emoji: '🪩', name: 'Lasers' },
   { id: 'emoji', emoji: '🌧️', name: 'Emoji rain' },
   { id: 'bravas', emoji: '🥔', name: 'Patatas bravas' },
+  { id: 'tofu', emoji: '🧊', name: 'Tofu' },
 ]
 
 /** The style for players who haven't picked one: what this phone used before. */
@@ -54,6 +56,7 @@ export function celebrateCard({ style, emoji }: Celebration) {
   if (style === 'fireworks') return fireworks({ shells: 3, overMs: 700, colors: PARTY })
   if (style === 'lasers') return lasers({ durationMs: 2400, colors: CLUB })
   if (style === 'bravas') return bravas({ cubes: 28, overMs: 400, minSize: 26, maxSize: 40, sauces: 1, holdMs: 700 })
+  if (style === 'tofu') return tofu({ blocks: 7, overMs: 500, minSize: 60, maxSize: 95, hops: 2, holdMs: 300 })
   confetti({ ...base, particleCount: 80, spread: 70, startVelocity: 40, origin: { y: 0.35 }, colors: PARTY })
 }
 
@@ -65,6 +68,7 @@ export function celebrateExact({ style, emoji }: Celebration) {
   if (style === 'lasers') return lasers({ durationMs: 3500, colors: GOLD_LASERS, big: true })
   // Exact year: a bigger plate, with pimentón on top.
   if (style === 'bravas') return bravas({ cubes: 55, overMs: 700, minSize: 30, maxSize: 52, sauces: 1, pimenton: true, holdMs: 900 })
+  if (style === 'tofu') return tofu({ blocks: 14, overMs: 800, minSize: 70, maxSize: 130, hops: 3, holdMs: 400 })
   const shot = (x: number, angle: number) =>
     confetti({
       ...base,
@@ -88,6 +92,7 @@ export function celebrateWin({ style, emoji }: Celebration) {
   if (style === 'fireworks') return fireworks({ shells: 14, overMs: 4000, colors: [...PARTY, ...GOLD], sparks: 100, glitter: true })
   if (style === 'lasers') return lasers({ durationMs: 6000, colors: CLUB, big: true })
   if (style === 'bravas') return bravas({ cubes: 110, overMs: 2000, minSize: 28, maxSize: 58, sauces: 2, pimenton: true, holdMs: 1500 })
+  if (style === 'tofu') return tofu({ blocks: 32, overMs: 2500, minSize: 50, maxSize: 140, hops: 4, holdMs: 600 })
   const end = Date.now() + 3500
   const burst = () => {
     confetti({
