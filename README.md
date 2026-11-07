@@ -6,7 +6,7 @@ in their personal timeline of songs.
 
 ## How to play
 
-1. **Setup:** add the players, pick a **game mode** (Standard, or Battle for two) and the number of points
+1. **Setup:** pick who's playing from the player cards (or make new ones), pick a **game mode** (Standard, or Battle for two) and the number of points
    needed to win, connect Spotify, pick a playlist and choose the device the
    music plays on.
 2. Every player starts with one random song card (the year is shown).
@@ -140,24 +140,29 @@ For two players, or two teams, on one phone lying between them.
   earlier games. The table view and turning the screen to each player are
   Standard only.
 
-**Remembered by name:** everyone's colour, celebration (with their emoji or
-scarf pattern) and painted card are saved on this phone under their name, as
-soon as they pick something and again when a game starts. Next time, typing
-the name brings it all back, in whichever slot they're in this time (a colour
-someone else already has is left out). Typing another name over theirs leaves
-their things behind. Names match whatever the capitals; the 40 most recent
-players are kept.
+**Players as cards:** players are made once and kept on the phone. On the
+setup screen, **Who's playing?** shows everyone as a collectible card, a bit like
+a trading card: a frame in their colour, their name with their wins (🏆) where
+the HP would be, their painted card as the picture (or their initial), how many
+games they played and won, and their celebration as their move ("Makes it rain
+🦖"). Tap the cards of everyone who's playing; the order you tap them in is the
+turn order, shown on each card, and picked cards get a holo shine. In Battle the
+first two picked play (tapping a third swaps out the second). **＋ New player**
+makes one: name, colour, painted card and celebration, with the card shown as
+it'll look; **✎** on a card changes or deletes that player. A colour someone
+picked before them already has is swapped for a free one in that game. Every
+finished game counts on the cards of those who played it, and a win for the
+winner. Players typed in before cards existed became cards automatically.
 
-**Paint your own card:** tap the little card next to a name on the setup
-screen to paint the back of that player's guess card, MS Paint style: pencil,
+**Paint your own card:** in a player's card editor (**＋ New player** or **✎**), tap
+**Paint the card** to paint the back of that player's guess card, MS Paint style: pencil,
 brush, spray can, paint bucket and eraser in three sizes, the classic 28-colour
 palette, undo and clear, in chunky pixels. The guess card then shows the
 painting, with the guessed year on it in a dark pill at the bottom (shown while
 you paint, so you can keep it clear). "Back to the plain card" undoes it.
 
-**Team colours:** every player (or team) has a colour: tap the swatch next to
-a name on the setup screen to move on to the next colour nobody has yet (8 to
-choose from). Colours are picked before the game, not during it. It colours their name on the turn
+**Team colours:** every player (or team) has a colour, picked in their card
+editor (8 to choose from). Colours are picked before the game, not during it. It colours their name on the turn
 screen, a dot and outline on the scoreboard, their half in Battle and their
 name on the reveal and the final scores.
 
@@ -183,8 +188,7 @@ for the winner). Pick knitting and you can **design your own scarf**: paint a
 10×12 grid of stitches in 8 yarns (tap or drag), or start from stripes, a
 heart, checks or a zigzag. The grid is drawn with the same stitches as the
 celebration, so what you paint is what gets knitted; it repeats down the scarf
-(two scarves of it for an exact year, three for the winner). Tap the celebration button next to a name on the
-setup screen to pick one (each shows itself off); for emoji rain pick one of
+(two scarves of it for an exact year, three for the winner). Tap **Celebration** in a player's card editor to pick one (each shows itself off); for emoji rain pick one of
 24 emoji or type any other. It can't be changed mid-game. It plays when that player wins a card or hits the
 exact year, and for the winner at the end. In Battle, each side that wins
 celebrates in its own style, so confetti and fireworks can go off together.

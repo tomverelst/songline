@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { findProfile, profileKey, saveProfile } from './profiles'
+import { deleteProfile, findProfile, loadRoster, profileKey, recordGame, saveProfile } from './profiles'
 
 beforeEach(() => {
   const items = new Map<string, string>()
@@ -10,25 +10,39 @@ beforeEach(() => {
   })
 })
 
-describe('profiles (players remembered by name)', () => {
-  it('finds a player again by name, however it is capitalised or spaced', () => {
+describe('the players on this phone', () => {
+  it('finds a player by name, however it is capitalised or spaced', () => {
     saveProfile('Tom', { color: 'cyan', celebration: 'knitting', knitPattern: '1'.repeat(120), cardArt: 'data:image/png;base64,x' })
     expect(profileKey('  TOM ')).toBe('tom')
-    expect(findProfile(' tom')).toEqual({ color: 'cyan', celebration: 'knitting', knitPattern: '1'.repeat(120), cardArt: 'data:image/png;base64,x', emoji: undefined })
+    expect(findProfile(' tom')).toMatchObject({ name: 'Tom', color: 'cyan', celebration: 'knitting', cardArt: 'data:image/png;base64,x' })
     expect(findProfile('Tomas')).toBeUndefined()
     expect(findProfile('')).toBeUndefined()
   })
 
-  it('replaces what was remembered, dropping what is no longer set', () => {
-    saveProfile('Lien', { color: 'pink', cardArt: 'data:x' })
-    saveProfile('lien', { color: 'green', celebration: 'emoji', emoji: '🦖' })
-    expect(findProfile('Lien')).toMatchObject({ color: 'green', emoji: '🦖', cardArt: undefined })
+  it('lists everyone in the order they were made, keeping that order through changes', () => {
+    saveProfile('Lien', { color: 'pink' }, 1000)
+    saveProfile('Tom', { color: 'cyan' }, 2000)
+    saveProfile('Lien', { color: 'green' }, 3000)
+    expect(loadRoster().map((p) => [p.name, p.color])).toEqual([
+      ['Lien', 'green'],
+      ['Tom', 'cyan'],
+    ])
   })
 
-  it('keeps the 40 most recent players', () => {
-    for (let i = 0; i < 45; i++) saveProfile(`Player ${i}`, { color: 'red' }, 1000 + i)
-    expect(findProfile('Player 0')).toBeUndefined()
-    expect(findProfile('Player 5')).toBeDefined()
-    expect(findProfile('Player 44')).toBeDefined()
+  it('counts games and wins, and keeps them through changes and a new name', () => {
+    saveProfile('Ann', { color: 'red' })
+    saveProfile('Bob', {})
+    recordGame(['Ann', 'Bob', 'Nobody'], ['ann'])
+    recordGame(['Ann', 'Bob'], ['Bob'])
+    saveProfile('Annie', { color: 'blue' }, Date.now(), 'Ann')
+    expect(findProfile('Ann')).toBeUndefined()
+    expect(findProfile('Annie')).toMatchObject({ color: 'blue', games: 2, wins: 1 })
+    expect(findProfile('Bob')).toMatchObject({ games: 2, wins: 1 })
+  })
+
+  it('deletes a player', () => {
+    saveProfile('Sara', { cardArt: 'data:x' })
+    deleteProfile('SARA')
+    expect(loadRoster()).toEqual([])
   })
 })

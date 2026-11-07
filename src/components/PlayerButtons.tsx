@@ -39,7 +39,7 @@ export function CelebrationButton({
 }
 
 /** A celebration's icon: its emoji, the player's own for emoji rain, or a drawn one. */
-function CelebrationIcon({ style, emoji }: { style: CelebrationStyle; emoji: string }) {
+export function CelebrationIcon({ style, emoji }: { style: CelebrationStyle; emoji: string }) {
   if (style === 'emoji') return <>{emoji}</>
   if (style === 'tofu') return <TofuIcon />
   return <>{CELEBRATIONS.find((c) => c.id === style)?.emoji}</>

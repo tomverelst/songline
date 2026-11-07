@@ -19,10 +19,10 @@ import { KEYS, load, save } from '../storage'
 import { GAME_MODES } from '../game/modes'
 import { BATTLE_PLAYERS } from '../game/battle'
 import { Coin } from '../components/Coins'
-import { CardButton, CelebrationButton, ColorButton } from '../components/PlayerButtons'
 import { SeatingPicker } from '../components/SeatingPicker'
-import { findProfile, saveProfile, type Profile } from '../profiles'
-import { freeColor, teamColorById } from '../game/teams'
+import { deleteProfile, findProfile, loadRoster, profileKey, saveProfile, type RosterPlayer } from '../profiles'
+import { PlayerCard, PlayerEditor } from '../components/PlayerCard'
+import { freeColor, TEAM_COLORS, teamColorById } from '../game/teams'
 import { DEFAULT_EMOJI, defaultCelebration, type Celebration, type CelebrationStyle } from '../party'
 import {
   Artwork,
@@ -111,7 +111,9 @@ interface Props {
 }
 
 export function SetupScreen({ onStart, initialError }: Props) {
-  const [draft, setDraft] = useState<SetupDraft>(() => ({ ...DEFAULT_DRAFT, ...load(KEYS.setup, DEFAULT_DRAFT) }))
+  const [draft, setDraft] = useState<SetupDraft>(() => withRoster({ ...DEFAULT_DRAFT, ...load(KEYS.setup, DEFAULT_DRAFT) }))
+  const [roster, setRoster] = useState(loadRoster)
+  const [editing, setEditing] = useState<RosterPlayer | 'new' | null>(null)
   const [deviceId, setDeviceId] = useState<string | null>(() => load(KEYS.device, null))
   const [loggedIn, setLoggedIn] = useState(isLoggedIn)
   const [error, setError] = useState<string | null>(initialError)
@@ -123,36 +125,25 @@ export function SetupScreen({ onStart, initialError }: Props) {
 
   const update = (patch: Partial<SetupDraft>) => setDraft((d) => ({ ...d, ...patch }))
 
-  /** What the player in slot `i` has now, as their profile. */
-  const slotProfile = (i: number): Profile => ({
-    color: draft.colors[i] ?? undefined,
-    celebration: draft.celebrations[i] ?? undefined,
-    emoji: draft.emojis[i] ?? undefined,
-    knitPattern: draft.knitPatterns?.[i] ?? undefined,
-    cardArt: draft.cardArts?.[i] ?? undefined,
-  })
-  /** Remembers slot `i`'s player by name, with these changes, for next time. */
-  const remember = (i: number, changes: Profile) => {
-    const name = draft.names[i]?.trim()
-    if (name) saveProfile(name, { ...slotProfile(i), ...changes })
+  /** The players picked, in turn order, with each one's things from the roster. */
+  const pick = (names: string[]) => update(selectionFor(names, draft))
+
+  /**
+   * Picks or unpicks a player. Battle plays the first two picked: a third
+   * takes the second one's place.
+   */
+  function toggle(name: string) {
+    const key = profileKey(name)
+    const names = draft.names.filter((n) => n.trim())
+    const at = names.findIndex((n) => profileKey(n) === key)
+    const others = names.filter((n) => profileKey(n) !== key)
+    if (!battle) return pick(at >= 0 ? others : [...names, name])
+    if (at >= 0 && at < BATTLE_PLAYERS) return pick(others)
+    const playing = others.slice(0, BATTLE_PLAYERS)
+    const rest = others.slice(BATTLE_PLAYERS)
+    pick(playing.length < BATTLE_PLAYERS ? [...playing, name, ...rest] : [playing[0], name, playing[1], ...rest])
   }
-  /** Puts a profile in slot `i` (or clears it, for nobody's), leaving out a colour someone else has. */
-  const slotPatch = (i: number, profile: Profile | undefined): Partial<SetupDraft> => {
-    const set = <T,>(list: (T | null)[] | undefined, value: T | undefined) => {
-      const next = [...(list ?? [])]
-      while (next.length <= i) next.push(null)
-      next[i] = value ?? null
-      return next
-    }
-    const taken = draft.colors.some((c, j) => j !== i && c === profile?.color)
-    return {
-      colors: set(draft.colors, taken ? undefined : profile?.color),
-      celebrations: set(draft.celebrations, profile?.celebration),
-      emojis: set(draft.emojis, profile?.emoji),
-      knitPatterns: set(draft.knitPatterns, profile?.knitPattern),
-      cardArts: set(draft.cardArts, profile?.cardArt),
-    }
-  }
+
   const battle = draft.mode === 'battle'
   // Battle is always two players (or teams); extra names are kept for later.
   const nameFields = battle ? Array.from({ length: BATTLE_PLAYERS }, (_, i) => draft.names[i] ?? '') : draft.names
@@ -165,7 +156,6 @@ export function SetupScreen({ onStart, initialError }: Props) {
   const picked = nameFields.map((_, i) => teamColorById(draft.colors[i])?.id ?? null)
   const colorAt = (i: number) =>
     teamColorById(picked[i]) ?? freeColor(i, picked.filter((_, j) => j !== i))
-  const othersColors = (i: number) => nameFields.flatMap((_, j) => (j === i ? [] : [colorAt(j).id]))
   // Players are the filled-in names, each with the celebration picked next to it.
   const entries = nameFields
     .map((name, i) => ({ index: i, name: name.trim(), ...celebrationAt(i), color: colorAt(i).id }))
@@ -200,10 +190,6 @@ export function SetupScreen({ onStart, initialError }: Props) {
     const playlistName = draft.playlist.name
     // The players' colours, for the shuffling cards and their first cards.
     const colors = entries.map((e) => teamColorById(e.color) ?? colorAt(e.index))
-    // Remember everyone by name, as they play now, for next time.
-    entries.forEach((e) =>
-      saveProfile(e.name, { ...slotProfile(e.index), color: e.color, celebration: e.style, emoji: e.emoji, knitPattern: e.pattern }),
-    )
     setError(null)
     setLoading({ phase: 'playlist', playlistName, art: [], checks: [], colors })
     try {
@@ -319,92 +305,65 @@ export function SetupScreen({ onStart, initialError }: Props) {
       </header>
 
       <Card>
-        <CardTitle>{battle ? 'Players or teams' : 'Players'}</CardTitle>
-        {nameFields.map((name, i) => (
-          <div className="flex items-center gap-2" key={i}>
-            <TextInput
-              placeholder={battle ? `Player or team ${i + 1}` : `Player ${i + 1}`}
-              value={name}
-              autoComplete="off"
-              enterKeyHint="next"
-              onChange={(e) => {
-                const next = [...draft.names]
-                while (next.length <= i) next.push('')
-                next[i] = e.target.value
-                // A name we know brings back their colour, celebration and
-                // card; typing away from it leaves theirs behind.
-                const known = findProfile(e.target.value)
-                const leaving = !known && findProfile(draft.names[i] ?? '')
-                update({ names: next, ...(known ? slotPatch(i, known) : leaving ? slotPatch(i, undefined) : {}) })
-              }}
-            />
-            <ColorButton
-              value={colorAt(i)}
-              taken={othersColors(i)}
-              onChange={(color) => {
-                const next = [...draft.colors]
-                while (next.length <= i) next.push(null)
-                next[i] = color
-                update({ colors: next })
-                remember(i, { color })
-              }}
-            />
-            <CardButton
-              playerName={name.trim()}
-              art={draft.cardArts?.[i] ?? undefined}
-              color={colorAt(i)}
-              onChange={(art) => {
-                const cardArts = [...(draft.cardArts ?? [])]
-                while (cardArts.length <= i) cardArts.push(null)
-                cardArts[i] = art
-                update({ cardArts })
-                remember(i, { cardArt: art ?? undefined })
-              }}
-            />
-            <CelebrationButton
-              playerName={name.trim()}
-              value={celebrationAt(i)}
-              onChange={({ style, emoji, pattern }) => {
-                const celebrations = [...draft.celebrations]
-                const emojis = [...draft.emojis]
-                const knitPatterns = [...(draft.knitPatterns ?? [])]
-                while (celebrations.length <= i) celebrations.push(null)
-                while (emojis.length <= i) emojis.push(null)
-                while (knitPatterns.length <= i) knitPatterns.push(null)
-                celebrations[i] = style
-                emojis[i] = emoji
-                knitPatterns[i] = pattern ?? null
-                update({ celebrations, emojis, knitPatterns })
-                remember(i, { celebration: style, emoji, knitPattern: pattern })
-              }}
-            />
-            {!battle && draft.names.length > 1 && (
-              <IconButton
-                aria-label={`Remove player ${i + 1}`}
-                onClick={() =>
-                  update({
-                    names: draft.names.filter((_, j) => j !== i),
-                    celebrations: draft.celebrations.filter((_, j) => j !== i),
-                    emojis: draft.emojis.filter((_, j) => j !== i),
-                    knitPatterns: draft.knitPatterns?.filter((_, j) => j !== i),
-                    cardArts: draft.cardArts?.filter((_, j) => j !== i),
-                    colors: draft.colors.filter((_, j) => j !== i),
-                    seats: draft.seats?.filter((_, j) => j !== i),
-                  })
-                }
-              >
-                ✕
-              </IconButton>
-            )}
-          </div>
-        ))}
-        <Muted>Everyone’s colour, celebration and card are remembered by name on this phone.</Muted>
-        {battle ? (
-          <Muted>Battle is for two: one player or one team on each side of the phone.</Muted>
-        ) : (
-          <Button variant="ghost" onClick={() => update({ names: [...draft.names, ''] })}>
-            + Add player
-          </Button>
+        <CardTitle>Who’s playing?</CardTitle>
+        <Muted>
+          {battle
+            ? 'Pick two players or teams, one for each side of the phone.'
+            : 'Tap everyone who’s playing, in turn order. ✎ changes a player.'}
+        </Muted>
+        <div className="grid grid-cols-2 gap-x-3.5 gap-y-4 pt-2 pb-1 min-[480px]:grid-cols-3 tablet:grid-cols-4">
+          {roster.map((player) => {
+            const at = nameFields.findIndex((n) => profileKey(n) === profileKey(player.name))
+            return (
+              <PlayerCard
+                key={profileKey(player.name)}
+                player={player}
+                color={at >= 0 ? colorAt(at) : (teamColorById(player.color) ?? TEAM_COLORS[0])}
+                order={at >= 0 ? at + 1 : undefined}
+                onSelect={() => toggle(player.name)}
+                onEdit={() => setEditing(player)}
+              />
+            )
+          })}
+          <button
+            type="button"
+            className="grid aspect-[63/88] w-full place-items-center rounded-[0.9rem] border-2 border-dashed border-line text-muted active:bg-surface-2"
+            onClick={() => setEditing('new')}
+          >
+            <span className="flex flex-col items-center gap-1">
+              <span className="text-3xl leading-none">＋</span>
+              <span className="text-sm font-semibold">New player</span>
+            </span>
+          </button>
+        </div>
+        {editing && (
+          <PlayerEditor
+            player={editing === 'new' ? undefined : editing}
+            onClose={() => setEditing(null)}
+            onSave={(name, profile) => {
+              const before = editing === 'new' ? undefined : editing.name
+              saveProfile(name, profile, Date.now(), before)
+              setRoster(loadRoster())
+              const names = draft.names.filter((n) => n.trim())
+              // A new player is picked straight away; a renamed one keeps their place.
+              pick(
+                before === undefined
+                  ? battle && names.length >= BATTLE_PLAYERS
+                    ? names
+                    : [...names, name]
+                  : names.map((n) => (profileKey(n) === profileKey(before) ? name : n)),
+              )
+            }}
+            onDelete={
+              editing === 'new'
+                ? undefined
+                : () => {
+                    deleteProfile(editing.name)
+                    setRoster(loadRoster())
+                    pick(draft.names.filter((n) => n.trim() && profileKey(n) !== profileKey(editing.name)))
+                  }
+            }
+          />
         )}
       </Card>
 
@@ -821,4 +780,43 @@ function PlaylistPicker({
       )}
     </div>
   )
+}
+
+/**
+ * A draft whose players come from the roster: names typed before there was
+ * one become players (with what they had), and every picked player gets their
+ * own things from it.
+ */
+function withRoster(draft: SetupDraft): SetupDraft {
+  draft.names.forEach((name, i) => {
+    if (!name.trim() || findProfile(name)) return
+    saveProfile(name, {
+      color: draft.colors[i] ?? undefined,
+      celebration: draft.celebrations[i] ?? undefined,
+      emoji: draft.emojis[i] ?? undefined,
+      knitPattern: draft.knitPatterns?.[i] ?? undefined,
+      cardArt: draft.cardArts?.[i] ?? undefined,
+    })
+  })
+  return { ...draft, ...selectionFor(draft.names, draft) }
+}
+
+/**
+ * The draft's players for these names, each with their colour (unless someone
+ * picked before them has it), celebration and card from the roster; their
+ * sides of the table stay with them.
+ */
+function selectionFor(names: string[], draft: SetupDraft): Partial<SetupDraft> {
+  const players = names.filter((n) => n.trim()).map((n) => findProfile(n)).filter((p) => p !== undefined)
+  const seatOf = new Map(draft.names.map((n, i) => [profileKey(n), draft.seats?.[i] ?? null]))
+  const used = new Set<string>()
+  return {
+    names: players.map((p) => p.name),
+    colors: players.map((p) => (p.color && !used.has(p.color) ? (used.add(p.color), p.color) : null)),
+    celebrations: players.map((p) => p.celebration ?? null),
+    emojis: players.map((p) => p.emoji ?? null),
+    knitPatterns: players.map((p) => p.knitPattern ?? null),
+    cardArts: players.map((p) => p.cardArt ?? null),
+    seats: players.map((p) => seatOf.get(profileKey(p.name)) ?? null),
+  }
 }

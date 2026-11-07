@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import type { GameState } from '../game/types'
 import { celebrateWin, celebrationOf } from '../party'
+import { recordGame } from '../profiles'
+import { KEYS, load, save } from '../storage'
 import { ranking, score } from '../game/logic'
 import { Timeline } from '../components/Timeline'
 import { SongDetailsProvider } from '../components/SongDetails'
@@ -14,6 +16,16 @@ export function FinishedScreen({ game, onNewGame }: { game: GameState; onNewGame
   // The (first) winner's own celebration, once.
   const { style, emoji, pattern } = celebrationOf(winners[0] ?? {})
   useEffect(() => celebrateWin({ style, emoji, pattern }), [style, emoji, pattern])
+  // Count the game on everyone's player card, once (not again on a reload).
+  useEffect(() => {
+    const key = [...game.players.map((p) => p.name), ...(game.played ?? []).map((p) => p.song.id)].join('|')
+    if (load<string | null>(KEYS.recordedGame, null) === key) return
+    save(KEYS.recordedGame, key)
+    recordGame(
+      game.players.map((p) => p.name),
+      winners.map((p) => p.name),
+    )
+  }, [game, winners])
   const ranked = ranking(game)
 
   return (

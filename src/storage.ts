@@ -24,4 +24,6 @@ export const KEYS = {
   celebration: 'songline.celebration',
   /** Players' colours, celebrations and cards, remembered by name (profiles.ts). */
   profiles: 'songline.profiles',
+  /** The last finished game counted on the player cards, so a reload doesn't count it again. */
+  recordedGame: 'songline.recordedGame',
 } as const
