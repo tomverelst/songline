@@ -92,6 +92,10 @@ export interface BattleGuess {
   yearGuess?: number
   /** Locked in; the turn is revealed once every player locked in. */
   locked?: boolean
+  /** When it was locked in (ms since 1970): with the same year, the first to lock in gets the card. */
+  lockedAt?: number
+  /** Right spot, but the other side locked in the same year first, so they get the card. */
+  outpaced?: boolean
   /** Where the guessed year falls in this player's timeline; set on reveal. */
   slot?: Slot
   result?: TurnResult

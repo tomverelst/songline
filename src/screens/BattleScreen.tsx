@@ -410,9 +410,14 @@ function BattleReveal({
               <span className="min-w-0 truncate text-xl font-black text-(--team)">{player.name}</span>
               <ScoreChip player={player} settings={game.settings} />
               <span className={cx('ml-auto font-extrabold', result.placementCorrect ? 'text-good' : 'text-bad')}>
-                {result.placementCorrect ? '✓ Wins the card' : '✗ Wrong spot'}
+                {result.placementCorrect ? '✓ Wins the card' : guess.outpaced ? '✗ Locked in second' : '✗ Wrong spot'}
               </span>
             </div>
+            {guess.outpaced && !result.placementCorrect && (
+              <p className="text-sm font-semibold">
+                Same year as {game.players.find((_, j) => j !== index)?.name}, who locked it in first and gets the card.
+              </p>
+            )}
             <Muted>
               {guessText(guess.yearGuess)[0].toUpperCase() + guessText(guess.yearGuess).slice(1)} · tap to change, e.g. if
               the year looks wrong.

@@ -1,9 +1,10 @@
 /**
  * Battle mode: two players (or teams) hear the same song and guess at the
  * same time, each placing it in their own timeline. Everyone who places it
- * right wins a copy of the card.
+ * right wins a copy of the card; but when both picked the same year, only
+ * the side that locked it in first does.
  */
-import { finish, insertSorted, isPlacementCorrect, isValidYear, ranking, slotForYear, score } from './logic'
+import { finish, firstToLockWins, insertSorted, isPlacementCorrect, isValidYear, ranking, slotForYear, score } from './logic'
 import type { BattleGuess, GameState, Player, TurnResult } from './types'
 
 export const BATTLE_PLAYERS = 2
@@ -19,11 +20,19 @@ export function setBattleGuess(state: GameState, index: number, yearGuess: numbe
   return updateGuess(state, index, (g) => (g.locked ? g : { ...g, yearGuess }))
 }
 
-/** Locks a guess in (only a valid year), or opens it up again. */
-export function setBattleLocked(state: GameState, index: number, locked: boolean): GameState {
+/**
+ * Locks a guess in (only a valid year), noting when, or opens it up again
+ * (locking in again later counts from then).
+ */
+export function setBattleLocked(state: GameState, index: number, locked: boolean, now = Date.now()): GameState {
   if (state.turn?.phase !== 'guess') return state
-  return updateGuess(state, index, (g) => (locked && !isValidYear(g.yearGuess) ? g : { ...g, locked }))
+  return updateGuess(state, index, (g) => {
+    if (locked && !isValidYear(g.yearGuess)) return g
+    if (!locked) return { yearGuess: g.yearGuess }
+    return g.locked ? g : { ...g, locked: true, lockedAt: now }
+  })
 }
+
 
 export function allLockedIn(state: GameState): boolean {
   const guesses = state.turn?.guesses
@@ -49,7 +58,7 @@ export function revealBattle(state: GameState, timedOut = false): GameState {
       result: { ...NOTHING, placementCorrect: isPlacementCorrect(slot, year), exactYear: g.yearGuess === year },
     }
   })
-  return { ...state, turn: { ...turn, phase: 'reveal', guesses, ...(timedOut && { timedOut: true }) } }
+  return { ...state, turn: { ...turn, phase: 'reveal', guesses: firstToLockWins(guesses), ...(timedOut && { timedOut: true }) } }
 }
 
 export function updateBattleResult(state: GameState, index: number, patch: Partial<TurnResult>): GameState {

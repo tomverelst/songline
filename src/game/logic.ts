@@ -1,4 +1,4 @@
-import type { GameSettings, GameState, Player, ScreenTurn, Seat, Slot, Song, Turn } from './types'
+import type { BattleGuess, GameSettings, GameState, Player, ScreenTurn, Seat, Slot, Song, Turn } from './types'
 import { AvoidDoubleYearsDeck, newGameDeck, SourceDeck, YearRangeDeck, type Deck, type YearRange } from './deck'
 import { withOriginalYear } from './songs'
 
@@ -408,21 +408,44 @@ export function overwriteRevealedYear(state: GameState, year: number): GameState
         placementCorrect: turn.slot ? isPlacementCorrect(turn.slot, year) : false,
         exactYear: turn.yearGuess === year,
       },
-      guesses: turn.guesses?.map((g) =>
-        g.result
-          ? {
-              ...g,
-              result: {
-                ...g.result,
-                placementCorrect: g.slot ? isPlacementCorrect(g.slot, year) : false,
-                exactYear: g.yearGuess === year,
-              },
-            }
-          : g,
-      ),
+      guesses:
+        turn.guesses &&
+        firstToLockWins(
+          // Worked out afresh for the new year.
+          turn.guesses.map((g) =>
+            g.result
+              ? {
+                  ...g,
+                  outpaced: undefined,
+                  result: {
+                    ...g.result,
+                    placementCorrect: g.slot ? isPlacementCorrect(g.slot, year) : false,
+                    exactYear: g.yearGuess === year,
+                  },
+                }
+              : g,
+          ),
+        ),
     },
   }
 }
+
+/**
+ * Same year, both in the right spot: only the first to lock it in gets the
+ * card. A guess left unlocked when time ran out comes after a locked one;
+ * when nobody's first (neither locked in), both keep it.
+ */
+export function firstToLockWins(guesses: BattleGuess[]): BattleGuess[] {
+  const when = (g: BattleGuess) => (g.locked && g.lockedAt !== undefined ? g.lockedAt : Infinity)
+  return guesses.map((g) => {
+    if (!g.result?.placementCorrect) return g
+    const faster = guesses.some(
+      (other) => other !== g && other.result?.placementCorrect && other.yearGuess === g.yearGuess && when(other) < when(g),
+    )
+    return faster ? { ...g, outpaced: true, result: { ...g.result, placementCorrect: false } } : g
+  })
+}
+
 
 /** Overwrites the year of a card already in a timeline; it moves to its new spot. */
 export function overwriteCardYear(state: GameState, songId: string, year: number): GameState {

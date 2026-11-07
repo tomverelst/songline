@@ -123,7 +123,11 @@ For two players, or two teams, on one phone lying between them.
 - Once a side locks in, its guess is hidden from the other side. **Change**
   unlocks it again. When both sides have locked in, the song is revealed.
 - Everyone who places the song right in their own timeline wins a copy of the
-  card, and an exact year earns each side a coin.
+  card, and an exact year earns each side a coin. **Same year, both right?**
+  Then only the side that locked it in first wins the card (the reveal says
+  so); a side that tapped **Change** counts from when it locked in again. When
+  time runs out, a locked-in guess beats one still open. The exact-year coin
+  still goes to both. The **Card** chip can still be tapped to overrule it.
 - **Title and artist are a race:** shout them out loud, and only the side that
   names one first gets its coin. On the reveal, **Who named it first?** has a
   button per side for the title and for the artist. Tap a side to give it the
@@ -298,7 +302,7 @@ Every push to `main` is tested, built and published to GitHub Pages at
   early) → `YearRangeDeck` (on the real year) → `AvoidDoubleYearsDeck` (holds
   back blocked years for later). `GameState.deck` saves what's left, in draw
   order.
-- `src/game/battle.ts`: Battle mode's rules (simultaneous guesses, shared wins), with tests
+- `src/game/battle.ts`: Battle mode's rules (simultaneous guesses, shared wins, first to lock in wins a shared year), with tests
 - `src/screens/`: the setup, results and game screens. Each game mode has its
   own screen (`GameScreen` for Standard, `BattleScreen` for Battle); what they
   share lives in `useTurnSession.ts` (playback, autoplay, year lookup, guess

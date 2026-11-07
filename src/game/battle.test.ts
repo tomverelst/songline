@@ -103,3 +103,40 @@ describe('battle mode', () => {
     expect(endBattleTurn(g).players.map((p) => p.bonus)).toEqual([0, 1])
   })
 })
+
+describe('battle: the same year (Ann 1960, Bob 2000, song 1980)', () => {
+  const lock = (g: GameState, index: number, at: number) => setBattleLocked(g, index, true, at)
+  const cards = (g: GameState) => g.turn!.guesses!.map((x) => x.result!.placementCorrect)
+
+  it('gives the card only to whoever locked the year in first', () => {
+    const bobFirst = revealBattle(lock(lock(guess(battle(), 1985, 1985), 1, 1000), 0, 2000))
+    expect(cards(bobFirst)).toEqual([false, true])
+    expect(bobFirst.turn!.guesses![0].outpaced).toBe(true)
+    const annFirst = revealBattle(lock(lock(guess(battle(), 1985, 1985), 0, 1000), 1, 2000))
+    expect(cards(annFirst)).toEqual([true, false])
+    expect(endBattleTurn(annFirst).players.map((p) => p.timeline.length)).toEqual([2, 1])
+  })
+
+  it('still gives both the card with different years', () => {
+    expect(cards(revealBattle(lock(lock(guess(battle(), 1985, 1975), 1, 1000), 0, 2000)))).toEqual([true, true])
+  })
+
+  it('counts from locking in again, after changing your mind', () => {
+    let g = lock(guess(battle(), 1985, 1985), 0, 1000)
+    g = lock(g, 1, 2000)
+    g = setBattleLocked(g, 0, false)
+    g = lock(g, 0, 3000)
+    expect(cards(revealBattle(g))).toEqual([false, true])
+  })
+
+  it('puts a locked guess ahead of one left open when time ran out; nobody locked, both keep it', () => {
+    expect(cards(revealBattle(lock(guess(battle(), 1985, 1985), 1, 1000), true))).toEqual([false, true])
+    expect(cards(revealBattle(guess(battle(), 1985, 1985), true))).toEqual([true, true])
+  })
+
+  it('keeps the rule when the year is corrected on the reveal', () => {
+    const g = revealBattle(lock(lock(guess(battle(), 1985, 1985), 1, 1000), 0, 2000))
+    // 1990 instead: still between both timelines' cards, still Bob's.
+    expect(cards(overwriteRevealedYear(g, 1990))).toEqual([false, true])
+  })
+})
