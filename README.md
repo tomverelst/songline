@@ -141,6 +141,11 @@ card in a timeline (or tap a song on the final scores) to open it: the song
 with the same ⊕, and a link to open it in Spotify. Logins
 from before this feature need to log in to Spotify once more for it.
 
+**Songs this game:** the final scores list every song that came up, with
+its year and who won it. **Missed** shows the ones nobody got, **All** shows
+every one. ▶ plays a song again from the start (on the device picked for
+the game) and ⊕ saves it to Liked Songs or a playlist.
+
 **Skip** next to Pause and Restart throws away a song with a wrong year or one
 that won't play. The ☰ menu lets you switch the playback device, end the game
 early, or quit.

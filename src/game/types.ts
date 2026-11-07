@@ -113,6 +113,13 @@ export interface GameSettings {
   playlistName: string
 }
 
+/** A song that came up and was revealed, with who won it. */
+export interface PlayedSong {
+  song: Song
+  /** Ids of the players who won the card; empty when nobody did. */
+  winners: string[]
+}
+
 export interface GameState {
   status: 'playing' | 'finished'
   settings: GameSettings
@@ -123,4 +130,6 @@ export interface GameState {
   deck: Song[]
   turn?: Turn
   winnerIds?: string[]
+  /** Every song revealed this game, in the order they came up. */
+  played?: PlayedSong[]
 }

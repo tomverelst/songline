@@ -89,7 +89,8 @@ export function endBattleTurn(state: GameState): GameState {
       bonus: p.bonus + [exactYear, titleCorrect, artistCorrect].filter(Boolean).length,
     }
   })
-  const next: GameState = { ...state, players, turn: undefined }
+  const winners = players.filter((_, i) => turn.guesses![i]?.result?.placementCorrect).map((p) => p.id)
+  const next: GameState = { ...state, players, played: [...(state.played ?? []), { song: turn.song, winners }], turn: undefined }
   const reached = players.filter((p) => score(p, state.settings) >= state.settings.targetPoints)
   if (reached.length > 0) {
     const [best] = ranking({ players: reached, settings: state.settings })

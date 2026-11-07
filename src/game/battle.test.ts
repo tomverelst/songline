@@ -76,6 +76,7 @@ describe('battle mode', () => {
     expect(g.players.map((p) => p.bonus)).toEqual([0, 1])
     expect(g.round).toBe(2)
     expect(g.turn).toBeUndefined()
+    expect(g.played).toEqual([{ song: song(1980), winners: ['p0'] }])
   })
 
   it('shares the win when both reach the target level, coins break a tie', () => {

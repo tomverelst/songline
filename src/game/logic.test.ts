@@ -383,3 +383,20 @@ describe('decades', () => {
     expect(years.sort()).toEqual([1962, 1971, 1984])
   })
 })
+
+describe('songs played this game', () => {
+  it('keeps every revealed song with who won it, also on the last turn', () => {
+    const settings: GameSettings = { mode: 'standard', targetPoints: 2, bonusCountsTowardsGoal: false, playlistId: 'x', playlistName: 'x' }
+    let g = drawSong(newGame(['Ann'], settings, [1960, 1970, 1980, 1990].map((y) => song(y)), () => 0.5))
+    const missed = g.turn!.song
+    g = endTurn(reveal({ ...g, turn: { ...g.turn!, yearGuess: 1500 } }))
+    g = drawSong(g)
+    const won = g.turn!.song
+    g = endTurn(reveal({ ...g, turn: { ...g.turn!, yearGuess: won.year } }))
+    expect(g.status).toBe('finished')
+    expect(g.played).toEqual([
+      { song: missed, winners: [] },
+      { song: won, winners: ['p0'] },
+    ])
+  })
+})

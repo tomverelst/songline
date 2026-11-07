@@ -406,7 +406,8 @@ export function endTurn(state: GameState): GameState {
       bonus: p.bonus + [exactYear, titleCorrect, artistCorrect].filter(Boolean).length,
     }
   })
-  const next = { ...state, players, turn: undefined }
+  const played = [...(state.played ?? []), { song: turn.song, winners: placementCorrect ? [players[state.currentPlayer].id] : [] }]
+  const next = { ...state, players, played, turn: undefined }
   if (score(players[state.currentPlayer], state.settings) >= state.settings.targetPoints) {
     return { ...next, status: 'finished', winnerIds: [players[state.currentPlayer].id] }
   }

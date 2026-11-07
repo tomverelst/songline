@@ -5,6 +5,7 @@ import { ranking, score } from '../game/logic'
 import { Timeline } from '../components/Timeline'
 import { SongDetailsProvider } from '../components/SongDetails'
 import { Coins } from '../components/Coins'
+import { PlayedSongs } from '../components/PlayedSongs'
 import { BottomBar, Button, Card, CardTitle, Logo, Screen } from '../components/ui'
 
 export function FinishedScreen({ game, onNewGame }: { game: GameState; onNewGame: () => void }) {
@@ -40,6 +41,8 @@ export function FinishedScreen({ game, onNewGame }: { game: GameState; onNewGame
             </Card>
           )
         })}
+
+        <PlayedSongs game={game} />
 
         <BottomBar>
           <Button variant="primary" block onClick={onNewGame}>
