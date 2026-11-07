@@ -17,7 +17,7 @@ export interface Song {
 }
 
 /** How a player's wins are celebrated. */
-export type CelebrationStyle = 'confetti' | 'fireworks' | 'lasers' | 'emoji'
+export type CelebrationStyle = 'confetti' | 'fireworks' | 'lasers' | 'emoji' | 'bravas'
 
 export interface Player {
   id: string

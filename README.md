@@ -139,7 +139,10 @@ year, the full rig for the winner). The strobe flashes once a beat, so never
 more than 3 times in any one second, the limit for people with photosensitive
 epilepsy; phones set to reduce motion skip the laser show altogether. Or
 **emoji rain**: the player's own emoji pours down the screen (a downpour of
-big ones for an exact year). Tap the celebration button next to a name on the
+big ones for an exact year). Or **patatas bravas**: golden potato cubes are
+tossed up from the bottom of the screen and land in a heap, then get a red
+zigzag of brava sauce and a white one of aioli (a bigger plate with pimentón
+for an exact year, two rounds of sauce for the winner). Tap the celebration button next to a name on the
 setup screen to pick one (each shows itself off); for emoji rain pick one of
 24 emoji or type any other. It can't be changed mid-game. It plays when that player wins a card or hits the
 exact year, and for the winner at the end. In Battle, each side that wins

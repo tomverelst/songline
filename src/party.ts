@@ -2,6 +2,7 @@ import confetti from 'canvas-confetti'
 import { fireworks } from './fireworks'
 import { lasers } from './lasers'
 import { emojiRain } from './emojiRain'
+import { bravas } from './bravas'
 import { KEYS, load } from './storage'
 import type { CelebrationStyle, Player } from './game/types'
 
@@ -27,6 +28,7 @@ export const CELEBRATIONS: { id: CelebrationStyle; emoji: string; name: string }
   { id: 'fireworks', emoji: '🎆', name: 'Fireworks' },
   { id: 'lasers', emoji: '🪩', name: 'Lasers' },
   { id: 'emoji', emoji: '🌧️', name: 'Emoji rain' },
+  { id: 'bravas', emoji: '🥔', name: 'Patatas bravas' },
 ]
 
 /** The style for players who haven't picked one: what this phone used before. */
@@ -51,6 +53,7 @@ export function celebrateCard({ style, emoji }: Celebration) {
   if (style === 'emoji') return emojiRain({ emoji, count: 45, overMs: 1500, minSize: 26, maxSize: 52 })
   if (style === 'fireworks') return fireworks({ shells: 3, overMs: 700, colors: PARTY })
   if (style === 'lasers') return lasers({ durationMs: 2400, colors: CLUB })
+  if (style === 'bravas') return bravas({ cubes: 28, overMs: 400, minSize: 26, maxSize: 40, sauces: 1, holdMs: 700 })
   confetti({ ...base, particleCount: 80, spread: 70, startVelocity: 40, origin: { y: 0.35 }, colors: PARTY })
 }
 
@@ -60,6 +63,8 @@ export function celebrateExact({ style, emoji }: Celebration) {
   if (style === 'emoji') return emojiRain({ emoji, count: 110, overMs: 2200, minSize: 34, maxSize: 84 })
   if (style === 'fireworks') return fireworks({ shells: 6, overMs: 1400, colors: GOLD, sparks: 110, glitter: true })
   if (style === 'lasers') return lasers({ durationMs: 3500, colors: GOLD_LASERS, big: true })
+  // Exact year: a bigger plate, with pimentón on top.
+  if (style === 'bravas') return bravas({ cubes: 55, overMs: 700, minSize: 30, maxSize: 52, sauces: 1, pimenton: true, holdMs: 900 })
   const shot = (x: number, angle: number) =>
     confetti({
       ...base,
@@ -82,6 +87,7 @@ export function celebrateWin({ style, emoji }: Celebration) {
   if (style === 'emoji') return emojiRain({ emoji, count: 220, overMs: 4500, minSize: 26, maxSize: 90 })
   if (style === 'fireworks') return fireworks({ shells: 14, overMs: 4000, colors: [...PARTY, ...GOLD], sparks: 100, glitter: true })
   if (style === 'lasers') return lasers({ durationMs: 6000, colors: CLUB, big: true })
+  if (style === 'bravas') return bravas({ cubes: 110, overMs: 2000, minSize: 28, maxSize: 58, sauces: 2, pimenton: true, holdMs: 1500 })
   const end = Date.now() + 3500
   const burst = () => {
     confetti({
