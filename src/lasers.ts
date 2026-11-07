@@ -1,35 +1,33 @@
 /**
- * A techno-club laser show on a full-screen canvas: the page dims, and fans
- * of beams sweep from the corners in time with a 128 BPM beat, switching
- * colour on the beat.
+ * A techno-club laser show on a full-screen canvas: the page dims, and laser
+ * heads all round the edge throw beams to a 128 BPM beat. Every head picks
+ * its own pattern each bar (fan, criss-cross, scan, spin), beams cut in and
+ * out on the sixteenths, and colours jump on the beat.
  */
 
 export interface LaserOptions {
   durationMs: number
-  /** Beam colours, cycled on the beat. */
+  /** Beam colours, picked at random on the beat. */
   colors: string[]
-  /** More emitters and beams, and a soft flash on every downbeat. */
+  /** More heads and beams, and a soft flash on every downbeat. */
   big?: boolean
 }
 
 const BPM = 128
 const BEAT_MS = 60_000 / BPM
-const FADE_IN_MS = 250
-const FADE_OUT_MS = 500
+const FADE_IN_MS = 200
+const FADE_OUT_MS = 450
 
-interface Emitter {
+type Pattern = 'fan' | 'criss' | 'scan' | 'spin'
+const PATTERNS: Pattern[] = ['fan', 'criss', 'scan', 'spin']
+
+interface Head {
   /** Position as a fraction of the screen. */
   x: number
   y: number
-  /** Where the fan points (radians, 0 = right, screen y down). */
+  /** Where the head points (radians, 0 = right, screen y down). */
   aim: number
   beams: number
-  /** Angle between neighbouring beams. */
-  spread: number
-  /** How far the fan swings either way, and where in the swing it starts. */
-  swing: number
-  phase: number
-  colorOffset: number
 }
 
 let active: { extend: (o: LaserOptions) => void } | null = null
@@ -60,83 +58,101 @@ export function lasers(options: LaserOptions) {
   window.addEventListener('resize', resize)
 
   const start = performance.now()
+  const seed = Math.floor(Math.random() * 1e6)
   let end = start + options.durationMs
-  let colors = options.colors
+  let colors = options.colors.length ? options.colors : ['#ffffff']
   let big = !!options.big
-  let emitters = makeEmitters(big)
+  let heads = makeHeads(big)
+
+  function stop() {
+    window.removeEventListener('resize', resize)
+    canvas.remove()
+    active = null
+  }
+
   active = {
     extend(o) {
       end = Math.max(end, performance.now() + o.durationMs)
       colors = [...new Set([...colors, ...o.colors])]
       if (o.big && !big) {
         big = true
-        emitters = makeEmitters(true)
+        heads = makeHeads(true)
       }
     },
   }
 
   function frame(now: number) {
-    const t = now - start
-    // Fade the whole show in and out.
-    const envelope = Math.min(1, t / FADE_IN_MS, Math.max(0, (end - now) / FADE_OUT_MS))
+    try {
+      draw(now)
+    } catch (e) {
+      // Never leave a dead show behind: it would swallow every later one.
+      stop()
+      throw e
+    }
+    if (now < end) requestAnimationFrame(frame)
+    else stop()
+  }
+
+  function draw(now: number) {
+    // A frame's timestamp can be from just before the show started.
+    const t = Math.max(0, now - start)
+    const envelope = clamp01(Math.min(t / FADE_IN_MS, (end - now) / FADE_OUT_MS))
     const beat = t / BEAT_MS
     const beatIndex = Math.floor(beat)
+    const bar = Math.floor(beatIndex / 4)
+    const sixteenth = Math.floor(beat * 4)
     // Each beat hits hard, then eases off.
-    const pulse = 0.55 + 0.45 * Math.pow(1 - (beat - beatIndex), 2)
+    const pulse = 0.5 + 0.5 * Math.pow(1 - (beat - beatIndex), 2)
 
     ctx!.clearRect(0, 0, w, h)
     ctx!.globalCompositeOperation = 'source-over'
-    ctx!.fillStyle = `rgba(5, 2, 12, ${0.55 * envelope})`
+    ctx!.fillStyle = `rgba(5, 2, 12, ${0.6 * envelope})`
     ctx!.fillRect(0, 0, w, h)
 
     ctx!.globalCompositeOperation = 'lighter'
     const reach = Math.hypot(w, h) * 1.1
-    for (const e of emitters) {
-      const ox = e.x * w
-      const oy = e.y * h
-      const color = colors[(beatIndex + e.colorOffset) % colors.length]
-      // Swing over two beats, so the fans sweep to the music.
-      const sweep = e.swing * Math.sin((Math.PI * beat) / 2 + e.phase)
-      for (let i = 0; i < e.beams; i++) {
-        const angle = e.aim + sweep + (i - (e.beams - 1) / 2) * e.spread
-        beam(ox, oy, ox + Math.cos(angle) * reach, oy + Math.sin(angle) * reach, color, envelope * pulse)
+    heads.forEach((head, hi) => {
+      const ox = head.x * w
+      const oy = head.y * h
+      const pattern = PATTERNS[Math.floor(rand(seed, bar, hi, 1) * PATTERNS.length)]
+      const color = colors[Math.floor(rand(seed, beatIndex, hi, 2) * colors.length)]
+      const flip = rand(seed, bar, hi, 3) < 0.5 ? -1 : 1
+      for (let i = 0; i < head.beams; i++) {
+        // Beams cut in and out on the sixteenths.
+        if (rand(seed, sixteenth, hi * 31 + i, 4) < (big ? 0.22 : 0.15)) continue
+        const angle = head.aim + flip * beamAngle(pattern, beat, i, head.beams)
+        // Now and then a beam takes another colour from the palette.
+        const beamColor = rand(seed, beatIndex, hi * 31 + i, 5) < 0.2 ? colors[(i + beatIndex) % colors.length] : color
+        beam(ox, oy, ox + Math.cos(angle) * reach, oy + Math.sin(angle) * reach, beamColor, envelope * pulse)
       }
       // The laser head glows where the beams come out.
-      const glow = ctx!.createRadialGradient(ox, oy, 0, ox, oy, 40)
-      glow.addColorStop(0, withAlpha(color, 0.9 * envelope))
-      glow.addColorStop(1, withAlpha(color, 0))
+      const glow = ctx!.createRadialGradient(ox, oy, 0, ox, oy, 46)
+      glow.addColorStop(0, rgba(color, 0.95 * envelope * pulse))
+      glow.addColorStop(1, rgba(color, 0))
       ctx!.fillStyle = glow
-      ctx!.fillRect(ox - 40, oy - 40, 80, 80)
-    }
+      ctx!.fillRect(ox - 46, oy - 46, 92, 92)
+    })
 
     // The big show flashes softly on every downbeat (once a bar, not a strobe).
-    if (big && beatIndex % 4 === 0 && beat - beatIndex < 0.12) {
-      ctx!.fillStyle = `rgba(255, 255, 255, ${0.12 * envelope})`
+    if (big && beatIndex % 4 === 0 && beat - beatIndex < 0.1) {
+      ctx!.fillStyle = `rgba(255, 255, 255, ${0.14 * envelope})`
       ctx!.fillRect(0, 0, w, h)
-    }
-
-    if (now < end) {
-      requestAnimationFrame(frame)
-    } else {
-      window.removeEventListener('resize', resize)
-      canvas.remove()
-      active = null
     }
   }
 
   function beam(x1: number, y1: number, x2: number, y2: number, color: string, alpha: number) {
     const fade = ctx!.createLinearGradient(x1, y1, x2, y2)
-    fade.addColorStop(0, withAlpha(color, alpha))
-    fade.addColorStop(0.6, withAlpha(color, alpha * 0.35))
-    fade.addColorStop(1, withAlpha(color, 0))
+    fade.addColorStop(0, rgba(color, alpha))
+    fade.addColorStop(0.55, rgba(color, alpha * 0.4))
+    fade.addColorStop(1, rgba(color, 0))
     ctx!.strokeStyle = fade
     ctx!.lineCap = 'round'
     // A wide soft glow (the haze in the room), then the hot thin core.
-    ctx!.globalAlpha = 0.18
-    ctx!.lineWidth = 10
+    ctx!.globalAlpha = 0.2
+    ctx!.lineWidth = 11
     line(x1, y1, x2, y2)
     ctx!.globalAlpha = 1
-    ctx!.lineWidth = 1.6
+    ctx!.lineWidth = 1.8
     line(x1, y1, x2, y2)
   }
 
@@ -150,26 +166,65 @@ export function lasers(options: LaserOptions) {
   requestAnimationFrame(frame)
 }
 
-function makeEmitters(big: boolean): Emitter[] {
+/** Where beam `i` of `n` points, relative to its head's aim, for a pattern. */
+function beamAngle(pattern: Pattern, beat: number, i: number, n: number): number {
+  const mid = (n - 1) / 2
+  switch (pattern) {
+    case 'fan':
+      // A fan swinging back and forth over two beats.
+      return 0.45 * Math.sin((Math.PI * beat) / 2) + (i - mid) * 0.1
+    case 'criss':
+      // Every beam waves on its own, on the beat: beams cross all the time.
+      return 0.7 * Math.sin(Math.PI * beat + i * 0.9) + (i - mid) * 0.05
+    case 'scan':
+      // A tight bundle racing from side to side, twice a beat.
+      return 1.1 * triangle(beat * 2) + (i - mid) * 0.035
+    case 'spin':
+      // Beams all round, spinning a quarter turn a beat.
+      return (Math.PI / 2) * beat + (i * 2 * Math.PI) / n
+  }
+}
+
+function makeHeads(big: boolean): Head[] {
   const up = -Math.PI / 2
-  const emitters: Emitter[] = [
-    // Bottom corners, aiming up and inwards.
-    { x: 0, y: 1, aim: up + 0.45, beams: big ? 7 : 5, spread: 0.09, swing: 0.35, phase: 0, colorOffset: 0 },
-    { x: 1, y: 1, aim: up - 0.45, beams: big ? 7 : 5, spread: 0.09, swing: 0.35, phase: Math.PI, colorOffset: 1 },
+  const down = Math.PI / 2
+  const heads: Head[] = [
+    { x: 0, y: 1, aim: up + 0.5, beams: 6 },
+    { x: 1, y: 1, aim: up - 0.5, beams: 6 },
+    { x: 0, y: 0, aim: down - 0.6, beams: 5 },
+    { x: 1, y: 0, aim: down + 0.6, beams: 5 },
   ]
   if (big) {
-    // Top corners and the middle of the stage join in.
-    emitters.push(
-      { x: 0, y: 0, aim: 0.6, beams: 5, spread: 0.11, swing: 0.4, phase: Math.PI / 2, colorOffset: 2 },
-      { x: 1, y: 0, aim: Math.PI - 0.6, beams: 5, spread: 0.11, swing: 0.4, phase: -Math.PI / 2, colorOffset: 3 },
-      { x: 0.5, y: 1, aim: up, beams: 9, spread: 0.12, swing: 0.5, phase: Math.PI / 4, colorOffset: 1 },
+    heads.push(
+      { x: 0.5, y: 1, aim: up, beams: 9 },
+      { x: 0.5, y: 0, aim: down, beams: 7 },
+      { x: 0, y: 0.5, aim: 0, beams: 6 },
+      { x: 1, y: 0.5, aim: Math.PI, beams: 6 },
     )
   }
-  return emitters
+  return heads
+}
+
+/** -1 → 1 → -1 over one unit, in straight lines. */
+function triangle(x: number) {
+  const f = x - Math.floor(x)
+  return f < 0.5 ? 4 * f - 1 : 3 - 4 * f
+}
+
+/** The same "random" number for the same inputs: patterns hold for their bar, beat or sixteenth. */
+function rand(seed: number, a: number, b: number, c: number) {
+  let x = (seed ^ Math.imul(a + 1, 0x9e3779b1) ^ Math.imul(b + 7, 0x85ebca6b) ^ Math.imul(c + 13, 0xc2b2ae35)) >>> 0
+  x = Math.imul(x ^ (x >>> 16), 0x7feb352d) >>> 0
+  x = Math.imul(x ^ (x >>> 15), 0x846ca68b) >>> 0
+  return ((x ^ (x >>> 16)) >>> 0) / 4294967296
+}
+
+function clamp01(x: number) {
+  return Math.max(0, Math.min(1, x))
 }
 
 /** "#33ff88" with an alpha, as rgba(). */
-function withAlpha(hex: string, alpha: number) {
+function rgba(hex: string, alpha: number) {
   const n = parseInt(hex.slice(1), 16)
-  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${Math.max(0, Math.min(1, alpha))})`
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${clamp01(alpha)})`
 }
