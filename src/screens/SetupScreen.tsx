@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import type { GameMode, GameState } from '../game/types'
-import { newGame, shuffle, withOriginalYear, yearsInRange } from '../game/logic'
+import type { GameMode, GameState, ScreenTurn, Seat } from '../game/types'
+import { defaultSeats, newGame, screenTurnOf, shuffle, withOriginalYear, yearsInRange } from '../game/logic'
 import { inYearRange } from '../game/deck'
 import { LoadingScreen, type LoadingState, type StartingCardCheck } from './LoadingScreen'
 import { originalYear } from '../musicbrainz'
@@ -20,6 +20,7 @@ import { GAME_MODES } from '../game/modes'
 import { BATTLE_PLAYERS } from '../game/battle'
 import { Coin } from '../components/Coins'
 import { CelebrationButton, ColorButton } from '../components/PlayerButtons'
+import { SeatingPicker } from '../components/SeatingPicker'
 import { freeColor, teamColorById } from '../game/teams'
 import { DEFAULT_EMOJI, defaultCelebration, type Celebration, type CelebrationStyle } from '../party'
 import {
@@ -54,7 +55,12 @@ interface SetupDraft {
   targetPoints: number
   bonusCountsTowardsGoal: boolean
   autoplay: boolean
-  flipBetweenTurns: boolean
+  /** How the screen turns between turns; unset in older drafts (see flipBetweenTurns). */
+  screenTurn?: ScreenTurn
+  /** Older drafts: the screen flips every other turn (now screenTurn 'flip'). */
+  flipBetweenTurns?: boolean
+  /** Each player's side of the table, by the same index as `names`. */
+  seats?: (Seat | null)[]
   tableView: boolean
   swipeCards: boolean
   /** Seconds to guess; 0 means no limit. */
@@ -81,7 +87,6 @@ const DEFAULT_DRAFT: SetupDraft = {
   targetPoints: 10,
   bonusCountsTowardsGoal: false,
   autoplay: true,
-  flipBetweenTurns: false,
   tableView: true,
   swipeCards: false,
   guessTimeLimit: 0,
@@ -126,8 +131,11 @@ export function SetupScreen({ onStart, initialError }: Props) {
   const othersColors = (i: number) => nameFields.flatMap((_, j) => (j === i ? [] : [colorAt(j).id]))
   // Players are the filled-in names, each with the celebration picked next to it.
   const entries = nameFields
-    .map((name, i) => ({ name: name.trim(), ...celebrationAt(i), color: colorAt(i).id }))
+    .map((name, i) => ({ index: i, name: name.trim(), ...celebrationAt(i), color: colorAt(i).id }))
     .filter((e) => e.name)
+  // Their sides of the table: picked, or else one by their place among the players.
+  const screenTurn = screenTurnOf(draft)
+  const seatedEntries = entries.map((e, n) => ({ ...e, seat: draft.seats?.[e.index] ?? defaultSeats(entries.length)[n] }))
   const names = entries.map((e) => e.name)
   const enoughPlayers = battle ? names.length === BATTLE_PLAYERS : names.length >= 1
   const canStart = enoughPlayers && !!draft.playlist && loggedIn && !loading
@@ -187,7 +195,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
           targetPoints,
           bonusCountsTowardsGoal: draft.bonusCountsTowardsGoal,
           autoplay: draft.autoplay,
-          flipBetweenTurns: draft.flipBetweenTurns,
+          screenTurn,
           tableView: draft.tableView,
           swipeCards: draft.swipeCards,
           guessTimeLimit: draft.guessTimeLimit,
@@ -210,6 +218,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
           celebration: entries[i].style,
           emoji: entries[i].emoji,
           color: entries[i].color,
+          ...(screenTurn === 'seats' && { seat: seatedEntries[i].seat }),
         })),
       }
       const checks: StartingCardCheck[] = game.players.map((p) => ({
@@ -311,6 +320,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
                     celebrations: draft.celebrations.filter((_, j) => j !== i),
                     emojis: draft.emojis.filter((_, j) => j !== i),
                     colors: draft.colors.filter((_, j) => j !== i),
+                    seats: draft.seats?.filter((_, j) => j !== i),
                   })
                 }
               >
@@ -474,11 +484,23 @@ export function SetupScreen({ onStart, initialError }: Props) {
             />
           )}
           {!battle && (
-            <Switch
-              title="Flip screen between turns"
-              description="Turns the screen upside down every other turn, for players sitting across the table."
-              checked={draft.flipBetweenTurns}
-              onChange={(flipBetweenTurns) => update({ flipBetweenTurns })}
+            <SeatingPicker
+              mode={screenTurn}
+              onModeChange={(mode) => update({ screenTurn: mode })}
+              players={seatedEntries.map((e) => ({
+                key: String(e.index),
+                name: e.name,
+                color: teamColorById(e.color) ?? colorAt(e.index),
+                seat: e.seat,
+              }))}
+              onSeatChange={(key, seat) => {
+                const seats = [...(draft.seats ?? [])]
+                while (seats.length < nameFields.length) seats.push(null)
+                // Fix everyone's side as it shows now, so later players don't shift the others.
+                seatedEntries.forEach((e) => (seats[e.index] = e.seat))
+                seats[Number(key)] = seat
+                update({ seats })
+              }}
             />
           )}
           <Switch

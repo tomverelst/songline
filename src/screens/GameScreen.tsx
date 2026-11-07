@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react'
 import type { GameState, TurnResult } from '../game/types'
 import {
   endTurn,
-  isFlipped,
+  screenTurnOf,
+  seatOf,
+  tableAngle,
   isValidYear,
   overwriteCardYear,
   overwriteRevealedYear,
@@ -27,6 +29,7 @@ import { teamColor, teamVars } from '../game/teams'
 import { ScreenRotation } from '../components/rotation'
 import { useCardsOnly } from '../components/scale'
 import { RecordButton } from '../components/RecordButton'
+import { SeatingPicker } from '../components/SeatingPicker'
 import { requestMotionAccess, useDeviceTurn, useScreenAngle } from '../motion'
 import { useTurnSession } from './useTurnSession'
 
@@ -97,18 +100,19 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
     onChange({ ...game, turn: { ...turn, result: { ...turn.result, ...patch } } })
   }
 
-  const flipEnabled = !!game.settings.flipBetweenTurns
   const tableViewEnabled = game.settings.tableView !== false
   // The guess and the reveal have a table view for a phone on its side.
   const tablePhase = turn?.phase === 'guess' || turn?.phase === 'reveal'
   // The screen faces whoever holds the phone, going by its motion sensor (this
   // works with the phone's auto-rotate locked too). Lying flat, or without a
-  // sensor, it follows the flip setting.
+  // sensor, it faces the current player's side of the table (or flips every
+  // other turn), as set in the menu.
   const deviceTurn = useDeviceTurn(introKey)
   const screenAngle = useScreenAngle()
-  const flipAngle = isFlipped(game) ? 180 : 0
+  const flipAngle = tableAngle(game)
   let angle = deviceTurn === null ? flipAngle : (deviceTurn - screenAngle + 360) % 360
-  // Only the table view is made for a phone on its side.
+  // Picked up, only the table view is made for a phone on its side; lying flat
+  // it faces the player's side of the table whatever the screen.
   if (angle % 180 !== 0 && !(tablePhase && tableViewEnabled)) angle = flipAngle
   const turned = angle % 180 !== 0
   const landscape = useLandscape()
@@ -195,7 +199,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
 
       {!turn && (
         <>
-          <section className="flex min-h-[calc(100dvh-260px)] flex-col justify-center gap-3 text-center">
+          <section className="flex min-h-[calc(var(--frame-h)-260px)] flex-col justify-center gap-3 text-center">
             <p className="text-lg text-muted">Round {game.round}</p>
             <h1
               className="text-[clamp(3.5rem,18vw,6rem)] leading-none font-bold text-(--team) [overflow-wrap:anywhere]"
@@ -327,11 +331,17 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
               onChange={(swipeCards) => onChange((g) => ({ ...g, settings: { ...g.settings, swipeCards } }))}
             />
           )}
-          <Switch
-            title="Flip screen between turns"
-            description="Upside down every other turn, for players across the table."
-            checked={flipEnabled}
-            onChange={(flipBetweenTurns) => onChange((g) => ({ ...g, settings: { ...g.settings, flipBetweenTurns } }))}
+          <SeatingPicker
+            mode={screenTurnOf(game.settings)}
+            onModeChange={(screenTurn) => onChange((g) => ({ ...g, settings: { ...g.settings, screenTurn } }))}
+            players={game.players.map((p, i) => ({ key: p.id, name: p.name, color: teamColor(p, i), seat: seatOf(game.players, i) }))}
+            onSeatChange={(id, seat) =>
+              onChange((g) => ({
+                ...g,
+                // Fix everyone's side as it shows now, then move this one.
+                players: g.players.map((p, i) => ({ ...p, seat: p.id === id ? seat : seatOf(g.players, i) })),
+              }))
+            }
           />
         </GameMenu>
       )}
@@ -394,7 +404,8 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
           'absolute top-1/2 left-1/2 bg-bg transition-transform duration-700 ease-[cubic-bezier(0.65,0,0.35,1)]',
           turned ? 'h-[100dvw] w-[100dvh]' : 'size-full',
         )}
-        style={{ transform: `translate(-50%, -50%) rotate(${angle}deg)` }}
+        // --frame-h: the frame's height, which is the phone's width when turned.
+        style={{ transform: `translate(-50%, -50%) rotate(${angle}deg)`, '--frame-h': turned ? '100dvw' : '100dvh' } as CSSProperties}
       >
         <ScreenRotation value={angle}>
           {/* Hold a card to open its song. */}

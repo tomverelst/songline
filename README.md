@@ -78,9 +78,14 @@ in their personal timeline of songs.
   starts the next mystery song by itself after 2.5 seconds. The border of the
   Play button fills up as a countdown; tap it to start straight away. Opening
   the ☰ menu pauses the countdown.
-- **Advanced options** → **Flip screen between turns**: turns the whole screen
-  upside down every other turn, so the phone can lie in the middle of the table
-  for players sitting across from each other. It can also be switched on or off
+- **Advanced options** → **Turn the screen to each player**: for a phone lying
+  flat in the middle of the table. **Across** turns the screen upside down
+  every other turn, for players sitting across from each other. **Around the
+  table** is for 3, 4 or more players: lay the phone with its charging port
+  towards the bottom side and pick everyone's side (bottom, left, top or right;
+  several players can share one). Each turn the screen turns to face whoever's
+  turn it is; on the left and right sides the guess and reveal use the table
+  view. A picture of the table shows who sits where. It can also be changed
   mid-game from the ☰ menu.
 - **Advanced options** → **Table view when turned sideways** (on by default):
   turn the phone on its side while guessing and the screen switches to a table
@@ -93,7 +98,7 @@ in their personal timeline of songs.
   tap along the bottom. The screen follows the phone's motion sensor, so it faces
   whoever holds it, even with auto-rotate locked; held upside down it flips.
   Lying flat, it keeps its last position, and at the start of each turn it
-  follows **Flip screen between turns** until someone picks the phone up. It
+  follows **Turn the screen to each player** until someone picks the phone up. It
   can also be switched on or off mid-game from the ☰ menu.
 - **Advanced options** → **Avoid songs from earlier games** (on by default): the
   phone remembers every song that came up (mystery songs, skipped songs and
@@ -126,8 +131,8 @@ For two players, or two teams, on one phone lying between them.
 - **Same options as Standard:** points to win, time to guess (both sides
   share one clock, and when it runs out each guess counts as it stands), start
   somewhere in the song, no double years, coins count as points, autoplay and avoid songs from
-  earlier games. The table view and flip-between-turns options are Standard
-  only.
+  earlier games. The table view and turning the screen to each player are
+  Standard only.
 
 **Team colours:** every player (or team) has a colour: tap the swatch next to
 a name on the setup screen to move on to the next colour nobody has yet (8 to

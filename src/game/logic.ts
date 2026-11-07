@@ -1,4 +1,4 @@
-import type { GameSettings, GameState, Player, Slot, Song, Turn } from './types'
+import type { GameSettings, GameState, Player, ScreenTurn, Seat, Slot, Song, Turn } from './types'
 import { AvoidDoubleYearsDeck, newGameDeck, SourceDeck, YearRangeDeck, type Deck, type YearRange } from './deck'
 import { withOriginalYear } from './songs'
 
@@ -10,9 +10,43 @@ export function score(player: Player, settings: Pick<GameSettings, 'bonusCountsT
   return player.timeline.length + (settings.bonusCountsTowardsGoal ? player.bonus : 0)
 }
 
+export function screenTurnOf(settings: Pick<GameSettings, 'screenTurn' | 'flipBetweenTurns'>): ScreenTurn {
+  return settings.screenTurn ?? (settings.flipBetweenTurns ? 'flip' : 'off')
+}
+
+/** The sides around the phone, clockwise from the charging port, seen from above. */
+export const SEATS: Seat[] = ['bottom', 'left', 'top', 'right']
+
+/**
+ * Where players sit when nobody picked: two face each other, three take the
+ * bottom, left and right, four take a side each, and more go round again.
+ */
+export function defaultSeats(count: number): Seat[] {
+  const order: Seat[] = count === 3 ? ['bottom', 'left', 'right'] : count === 2 ? ['bottom', 'top'] : SEATS
+  return Array.from({ length: count }, (_, i) => order[i % order.length])
+}
+
+/** A player's side of the table: the one they picked, or else one by their place. */
+export function seatOf(players: Pick<Player, 'seat'>[], index: number): Seat {
+  return players[index].seat ?? defaultSeats(players.length)[index]
+}
+
+/** How far the screen turns (clockwise) so its bottom faces each side. */
+const SEAT_ANGLE: Record<Seat, number> = { bottom: 0, left: 90, top: 180, right: 270 }
+
+/**
+ * How far the screen is turned this turn, lying flat on the table: towards
+ * the current player's side, upside down every other turn, or not at all.
+ */
+export function tableAngle(state: Pick<GameState, 'settings' | 'round' | 'currentPlayer' | 'players'>): number {
+  const mode = screenTurnOf(state.settings)
+  if (mode === 'seats') return SEAT_ANGLE[seatOf(state.players, state.currentPlayer)]
+  return isFlipped(state) ? 180 : 0
+}
+
 /** Whether this turn's screen is shown upside down (every other turn when enabled). */
 export function isFlipped(state: Pick<GameState, 'settings' | 'round' | 'currentPlayer' | 'players'>): boolean {
-  if (!state.settings.flipBetweenTurns) return false
+  if (screenTurnOf(state.settings) !== 'flip') return false
   const turnNumber = (state.round - 1) * state.players.length + state.currentPlayer
   return turnNumber % 2 === 1
 }

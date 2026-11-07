@@ -19,6 +19,19 @@ export interface Song {
 /** How a player's wins are celebrated. */
 export type CelebrationStyle = 'confetti' | 'fireworks' | 'lasers' | 'emoji' | 'bravas' | 'tofu'
 
+/**
+ * A side of the phone lying flat in the middle of the table. 'bottom' is the
+ * side with the charging port; the others go clockwise from there, seen from
+ * above.
+ */
+export type Seat = 'bottom' | 'left' | 'top' | 'right'
+
+/**
+ * How the screen turns between turns (Standard): not at all, upside down
+ * every other turn, or to the side of the table whoever's turn it is sits on.
+ */
+export type ScreenTurn = 'off' | 'flip' | 'seats'
+
 export interface Player {
   id: string
   name: string
@@ -28,6 +41,8 @@ export interface Player {
   emoji?: string
   /** Team colour (an id from TEAM_COLORS); unset in older games: one by their place. */
   color?: string
+  /** Where they sit around the phone, when the screen turns to each player's side. */
+  seat?: Seat
   timeline: Song[]
   /** Bonus coins: exact year, title and artist. */
   bonus: number
@@ -95,7 +110,9 @@ export interface GameSettings {
   bonusCountsTowardsGoal: boolean
   /** Advanced: start the next mystery song by itself after a few seconds. Unset means on. */
   autoplay?: boolean
-  /** Advanced: turn the screen upside down every other turn, for players across the table. */
+  /** Advanced: how the screen turns between turns. Unset: 'flip' when flipBetweenTurns, else off. */
+  screenTurn?: ScreenTurn
+  /** Older games: turn the screen upside down every other turn (now screenTurn 'flip'). */
   flipBetweenTurns?: boolean
   /** Advanced: a phone turned on its side while guessing shows the table view. Unset means on. */
   tableView?: boolean

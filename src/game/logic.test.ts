@@ -15,6 +15,8 @@ import {
   drawSong,
   finish,
   isFlipped,
+  defaultSeats,
+  tableAngle,
   yearForPosition,
   ranking,
   overwriteRevealedYear,
@@ -425,5 +427,33 @@ describe('yearsInRange (the most points to win with no double years)', () => {
     expect(yearsInRange({ from: 2020, to: 2029 })).toBe(MAX_YEAR - 2020 + 1)
     expect(yearsInRange({ to: 1959 })).toBe(1959 - MIN_YEAR + 1)
     expect(yearsInRange(undefined)).toBe(MAX_YEAR - MIN_YEAR + 1)
+  })
+})
+
+describe('tableAngle (the phone lying flat in the middle of the table)', () => {
+  const state = (settings: Partial<GameSettings>, seats: (string | undefined)[], currentPlayer: number, round = 1) => ({
+    round,
+    currentPlayer,
+    players: seats.map((seat) => ({ seat })) as never,
+    settings: settings as GameSettings,
+  })
+
+  it('turns the screen to face the side the current player sits on', () => {
+    const seats = ['bottom', 'left', 'top', 'right']
+    expect(seats.map((_, i) => tableAngle(state({ screenTurn: 'seats' }, seats, i)))).toEqual([0, 90, 180, 270])
+  })
+
+  it('seats players round the table when nobody picked a side', () => {
+    expect(defaultSeats(2)).toEqual(['bottom', 'top'])
+    expect(defaultSeats(3)).toEqual(['bottom', 'left', 'right'])
+    expect(defaultSeats(4)).toEqual(['bottom', 'left', 'top', 'right'])
+    expect(defaultSeats(6)).toEqual(['bottom', 'left', 'top', 'right', 'bottom', 'left'])
+    expect([0, 1, 2].map((i) => tableAngle(state({ screenTurn: 'seats' }, [undefined, undefined, undefined], i)))).toEqual([0, 90, 270])
+  })
+
+  it('flips every other turn or stays put, also for games from before seats', () => {
+    expect([0, 1].map((i) => tableAngle(state({ screenTurn: 'flip' }, ['left', 'left'], i)))).toEqual([0, 180])
+    expect([0, 1].map((i) => tableAngle(state({ flipBetweenTurns: true }, [undefined, undefined], i)))).toEqual([0, 180])
+    expect([0, 1].map((i) => tableAngle(state({ screenTurn: 'off', flipBetweenTurns: true }, ['top', 'top'], i)))).toEqual([0, 0])
   })
 })
