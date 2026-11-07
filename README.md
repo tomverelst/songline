@@ -42,6 +42,16 @@ in their personal timeline of songs.
 - **Coins:** bonus coins are shown next to the points. They don't count towards
   winning, but if the deck runs out (or the game is ended early) they break a
   tie on points.
+- **Time to guess** (Off, 15, 30, 45 or 60 seconds): a clock next to the
+  play controls counts down once the mystery song plays, and stops while it's
+  paused. It turns red for the last 5 seconds. When it runs out, the guess is
+  locked in as it stands; with no year picked yet the card is lost (title and
+  artist coins can still be ticked on the reveal).
+- **Start somewhere in the song**: the mystery song starts at a random point
+  instead of the beginning: past the intro (at least 10 seconds in, or 10% of
+  the song), and early enough that the whole time limit (or half a minute
+  without one) plus a margin fits before the end. **Restart** goes back to that
+  same point. Songs too short for that start as late as fits, or at the start.
 - **Advanced options** → **Coins count as points**: makes coins count towards
   the target as well, so a perfect turn is worth 4 points.
 - **Advanced options** → **Autoplay** (on by default): the "whose turn" screen

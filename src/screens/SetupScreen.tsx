@@ -46,6 +46,9 @@ interface SetupDraft {
   flipBetweenTurns: boolean
   tableView: boolean
   swipeCards: boolean
+  /** Seconds to guess; 0 means no limit. */
+  guessTimeLimit: number
+  randomStart: boolean
   avoidPlayedSongs: boolean
   playlist: PlaylistSummary | null
 }
@@ -59,6 +62,8 @@ const DEFAULT_DRAFT: SetupDraft = {
   flipBetweenTurns: false,
   tableView: true,
   swipeCards: false,
+  guessTimeLimit: 0,
+  randomStart: false,
   avoidPlayedSongs: true,
   playlist: null,
 }
@@ -117,6 +122,8 @@ export function SetupScreen({ onStart, initialError }: Props) {
           flipBetweenTurns: draft.flipBetweenTurns,
           tableView: draft.tableView,
           swipeCards: draft.swipeCards,
+          guessTimeLimit: draft.guessTimeLimit,
+          randomStart: draft.randomStart,
           playlistId: draft.playlist.id,
           playlistName,
         },
@@ -230,6 +237,33 @@ export function SetupScreen({ onStart, initialError }: Props) {
             : '. Coins don’t count towards winning, but break a tie if the songs run out.'}
         </Muted>
 
+        <h3 className="mt-1 text-[0.95rem] font-bold">Time to guess</h3>
+        <div className="grid grid-cols-5 gap-1.5">
+          {TIME_LIMITS.map((seconds) => (
+            <OptionButton
+              key={seconds}
+              className="min-h-11 items-center px-1 text-center font-semibold"
+              selected={draft.guessTimeLimit === seconds}
+              onClick={() => update({ guessTimeLimit: seconds })}
+            >
+              {seconds ? `${seconds}s` : 'Off'}
+            </OptionButton>
+          ))}
+        </div>
+        <Muted>
+          {draft.guessTimeLimit
+            ? `The clock runs while the song plays. When it runs out, your guess is locked in as it stands; no guess loses the card.`
+            : 'Take as long as you like to guess.'}
+        </Muted>
+        <Switch
+          title="Start somewhere in the song"
+          description={`Songs start at a random point past the intro instead of the beginning, with enough song left ${
+            draft.guessTimeLimit ? 'for the whole time limit' : 'to listen for a while'
+          }.`}
+          checked={draft.randomStart}
+          onChange={(randomStart) => update({ randomStart })}
+        />
+
         <details className="group border-t border-line pt-3">
           <summary className="flex min-h-8 list-none items-center font-semibold text-accent-2 [&::-webkit-details-marker]:hidden">
             <span className="mr-2 inline-block transition-transform group-open:rotate-90">▸</span>
@@ -324,6 +358,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
   )
 }
 
+const TIME_LIMITS = [0, 15, 30, 45, 60]
 const STARTING_YEARS_DEADLINE_MS = 10_000
 /** Let the shuffle animation play for a moment even when loading is quick. */
 const SHUFFLE_SHOW_MS = 1400

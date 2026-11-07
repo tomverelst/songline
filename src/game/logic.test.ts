@@ -16,6 +16,11 @@ import {
   ranking,
   overwriteRevealedYear,
   overwriteCardYear,
+  randomStartMs,
+  startClock,
+  stopClock,
+  timeLeftMs,
+  timeUp,
 } from './logic'
 import type { GameSettings, Song } from './types'
 
@@ -227,5 +232,75 @@ describe('yearForPosition (dragging the guess card)', () => {
 
   it('snaps to a card when no year fits between neighbours', () => {
     expect(yearForPosition(years, 2.5)).toEqual({ year: 1981, onIndex: 3 })
+  })
+})
+
+describe('randomStartMs', () => {
+  const minute = 60_000
+
+  it('starts past the intro and leaves the time limit before the end', () => {
+    for (const r of [0, 0.5, 0.999]) {
+      const start = randomStartMs(3.5 * minute, 45, () => r)
+      expect(start).toBeGreaterThanOrEqual(21_000) // 10% of the song
+      expect(start + 45_000 + 15_000).toBeLessThanOrEqual(3.5 * minute)
+      expect(start).toBeLessThanOrEqual(0.7 * 3.5 * minute)
+    }
+  })
+
+  it('leaves half a minute without a time limit', () => {
+    expect(randomStartMs(minute + 45_000, undefined, () => 1)).toBe(minute)
+  })
+
+  it('starts as late as fits for short songs, and at 0 when nothing fits', () => {
+    expect(randomStartMs(50_000, 30, () => 0.5)).toBe(5_000)
+    expect(randomStartMs(40_000, 30, () => 0.5)).toBe(0)
+    expect(randomStartMs(undefined, 30, () => 0.5)).toBe(0)
+  })
+})
+
+describe('time limit', () => {
+  const settings: GameSettings = {
+    mode: 'standard',
+    targetPoints: 5,
+    bonusCountsTowardsGoal: false,
+    guessTimeLimit: 30,
+    randomStart: true,
+    playlistId: 'x',
+    playlistName: 'x',
+  }
+  const songs = [1960, 1970, 1980, 1990].map((y) => ({ ...song(y), durationMs: 200_000 }))
+  const drawn = () => drawSong(newGame(['Ann', 'Bob'], settings, songs, () => 0.5), () => 0.5)
+
+  it('gives the turn a stopped clock and a random start', () => {
+    const g = drawn()
+    expect(g.turn!.clock).toEqual({ leftMs: 30_000 })
+    expect(g.turn!.startMs).toBeGreaterThan(0)
+    expect(drawSong(newGame(['Ann'], { ...settings, guessTimeLimit: 0, randomStart: false }, songs)).turn).not.toHaveProperty('clock')
+  })
+
+  it('only counts down while the song plays', () => {
+    let g = startClock(drawn(), 1000)
+    expect(timeLeftMs(g.turn, 11_000)).toBe(20_000)
+    g = stopClock(g, 11_000)
+    expect(timeLeftMs(g.turn, 99_000)).toBe(20_000)
+    g = startClock(g, 100_000)
+    expect(timeLeftMs(g.turn, 115_000)).toBe(5_000)
+    expect(timeLeftMs(g.turn, 200_000)).toBe(0)
+  })
+
+  it('locks in the guess as it stands when time is up', () => {
+    const g = drawn()
+    const year = g.turn!.song.year
+    const t = timeUp({ ...g, turn: { ...g.turn!, yearGuess: year } }).turn!
+    expect(t).toMatchObject({ phase: 'reveal', timedOut: true, result: { placementCorrect: true, exactYear: true } })
+  })
+
+  it('loses the card without a guess, and the year can still be corrected', () => {
+    let g = timeUp(drawn())
+    expect(g.turn).toMatchObject({ phase: 'reveal', timedOut: true, yearGuess: undefined })
+    expect(g.turn!.result!.placementCorrect).toBe(false)
+    g = overwriteRevealedYear(g, 1999)
+    expect(g.turn!.song.year).toBe(1999)
+    expect(g.turn!.result!.exactYear).toBe(false)
   })
 })

@@ -1,4 +1,4 @@
-import type { GameSettings, GameState, Player, Slot, Song } from './types'
+import type { GameSettings, GameState, Player, Slot, Song, Turn } from './types'
 
 /** Points towards the target: one per card, plus coins if the rules say so. */
 export function score(player: Player, settings: Pick<GameSettings, 'bonusCountsTowardsGoal'>): number {
@@ -184,11 +184,71 @@ export function newGame(
   }
 }
 
-export function drawSong(state: GameState): GameState {
+export function drawSong(state: GameState, random: () => number = Math.random): GameState {
   if (state.deck.length === 0) return finish(state)
   const deck = state.deck.slice(0, -1)
   const song = state.deck[state.deck.length - 1]
-  return { ...state, deck, turn: { song, phase: 'guess' } }
+  const turn: Turn = { song, phase: 'guess' }
+  if (state.settings.randomStart) turn.startMs = randomStartMs(song.durationMs, state.settings.guessTimeLimit, random)
+  const limitMs = timeLimitMs(state.settings)
+  if (limitMs) turn.clock = { leftMs: limitMs }
+  return { ...state, deck, turn }
+}
+
+/** Never start in the first bit of a song (intros all sound alike)… */
+const MIN_START_FRACTION = 0.1
+const MIN_START_MS = 10_000
+/** …nor so late that it ends before the guess is in. */
+const MAX_START_FRACTION = 0.7
+const LISTEN_WITHOUT_LIMIT_MS = 30_000
+const END_MARGIN_MS = 15_000
+
+/**
+ * A random point to start a song from: past the intro, and early enough that
+ * the whole time limit (or half a minute without one), plus a margin, still
+ * fits before the end. Songs too short for that start at the latest point that
+ * fits, or at the beginning; songs without a known length start at 0.
+ */
+export function randomStartMs(
+  durationMs: number | undefined,
+  timeLimitSeconds: number | undefined,
+  random: () => number = Math.random,
+): number {
+  if (!durationMs || durationMs <= 0) return 0
+  const listenMs = timeLimitSeconds ? timeLimitSeconds * 1000 : LISTEN_WITHOUT_LIMIT_MS
+  const lastFit = durationMs - listenMs - END_MARGIN_MS
+  if (lastFit <= 0) return 0
+  const earliest = Math.max(MIN_START_MS, durationMs * MIN_START_FRACTION)
+  const latest = Math.min(durationMs * MAX_START_FRACTION, lastFit)
+  if (latest <= earliest) return Math.round(Math.min(earliest, lastFit))
+  return Math.round(earliest + random() * (latest - earliest))
+}
+
+// ---------- Guess clock ----------
+
+export function timeLimitMs(settings: Pick<GameSettings, 'guessTimeLimit'>): number {
+  return settings.guessTimeLimit && settings.guessTimeLimit > 0 ? settings.guessTimeLimit * 1000 : 0
+}
+
+/** Time left to guess, or undefined when the turn has no time limit. */
+export function timeLeftMs(turn: Turn | undefined, now: number): number | undefined {
+  const clock = turn?.clock
+  if (!clock) return undefined
+  return Math.max(0, clock.deadline !== undefined ? clock.deadline - now : clock.leftMs)
+}
+
+/** Starts (or resumes) the guess clock, once the song is playing. */
+export function startClock(state: GameState, now: number): GameState {
+  const turn = state.turn
+  if (!turn?.clock || turn.phase !== 'guess' || turn.clock.deadline !== undefined) return state
+  return { ...state, turn: { ...turn, clock: { ...turn.clock, deadline: now + turn.clock.leftMs } } }
+}
+
+/** Stops the guess clock while the song is paused. */
+export function stopClock(state: GameState, now: number): GameState {
+  const turn = state.turn
+  if (!turn?.clock || turn.clock.deadline === undefined) return state
+  return { ...state, turn: { ...turn, clock: { leftMs: Math.max(0, turn.clock.deadline - now) } } }
 }
 
 /**
@@ -209,8 +269,8 @@ export function setTurnSongYear(state: GameState, songId: string, year: number |
 }
 
 /** Throw away the current song (e.g. wrong release year) and draw another. */
-export function skipSong(state: GameState): GameState {
-  return drawSong({ ...state, turn: undefined })
+export function skipSong(state: GameState, random: () => number = Math.random): GameState {
+  return drawSong({ ...state, turn: undefined }, random)
 }
 
 export function reveal(state: GameState): GameState {
@@ -234,12 +294,35 @@ export function reveal(state: GameState): GameState {
 }
 
 /**
+ * The time limit ran out: a valid guess is locked in as it stands; without
+ * one the card is lost (bonus coins for title and artist can still be ticked).
+ */
+export function timeUp(state: GameState): GameState {
+  const turn = state.turn
+  if (!turn || turn.phase !== 'guess') return state
+  if (isValidYear(turn.yearGuess)) {
+    const revealed = reveal(state)
+    return { ...revealed, turn: revealed.turn && { ...revealed.turn, timedOut: true } }
+  }
+  return {
+    ...state,
+    turn: {
+      ...turn,
+      yearGuess: undefined,
+      phase: 'reveal',
+      timedOut: true,
+      result: { placementCorrect: false, exactYear: false, titleCorrect: false, artistCorrect: false },
+    },
+  }
+}
+
+/**
  * Overwrites the revealed song's year (e.g. Spotify had a reissue's date) and
  * works the card and exact-year points out again. Title and artist stay.
  */
 export function overwriteRevealedYear(state: GameState, year: number): GameState {
   const turn = state.turn
-  if (!turn || turn.phase !== 'reveal' || !turn.result || !turn.slot) return state
+  if (!turn || turn.phase !== 'reveal' || !turn.result) return state
   return {
     ...state,
     turn: {
@@ -247,7 +330,8 @@ export function overwriteRevealedYear(state: GameState, year: number): GameState
       song: { ...turn.song, year, yearSource: 'manual' },
       result: {
         ...turn.result,
-        placementCorrect: isPlacementCorrect(turn.slot, year),
+        // Without a slot, nobody guessed before the time ran out.
+        placementCorrect: turn.slot ? isPlacementCorrect(turn.slot, year) : false,
         exactYear: turn.yearGuess === year,
       },
     },

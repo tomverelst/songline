@@ -146,6 +146,7 @@ interface ApiTrack {
   name: string
   type?: string
   is_local?: boolean
+  duration_ms?: number
   external_ids?: { isrc?: string }
   artists: { name: string }[]
   album: { release_date?: string; images?: { url: string }[] }
@@ -185,6 +186,7 @@ export async function getPlaylistSongs(id: string): Promise<Song[]> {
       spotifyYear: year,
       isrc: t.external_ids?.isrc,
       albumArt: t.album.images?.[0]?.url,
+      durationMs: t.duration_ms,
     })
   }
   return songs
@@ -239,11 +241,11 @@ export async function transferPlayback(deviceId: string) {
   await request('/me/player', { method: 'PUT', body: JSON.stringify({ device_ids: [deviceId], play: false }) })
 }
 
-export async function playSong(uri: string, deviceId?: string) {
+export async function playSong(uri: string, deviceId?: string, positionMs = 0) {
   const start = () =>
     request(`/me/player/play${deviceQuery(deviceId)}`, {
       method: 'PUT',
-      body: JSON.stringify({ uris: [uri], position_ms: 0 }),
+      body: JSON.stringify({ uris: [uri], position_ms: Math.max(0, Math.round(positionMs)) }),
     })
   try {
     await start()

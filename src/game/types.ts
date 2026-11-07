@@ -12,6 +12,8 @@ export interface Song {
   yearSource?: 'spotify' | 'musicbrainz' | 'manual'
   isrc?: string
   albumArt?: string
+  /** Length of the track; unset for songs loaded before it was stored. */
+  durationMs?: number
 }
 
 export interface Player {
@@ -47,6 +49,19 @@ export interface Turn {
   /** Where the guessed year falls in the timeline; set on reveal. */
   slot?: Slot
   result?: TurnResult
+  /** Where in the song playback starts (and restarts), with a random start. */
+  startMs?: number
+  /** The guess clock, with a time limit. It only runs while the song plays. */
+  clock?: GuessClock
+  /** The time limit ran out before the guess was locked in. */
+  timedOut?: boolean
+}
+
+export interface GuessClock {
+  /** When time runs out, while the clock runs. */
+  deadline?: number
+  /** Time left while the clock is stopped (song paused or not started yet). */
+  leftMs: number
 }
 
 export type GameMode = 'standard'
@@ -65,6 +80,10 @@ export interface GameSettings {
   tableView?: boolean
   /** Advanced: in the table view, the guess card stays in the middle and swiping the cards changes the year. */
   swipeCards?: boolean
+  /** Seconds to lock in a guess once the song plays. Unset or 0 means no limit. */
+  guessTimeLimit?: number
+  /** Start each mystery song at a random point, not at the beginning. */
+  randomStart?: boolean
   playlistId: string
   playlistName: string
 }

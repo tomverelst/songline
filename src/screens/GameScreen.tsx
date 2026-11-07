@@ -13,6 +13,11 @@ import {
   setTurnSongYear,
   skipSong,
   slotForYear,
+  startClock,
+  stopClock,
+  timeLeftMs,
+  timeLimitMs,
+  timeUp,
 } from '../game/logic'
 import { originalYear } from '../musicbrainz'
 import { rememberSongs } from '../history'
@@ -94,17 +99,19 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
     )
   }, [songToCheck, onChange])
 
-  async function play(uri: string) {
+  async function play(uri: string, positionMs?: number) {
     setError(null)
     try {
       try {
-        await playSong(uri, deviceId ?? undefined)
+        await playSong(uri, deviceId ?? undefined, positionMs)
       } catch (e) {
         // The saved device may have gone to sleep — fall back to the active one.
-        if (deviceId && e instanceof SpotifyError && e.status === 404) await playSong(uri)
+        if (deviceId && e instanceof SpotifyError && e.status === 404) await playSong(uri, undefined, positionMs)
         else throw e
       }
       setPlaying(true)
+      // The guess clock only runs once the song can be heard.
+      onChange((g) => (g.turn?.song.uri === uri ? startClock(g, Date.now()) : g))
     } catch (e) {
       setPlaying(false)
       setError(describePlaybackError(e))
@@ -116,6 +123,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
     try {
       if (playing) await pause(deviceId ?? undefined)
       else await resume(deviceId ?? undefined)
+      onChange((g) => (playing ? stopClock(g, Date.now()) : startClock(g, Date.now())))
       setPlaying(!playing)
     } catch (e) {
       setError(describePlaybackError(e))
@@ -125,16 +133,17 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
   function startTurn() {
     const next = drawSong(game)
     onChange(next)
-    if (next.turn) play(next.turn.song.uri)
+    if (next.turn) play(next.turn.song.uri, next.turn.startMs)
   }
 
   function skip() {
     const next = skipSong(game)
     onChange(next)
-    if (next.turn) play(next.turn.song.uri)
+    if (next.turn) play(next.turn.song.uri, next.turn.startMs)
   }
 
-  async function lockIn() {
+  /** Reveals the guess; `timedOut` when the time limit ran out first. */
+  async function lockIn(timedOut = false) {
     const pending = turn && !turn.song.yearSource ? yearLookups.current.get(turn.song.id) : undefined
     if (pending && turn) {
       setCheckingYear(true)
@@ -147,8 +156,23 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
       setCheckingYear(false)
     }
     scrollToTop()
-    onChange(reveal)
+    onChange(timedOut ? timeUp : reveal)
   }
+
+  // The time limit: lock in whatever is guessed when the clock runs out.
+  const now = useNow(!!turn?.clock?.deadline && turn.phase === 'guess')
+  const left = turn?.phase === 'guess' ? timeLeftMs(turn, now) : undefined
+  // `now` can lag behind for a tick just after the clock starts.
+  const timeLeft = left === undefined ? undefined : Math.min(left, timeLimitMs(game.settings))
+  const lockInRef = useRef(lockIn)
+  useEffect(() => {
+    lockInRef.current = lockIn
+  })
+  const timeIsUp = timeLeft === 0 && !checkingYear
+  useEffect(() => {
+    if (timeIsUp) lockInRef.current(true)
+  }, [timeIsUp])
+  const clock = timeLeft !== undefined && <GuessTimer ms={timeLeft} running={!!turn?.clock?.deadline} />
 
   function nextTurn() {
     if (playing) pause(deviceId ?? undefined).catch(() => {})
@@ -230,12 +254,15 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
         </div>
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <Muted className="truncate">{player.name} is guessing</Muted>
+        <div className="flex items-center justify-between gap-2">
+          <Muted className="truncate">{player.name} is guessing</Muted>
+          {clock}
+        </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <Button size="sm" className="px-3" onClick={togglePause}>
             {playing ? '❚❚ Pause' : '▶ Play'}
           </Button>
-          <Button size="sm" variant="ghost" className="px-3" onClick={() => play(turn.song.uri)}>
+          <Button size="sm" variant="ghost" className="px-3" onClick={() => play(turn.song.uri, turn.startMs)}>
             ↺ Restart
           </Button>
           <Button size="sm" variant="ghost" className="px-3" onClick={skip}>
@@ -260,7 +287,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
     />
   )
   const lockButton = turn?.phase === 'guess' && (
-    <Button variant="primary" block disabled={!guessSlot || checkingYear} onClick={lockIn}>
+    <Button variant="primary" block disabled={!guessSlot || checkingYear} onClick={() => lockIn()}>
       {checkingYear ? 'Checking the year…' : guessSlot ? `Lock in ${turn.yearGuess}` : 'Enter a year'}
     </Button>
   )
@@ -300,6 +327,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
 
       {turn?.phase === 'reveal' && turn.result && !sideways && (
         <>
+          {turn.timedOut && <p className="text-center text-lg font-extrabold text-bad">⏱ Time's up!</p>}
           <section
             className={cx(
               'flex animate-pop flex-col items-center gap-1.5 rounded-2xl border-2 bg-surface px-4 py-5 text-center',
@@ -323,14 +351,14 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
             <CardTitle>Points</CardTitle>
             <Muted>Tap to change, e.g. if the year looks wrong.</Muted>
             <BonusToggle
-              label={`Card (guessed ${turn.yearGuess})`}
+              label={`Card (${guessText(turn.yearGuess)})`}
               answer={turn.result.placementCorrect ? 'Goes in the timeline' : 'Wrong spot'}
               value={turn.result.placementCorrect}
               onChange={(placementCorrect) => updateResult({ placementCorrect })}
             />
             <BonusToggle
               coin
-              label={`Exact year (guessed ${turn.yearGuess})`}
+              label={`Exact year (${guessText(turn.yearGuess)})`}
               answer={String(turn.song.year)}
               value={turn.result.exactYear}
               onChange={(exactYear) => updateResult({ exactYear })}
@@ -490,11 +518,12 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
         onSelectYear={setYearGuess}
         playing={playing}
         onTogglePause={togglePause}
-        onRestart={() => play(turn.song.uri)}
+        onRestart={() => play(turn.song.uri, turn.startMs)}
+        clock={clock}
         onSkip={skip}
         lockLabel={checkingYear ? 'Checking…' : guessSlot ? 'Lock in' : 'Pick a year'}
         lockDisabled={!guessSlot || checkingYear}
-        onLock={lockIn}
+        onLock={() => lockIn()}
         swipeCards={!!game.settings.swipeCards}
       />
   ) : (
@@ -539,6 +568,41 @@ function useLandscape() {
     },
     () => window.matchMedia('(orientation: landscape)').matches,
   )
+}
+
+/** The current time, ticking a few times a second while `active`. */
+function useNow(active: boolean) {
+  const [now, setNow] = useState(Date.now)
+  useEffect(() => {
+    if (!active) return
+    const timer = setInterval(() => setNow(Date.now()), 200)
+    return () => clearInterval(timer)
+  }, [active])
+  return now
+}
+
+/** The time left to guess; red in the last seconds, dimmed while paused. */
+function GuessTimer({ ms, running }: { ms: number; running: boolean }) {
+  const seconds = Math.ceil(ms / 1000)
+  const hurry = seconds <= 5
+  return (
+    <span
+      role="timer"
+      aria-label={`${seconds} seconds left`}
+      className={cx(
+        'flex-none rounded-full border px-2.5 py-0.5 text-sm font-extrabold tabular-nums',
+        hurry ? 'border-bad bg-bad/15 text-bad' : 'border-line bg-surface-2',
+        hurry && running && 'animate-pulse',
+        !running && 'opacity-60',
+      )}
+    >
+      ⏱ {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}
+    </span>
+  )
+}
+
+function guessText(yearGuess: number | undefined) {
+  return yearGuess === undefined ? 'no guess in time' : `guessed ${yearGuess}`
 }
 
 function scrollToTop() {

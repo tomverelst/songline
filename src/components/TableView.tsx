@@ -23,6 +23,8 @@ interface Props {
   onTogglePause: () => void
   onRestart: () => void
   onSkip: () => void
+  /** The time left to guess, with a time limit. */
+  clock?: ReactNode
   lockLabel: string
   lockDisabled: boolean
   onLock: () => void
@@ -70,6 +72,7 @@ export function TableView(props: Props) {
             ⏭
           </RoundButton>
         </div>
+        {props.clock}
         <div className="ml-auto flex min-w-0 items-center gap-2">{scoreboard}</div>
       </header>
 
