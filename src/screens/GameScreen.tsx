@@ -249,7 +249,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
             )}
           >
             <div className="relative">
-              <Artwork src={turn.song.albumArt} className="size-45 rounded-xl text-5xl shadow-[0_12px_32px_rgb(0_0_0/0.5)]" />
+              <Artwork src={turn.song.albumArt} className="size-45 rounded-xl text-5xl shadow-[0_12px_32px_rgb(0_0_0/0.5)] tablet:size-36" />
               <LikeButton song={turn.song} playlistId={game.settings.playlistId} onArt className="absolute right-2 bottom-2" />
             </div>
             <RevealYear key={turn.song.id} song={turn.song} exact={turn.result.exactYear} onSave={overwriteYear} />
@@ -260,33 +260,36 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
           <Card className="gap-2">
             <CardTitle>Points</CardTitle>
             <Muted>Tap to change, e.g. if the year looks wrong.</Muted>
-            <BonusToggle
-              label={`Card (${guessText(turn.yearGuess)})`}
-              answer={turn.result.placementCorrect ? 'Goes in the timeline' : 'Wrong spot'}
-              value={turn.result.placementCorrect}
-              onChange={(placementCorrect) => updateResult({ placementCorrect })}
-            />
-            <BonusToggle
-              coin
-              label={`Exact year (${guessText(turn.yearGuess)})`}
-              answer={String(turn.song.year)}
-              value={turn.result.exactYear}
-              onChange={(exactYear) => updateResult({ exactYear })}
-            />
-            <BonusToggle
-              coin
-              label="Title"
-              answer={turn.song.title}
-              value={turn.result.titleCorrect}
-              onChange={(titleCorrect) => updateResult({ titleCorrect })}
-            />
-            <BonusToggle
-              coin
-              label="Artist"
-              answer={turn.song.artists.join(', ')}
-              value={turn.result.artistCorrect}
-              onChange={(artistCorrect) => updateResult({ artistCorrect })}
-            />
+            {/* Tablets: two by two, so all four fit above Continue (also when the screen is flipped). */}
+            <div className="grid gap-2 tablet:grid-cols-2">
+              <BonusToggle
+                label={`Card (${guessText(turn.yearGuess)})`}
+                answer={turn.result.placementCorrect ? 'Goes in the timeline' : 'Wrong spot'}
+                value={turn.result.placementCorrect}
+                onChange={(placementCorrect) => updateResult({ placementCorrect })}
+              />
+              <BonusToggle
+                coin
+                label={`Exact year (${guessText(turn.yearGuess)})`}
+                answer={String(turn.song.year)}
+                value={turn.result.exactYear}
+                onChange={(exactYear) => updateResult({ exactYear })}
+              />
+              <BonusToggle
+                coin
+                label="Title"
+                answer={turn.song.title}
+                value={turn.result.titleCorrect}
+                onChange={(titleCorrect) => updateResult({ titleCorrect })}
+              />
+              <BonusToggle
+                coin
+                label="Artist"
+                answer={turn.song.artists.join(', ')}
+                value={turn.result.artistCorrect}
+                onChange={(artistCorrect) => updateResult({ artistCorrect })}
+              />
+            </div>
           </Card>
 
           <Card className="gap-0">
