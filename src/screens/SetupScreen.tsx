@@ -21,7 +21,7 @@ import { BATTLE_PLAYERS } from '../game/battle'
 import { Coin } from '../components/Coins'
 import { CelebrationButton, ColorButton } from '../components/PlayerButtons'
 import { freeColor, teamColorById } from '../game/teams'
-import { defaultCelebration, type CelebrationStyle } from '../party'
+import { DEFAULT_EMOJI, defaultCelebration, type Celebration, type CelebrationStyle } from '../party'
 import {
   Artwork,
   BottomBar,
@@ -46,6 +46,8 @@ interface SetupDraft {
   names: string[]
   /** Each player's celebration, by the same index as `names`. */
   celebrations: (CelebrationStyle | null)[]
+  /** Each player's emoji for emoji rain, by the same index as `names`. */
+  emojis: (string | null)[]
   /** Each player's team colour id, by the same index as `names`. */
   colors: (string | null)[]
   mode: GameMode
@@ -73,6 +75,7 @@ interface SetupDraft {
 const DEFAULT_DRAFT: SetupDraft = {
   names: ['', ''],
   celebrations: [],
+  emojis: [],
   colors: [],
   mode: 'standard',
   targetPoints: 10,
@@ -112,7 +115,10 @@ export function SetupScreen({ onStart, initialError }: Props) {
   const battle = draft.mode === 'battle'
   // Battle is always two players (or teams); extra names are kept for later.
   const nameFields = battle ? Array.from({ length: BATTLE_PLAYERS }, (_, i) => draft.names[i] ?? '') : draft.names
-  const celebrationAt = (i: number) => draft.celebrations[i] ?? defaultCelebration()
+  const celebrationAt = (i: number): Celebration => ({
+    style: draft.celebrations[i] ?? defaultCelebration(),
+    emoji: draft.emojis[i] ?? DEFAULT_EMOJI,
+  })
   // A player's colour: the one they picked, or else the next one nobody picked.
   const picked = nameFields.map((_, i) => teamColorById(draft.colors[i])?.id ?? null)
   const colorAt = (i: number) =>
@@ -120,7 +126,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
   const othersColors = (i: number) => nameFields.flatMap((_, j) => (j === i ? [] : [colorAt(j).id]))
   // Players are the filled-in names, each with the celebration picked next to it.
   const entries = nameFields
-    .map((name, i) => ({ name: name.trim(), celebration: celebrationAt(i), color: colorAt(i).id }))
+    .map((name, i) => ({ name: name.trim(), ...celebrationAt(i), color: colorAt(i).id }))
     .filter((e) => e.name)
   const names = entries.map((e) => e.name)
   const enoughPlayers = battle ? names.length === BATTLE_PLAYERS : names.length >= 1
@@ -186,7 +192,12 @@ export function SetupScreen({ onStart, initialError }: Props) {
       )
       game = {
         ...game,
-        players: game.players.map((p, i) => ({ ...p, celebration: entries[i].celebration, color: entries[i].color })),
+        players: game.players.map((p, i) => ({
+          ...p,
+          celebration: entries[i].style,
+          emoji: entries[i].emoji,
+          color: entries[i].color,
+        })),
       }
       const checks: StartingCardCheck[] = game.players.map((p) => ({
         player: p.name,
@@ -266,12 +277,16 @@ export function SetupScreen({ onStart, initialError }: Props) {
               }}
             />
             <CelebrationButton
+              playerName={name.trim()}
               value={celebrationAt(i)}
-              onChange={(style) => {
-                const next = [...draft.celebrations]
-                while (next.length <= i) next.push(null)
-                next[i] = style
-                update({ celebrations: next })
+              onChange={({ style, emoji }) => {
+                const celebrations = [...draft.celebrations]
+                const emojis = [...draft.emojis]
+                while (celebrations.length <= i) celebrations.push(null)
+                while (emojis.length <= i) emojis.push(null)
+                celebrations[i] = style
+                emojis[i] = emoji
+                update({ celebrations, emojis })
               }}
             />
             {!battle && draft.names.length > 1 && (
@@ -281,6 +296,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
                   update({
                     names: draft.names.filter((_, j) => j !== i),
                     celebrations: draft.celebrations.filter((_, j) => j !== i),
+                    emojis: draft.emojis.filter((_, j) => j !== i),
                     colors: draft.colors.filter((_, j) => j !== i),
                   })
                 }

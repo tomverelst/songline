@@ -137,10 +137,11 @@ screen dims like a club and fans of laser beams sweep from the corners to a
 128 BPM beat, with a strobe flashing white on the beat (gold for an exact
 year, the full rig for the winner). The strobe flashes once a beat, so never
 more than 3 times in any one second, the limit for people with photosensitive
-epilepsy; phones set to reduce motion skip the laser show altogether. Tap the
-🎉/🎆/🪩 button
-next to a name on the setup screen to switch (it shows it off); it can't be
-changed mid-game. It plays when that player wins a card or hits the
+epilepsy; phones set to reduce motion skip the laser show altogether. Or
+**emoji rain**: the player's own emoji pours down the screen (a downpour of
+big ones for an exact year). Tap the celebration button next to a name on the
+setup screen to pick one (each shows itself off); for emoji rain pick one of
+24 emoji or type any other. It can't be changed mid-game. It plays when that player wins a card or hits the
 exact year, and for the winner at the end. In Battle, each side that wins
 celebrates in its own style, so confetti and fireworks can go off together.
 

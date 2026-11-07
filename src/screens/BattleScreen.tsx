@@ -10,7 +10,7 @@ import {
   setFirstToName,
   updateBattleResult,
 } from '../game/battle'
-import { celebrateCard, celebrateExact, celebrationOf, type CelebrationStyle } from '../party'
+import { celebrateCard, celebrateExact, celebrationOf, type Celebration } from '../party'
 import { CardRow } from '../components/CardRow'
 import { RecordButton } from '../components/RecordButton'
 import { LikeButton } from '../components/LikeButton'
@@ -77,22 +77,23 @@ export function BattleScreen({ game, onChange, onQuit }: Props) {
   // Party when the answer is revealed (once per song, not on later corrections).
   const celebrated = useRef<string | null>(null)
   const revealedSong = turn?.phase === 'reveal' ? turn.song.id : null
-  // Every side that won celebrates in its own style (once per style and kind).
-  const parties = [
-    ...new Set(
+  // Every side that won celebrates in its own way (the same party only once).
+  const parties = JSON.stringify([
+    ...new Map(
       (turn?.guesses ?? []).flatMap((g, i) => {
-        const style = celebrationOf(game.players[i])
-        return g.result?.exactYear ? [`exact:${style}`] : g.result?.placementCorrect ? [`card:${style}`] : []
+        const kind = g.result?.exactYear ? 'exact' : g.result?.placementCorrect ? 'card' : null
+        if (!kind) return []
+        const party = { kind, ...celebrationOf(game.players[i]) }
+        return [[`${party.kind} ${party.style} ${party.emoji}`, party] as const]
       }),
-    ),
-  ].join()
+    ).values(),
+  ])
   useEffect(() => {
     if (!revealedSong || celebrated.current === revealedSong) return
     celebrated.current = revealedSong
-    for (const party of parties.split(',').filter(Boolean)) {
-      const [kind, style] = party.split(':') as ['exact' | 'card', CelebrationStyle]
-      if (kind === 'exact') celebrateExact(style)
-      else celebrateCard(style)
+    for (const { kind, ...celebration } of JSON.parse(parties) as ({ kind: 'exact' | 'card' } & Celebration)[]) {
+      if (kind === 'exact') celebrateExact(celebration)
+      else celebrateCard(celebration)
     }
   }, [revealedSong, parties])
 

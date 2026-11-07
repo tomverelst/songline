@@ -17,13 +17,15 @@ export interface Song {
 }
 
 /** How a player's wins are celebrated. */
-export type CelebrationStyle = 'confetti' | 'fireworks' | 'lasers'
+export type CelebrationStyle = 'confetti' | 'fireworks' | 'lasers' | 'emoji'
 
 export interface Player {
   id: string
   name: string
   /** Unset: the phone's default (confetti, unless fireworks were picked before). */
   celebration?: CelebrationStyle
+  /** The emoji that rains down with the 'emoji' celebration. */
+  emoji?: string
   /** Team colour (an id from TEAM_COLORS); unset in older games: one by their place. */
   color?: string
   timeline: Song[]

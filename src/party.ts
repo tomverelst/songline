@@ -1,15 +1,32 @@
 import confetti from 'canvas-confetti'
 import { fireworks } from './fireworks'
 import { lasers } from './lasers'
+import { emojiRain } from './emojiRain'
 import { KEYS, load } from './storage'
 import type { CelebrationStyle, Player } from './game/types'
 
 export type { CelebrationStyle }
 
+/** How a player celebrates: a style, and for emoji rain, which emoji. */
+export interface Celebration {
+  style: CelebrationStyle
+  emoji: string
+}
+
+export const DEFAULT_EMOJI = '🔥'
+
+/** Emoji to pick from for emoji rain (any other can be typed in). */
+export const EMOJI_CHOICES = [
+  '🔥', '🎉', '🦖', '🍕', '🚀', '🌈', '💎', '🐐',
+  '👑', '⚡', '🍻', '🎸', '🥳', '💃', '🕺', '🐙',
+  '🦄', '🍩', '🌮', '💥', '🎯', '🏆', '😎', '🤘',
+]
+
 export const CELEBRATIONS: { id: CelebrationStyle; emoji: string; name: string }[] = [
   { id: 'confetti', emoji: '🎉', name: 'Confetti' },
   { id: 'fireworks', emoji: '🎆', name: 'Fireworks' },
   { id: 'lasers', emoji: '🪩', name: 'Lasers' },
+  { id: 'emoji', emoji: '🌧️', name: 'Emoji rain' },
 ]
 
 /** The style for players who haven't picked one: what this phone used before. */
@@ -18,8 +35,8 @@ export function defaultCelebration(): CelebrationStyle {
   return CELEBRATIONS.some((c) => c.id === saved) ? saved : 'confetti'
 }
 
-export function celebrationOf(player: Pick<Player, 'celebration'>): CelebrationStyle {
-  return player.celebration ?? defaultCelebration()
+export function celebrationOf(player: Pick<Player, 'celebration' | 'emoji'>): Celebration {
+  return { style: player.celebration ?? defaultCelebration(), emoji: player.emoji ?? DEFAULT_EMOJI }
 }
 
 // Party effects. canvas-confetti skips them for people who prefer reduced motion.
@@ -30,14 +47,17 @@ const CLUB = ['#39ff14', '#ff2bd6', '#00e5ff', '#3b5bff', '#ff1744']
 const GOLD_LASERS = ['#ffd23f', '#ffffff', '#ffb000']
 
 /** You won the card. */
-export function celebrateCard(style: CelebrationStyle) {
+export function celebrateCard({ style, emoji }: Celebration) {
+  if (style === 'emoji') return emojiRain({ emoji, count: 45, overMs: 1500, minSize: 26, maxSize: 52 })
   if (style === 'fireworks') return fireworks({ shells: 3, overMs: 700, colors: PARTY })
   if (style === 'lasers') return lasers({ durationMs: 2400, colors: CLUB })
   confetti({ ...base, particleCount: 80, spread: 70, startVelocity: 40, origin: { y: 0.35 }, colors: PARTY })
 }
 
 /** Exact year: a shower of gold coins from both sides. */
-export function celebrateExact(style: CelebrationStyle) {
+export function celebrateExact({ style, emoji }: Celebration) {
+  // Exact year: a downpour of big ones.
+  if (style === 'emoji') return emojiRain({ emoji, count: 110, overMs: 2200, minSize: 34, maxSize: 84 })
   if (style === 'fireworks') return fireworks({ shells: 6, overMs: 1400, colors: GOLD, sparks: 110, glitter: true })
   if (style === 'lasers') return lasers({ durationMs: 3500, colors: GOLD_LASERS, big: true })
   const shot = (x: number, angle: number) =>
@@ -58,7 +78,8 @@ export function celebrateExact(style: CelebrationStyle) {
 }
 
 /** Game over: bursts for a few seconds. */
-export function celebrateWin(style: CelebrationStyle) {
+export function celebrateWin({ style, emoji }: Celebration) {
+  if (style === 'emoji') return emojiRain({ emoji, count: 220, overMs: 4500, minSize: 26, maxSize: 90 })
   if (style === 'fireworks') return fireworks({ shells: 14, overMs: 4000, colors: [...PARTY, ...GOLD], sparks: 100, glitter: true })
   if (style === 'lasers') return lasers({ durationMs: 6000, colors: CLUB, big: true })
   const end = Date.now() + 3500
