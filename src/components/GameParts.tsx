@@ -1,10 +1,11 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { GameState, Song } from '../game/types'
 import { finish } from '../game/logic'
 import { useYearEditor } from './YearEdit'
 import { DevicePicker } from './DevicePicker'
 import { Coin } from './Coins'
-import { Button, CardTitle, IconButton, Muted, Switch } from './ui'
+import { Button, CardTitle, IconButton, Muted, OptionButton, Switch } from './ui'
+import { celebrateCard, celebrationStyle, setCelebrationStyle, type CelebrationStyle } from '../party'
 import { cx } from './classes'
 import { canFullscreen, enterFullscreen, exitFullscreen, useFullscreen } from '../fullscreen'
 
@@ -161,6 +162,7 @@ export function GameMenu({
           onChange={(noDoubleYears) => onChange((g) => ({ ...g, settings: { ...g.settings, noDoubleYears } }))}
         />
         {children}
+        <CelebrationPicker />
         {/* Pull-to-refresh can't reach the turned game screen; the game is saved, so this is safe. */}
         <Button onClick={() => window.location.reload()}>↻ Reload</Button>
         <Button
@@ -222,5 +224,36 @@ export function PointChip({
       <span className="truncate">{label}</span>
       {coin ? <Coin /> : <span className={value ? 'text-good' : ''}>+1</span>}
     </button>
+  )
+}
+
+const CELEBRATIONS: { id: CelebrationStyle; label: string }[] = [
+  { id: 'confetti', label: '🎉 Confetti' },
+  { id: 'fireworks', label: '🎆 Fireworks' },
+]
+
+/** Confetti or fireworks when a card is won; saved on this phone. Picking one shows it. */
+export function CelebrationPicker() {
+  const [style, setStyle] = useState(celebrationStyle)
+  return (
+    <div className="mt-2 flex flex-col gap-1.5">
+      <span className="font-semibold">Celebrations</span>
+      <div className="grid grid-cols-2 gap-1.5">
+        {CELEBRATIONS.map((c) => (
+          <OptionButton
+            key={c.id}
+            className="min-h-11 items-center text-center font-semibold"
+            selected={style === c.id}
+            onClick={() => {
+              setCelebrationStyle(c.id)
+              setStyle(c.id)
+              celebrateCard()
+            }}
+          >
+            {c.label}
+          </OptionButton>
+        ))}
+      </div>
+    </div>
   )
 }

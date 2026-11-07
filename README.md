@@ -112,6 +112,11 @@ For two players, or two teams, on one phone lying between them.
   earlier games. The table view and flip-between-turns options are Standard
   only.
 
+**Celebrations:** winning a card, hitting the exact year and winning the game
+are celebrated with confetti, or with fireworks: rockets that climb, burst
+and crackle out. Pick one under **Advanced options** → **Celebrations** or in
+the ☰ menu (tapping one shows it). The choice is saved on the phone.
+
 **Year looks off?** On the reveal, **🔍 Look up** searches the song's release
 year on DuckDuckGo, and **✎ Edit** lets you overwrite it right there; the card
 and exact-year points are worked out again from the new year. Holding a card in
@@ -155,7 +160,11 @@ so there is no backend and no client secret.
 
 Requirements and limitations:
 
-- **Spotify Premium** is required to start playback through the Web API.
+- **Spotify Premium** is required to start playback through the Web API. The game only
+  says so when Spotify answers that Premium is missing. Spotify also refuses
+  commands now and then for other reasons, such as pausing something that's
+  already paused or a device that isn't ready. The game checks or retries
+  those, and otherwise suggests ↺ Restart, ⏭ Skip or another device.
 - Music plays through **Spotify Connect** on a device you choose: a speaker,
   TV, laptop, or the Spotify app on a phone. Spotify must have been opened on that
   device recently for it to appear. Use a device that nobody is staring at,

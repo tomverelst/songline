@@ -18,6 +18,7 @@ import { KEYS, load, save } from '../storage'
 import { GAME_MODES } from '../game/modes'
 import { BATTLE_PLAYERS } from '../game/battle'
 import { Coin } from '../components/Coins'
+import { CelebrationPicker } from '../components/GameParts'
 import {
   Artwork,
   BottomBar,
@@ -361,6 +362,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
               Forget played songs
             </LinkButton>
           )}
+          <CelebrationPicker />
         </details>
       </Card>
 

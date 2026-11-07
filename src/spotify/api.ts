@@ -251,9 +251,10 @@ export async function playSong(uri: string, deviceId?: string, positionMs = 0) {
     await start()
   } catch (e) {
     // Spotify answers 5xx when it can't reach the device in time (e.g. a phone
-    // app in the background). Sometimes the song starts anyway; otherwise wake
+    // app in the background), and sometimes a 403 "restriction violated" for a
+    // device that isn't ready. Sometimes the song starts anyway; otherwise wake
     // the device by transferring playback to it and try once more.
-    if (!(e instanceof SpotifyError) || e.status < 500) throw e
+    if (!(e instanceof SpotifyError) || !(e.status >= 500 || isRestriction(e))) throw e
     await sleep(1000)
     if (await isPlaying(uri).catch(() => false)) return loopTrack(deviceId)
     if (deviceId) await transferPlayback(deviceId).catch(() => {})
@@ -268,22 +269,47 @@ function loopTrack(deviceId?: string) {
   request(`/me/player/repeat?state=track${deviceQuery(deviceId, '&')}`, { method: 'PUT' }).catch(() => {})
 }
 
+/**
+ * A 403 that isn't about Premium: Spotify's "restriction violated", e.g.
+ * pausing something that's already paused, or a device that isn't ready.
+ */
+function isRestriction(e: SpotifyError) {
+  return e.status === 403 && !isPremiumRequired(e)
+}
+
+function isPremiumRequired(e: SpotifyError) {
+  return e.reason === 'PREMIUM_REQUIRED' || /premium/i.test(e.message)
+}
+
+/**
+ * Runs a pause or resume. When Spotify refuses with a restriction, check
+ * whether the player already is where we wanted it: then it's fine.
+ */
+async function playerCommand(path: string, wantPlaying: boolean) {
+  try {
+    await request(path, { method: 'PUT' })
+  } catch (e) {
+    if (!(e instanceof SpotifyError) || !isRestriction(e)) throw e
+    const state = await request<{ is_playing?: boolean } | undefined>('/me/player').catch(() => undefined)
+    if (!!state?.is_playing !== wantPlaying) throw e
+  }
+}
+
 export async function pause(deviceId?: string) {
-  const query = deviceId ? `?device_id=${encodeURIComponent(deviceId)}` : ''
-  await request(`/me/player/pause${query}`, { method: 'PUT' })
+  await playerCommand(`/me/player/pause${deviceQuery(deviceId)}`, false)
 }
 
 export async function resume(deviceId?: string) {
-  const query = deviceId ? `?device_id=${encodeURIComponent(deviceId)}` : ''
-  await request(`/me/player/play${query}`, { method: 'PUT' })
+  await playerCommand(`/me/player/play${deviceQuery(deviceId)}`, true)
 }
 
 export function describePlaybackError(e: unknown): string {
   if (e instanceof SpotifyError) {
     if (e.reason === 'NO_ACTIVE_DEVICE' || e.status === 404)
       return 'No active Spotify device. Open Spotify on your phone or speaker, play anything for a second, then pick the device in settings.'
-    if (e.reason === 'PREMIUM_REQUIRED' || e.status === 403)
-      return 'Spotify Premium is required to control playback.'
+    if (isPremiumRequired(e)) return 'Spotify Premium is required to control playback.'
+    if (e.status === 403)
+      return "Spotify wouldn't do that on this device right now. Tap ↺ Restart or ▶ Play to try again, ⏭ Skip the song, or pick another device in the ☰ menu."
     if (e.status >= 500)
       return "Spotify couldn't reach the playback device. Open Spotify on it (on a phone, keep the app in the foreground), then tap ↺ Restart, or pick another device in the ☰ menu."
     return e.message
