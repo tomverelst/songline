@@ -42,8 +42,9 @@ export function teamColor(player: Pick<Player, 'color'>, index: number): TeamCol
 
 /**
  * Sets --team for an element, so its classes can use text-(--team),
- * bg-(--team)/15 and so on; and --team-2, a lighter shade, for bg-team-gradient.
+ * bg-(--team)/15 and so on; and --team-2, a touch lighter, for bg-team-gradient
+ * (any lighter and orange fades to a yellow).
  */
 export function teamVars(color: TeamColor): CSSProperties {
-  return { '--team': color.hex, '--team-2': `color-mix(in srgb, ${color.hex} 62%, white)` } as CSSProperties
+  return { '--team': color.hex, '--team-2': `color-mix(in srgb, ${color.hex} 85%, white)` } as CSSProperties
 }
