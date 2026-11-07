@@ -314,7 +314,7 @@ function GuessPanel({
               disabled={!valid}
               onClick={() => onLock(true)}
             >
-              {valid ? `Lock in ${guess.yearGuess}` : 'Pick a year'}
+              {valid ? 'Lock in' : 'Pick a year'}
             </Button>
           )}
         </div>

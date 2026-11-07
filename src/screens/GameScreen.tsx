@@ -196,7 +196,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
   )
   const lockButton = turn?.phase === 'guess' && (
     <Button variant="primary" block disabled={!guessSlot || checkingYear} onClick={() => lockIn()}>
-      {checkingYear ? 'Checking the year…' : guessSlot ? `Lock in ${turn.yearGuess}` : 'Enter a year'}
+      {checkingYear ? 'Checking the year…' : guessSlot ? 'Lock in' : 'Enter a year'}
     </Button>
   )
   const screen = (
