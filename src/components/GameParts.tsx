@@ -1,12 +1,10 @@
 import type { ReactNode } from 'react'
-import type { GameState, Player, Song } from '../game/types'
-import { freeColor, TEAM_COLORS, teamColor, teamVars, type TeamColor } from '../game/teams'
+import type { GameState, Song } from '../game/types'
 import { finish } from '../game/logic'
 import { useYearEditor } from './YearEdit'
 import { DevicePicker } from './DevicePicker'
 import { Coin } from './Coins'
 import { Button, CardTitle, IconButton, Muted, Switch } from './ui'
-import { CELEBRATIONS, celebrateCard, celebrationOf, type CelebrationStyle } from '../party'
 import { cx } from './classes'
 import { canFullscreen, enterFullscreen, exitFullscreen, useFullscreen } from '../fullscreen'
 
@@ -163,15 +161,6 @@ export function GameMenu({
           onChange={(noDoubleYears) => onChange((g) => ({ ...g, settings: { ...g.settings, noDoubleYears } }))}
         />
         {children}
-        <PlayerCelebrations
-          players={game.players}
-          onChange={(index, celebration) =>
-            onChange((g) => ({ ...g, players: g.players.map((p, i) => (i === index ? { ...p, celebration } : p)) }))
-          }
-          onColor={(index, color) =>
-            onChange((g) => ({ ...g, players: g.players.map((p, i) => (i === index ? { ...p, color } : p)) }))
-          }
-        />
         {/* Pull-to-refresh can't reach the turned game screen; the game is saved, so this is safe. */}
         <Button onClick={() => window.location.reload()}>↻ Reload</Button>
         <Button
@@ -236,99 +225,3 @@ export function PointChip({
   )
 }
 
-/**
- * A button that shows a player's celebration and switches to the next one
- * when tapped, showing it off.
- */
-export function CelebrationButton({
-  value,
-  onChange,
-  className,
-}: {
-  value: CelebrationStyle
-  onChange: (style: CelebrationStyle) => void
-  className?: string
-}) {
-  const current = CELEBRATIONS.find((c) => c.id === value) ?? CELEBRATIONS[0]
-  return (
-    <IconButton
-      aria-label={`Celebration: ${current.name}. Tap to change.`}
-      title={current.name}
-      className={className}
-      onClick={() => {
-        const next = CELEBRATIONS[(CELEBRATIONS.indexOf(current) + 1) % CELEBRATIONS.length]
-        onChange(next.id)
-        celebrateCard(next.id)
-      }}
-    >
-      {current.emoji}
-    </IconButton>
-  )
-}
-
-/** Every player's colour and celebration, to change mid-game. Picking a celebration shows it. */
-export function PlayerCelebrations({
-  players,
-  onChange,
-  onColor,
-}: {
-  players: Player[]
-  onChange: (index: number, style: CelebrationStyle) => void
-  onColor: (index: number, color: string) => void
-}) {
-  return (
-    <div className="mt-2 flex flex-col gap-1.5">
-      <span className="font-semibold">Colours and celebrations</span>
-      {players.map((p, index) => (
-        <div key={p.id} className="grid grid-cols-3 gap-1.5">
-          <span className="col-span-3 flex min-w-0 items-center gap-2" style={teamVars(teamColor(p, index))}>
-            <ColorButton
-              value={teamColor(p, index)}
-              taken={players.filter((_, j) => j !== index).map((o, j) => teamColor(o, j >= index ? j + 1 : j).id)}
-              onChange={(color) => onColor(index, color)}
-            />
-            <span className="truncate font-semibold text-(--team)">{p.name}</span>
-          </span>
-          {CELEBRATIONS.map((c) => (
-            <button
-              key={c.id}
-              aria-pressed={celebrationOf(p) === c.id}
-              className={cx(
-                'flex min-h-10 items-center justify-center gap-1 rounded-full border px-2 text-sm font-semibold',
-                celebrationOf(p) === c.id ? 'border-accent bg-accent/12' : 'border-line bg-bg text-muted',
-              )}
-              onClick={() => {
-                onChange(index, c.id)
-                celebrateCard(c.id)
-              }}
-            >
-              {c.emoji} {c.name}
-            </button>
-          ))}
-        </div>
-      ))}
-    </div>
-  )
-}
-
-/** A swatch of a player's colour; a tap moves on to the next colour nobody else has. */
-export function ColorButton({
-  value,
-  taken,
-  onChange,
-}: {
-  value: TeamColor
-  /** Colours of the other players. */
-  taken: string[]
-  onChange: (id: string) => void
-}) {
-  return (
-    <IconButton
-      aria-label={`Colour: ${value.name}. Tap to change.`}
-      title={value.name}
-      onClick={() => onChange(freeColor(TEAM_COLORS.indexOf(value) + 1, taken).id)}
-    >
-      <span className="size-6 rounded-full border-2 border-white/80 bg-(--team)" style={teamVars(value)} />
-    </IconButton>
-  )
-}

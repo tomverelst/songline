@@ -19,7 +19,7 @@ import { KEYS, load, save } from '../storage'
 import { GAME_MODES } from '../game/modes'
 import { BATTLE_PLAYERS } from '../game/battle'
 import { Coin } from '../components/Coins'
-import { CelebrationButton, ColorButton } from '../components/GameParts'
+import { CelebrationButton, ColorButton } from '../components/PlayerButtons'
 import { freeColor, teamColorById } from '../game/teams'
 import { defaultCelebration, type CelebrationStyle } from '../party'
 import {

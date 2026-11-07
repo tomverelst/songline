@@ -127,7 +127,7 @@ For two players, or two teams, on one phone lying between them.
 
 **Team colours:** every player (or team) has a colour: tap the swatch next to
 a name on the setup screen to move on to the next colour nobody has yet (8 to
-choose from), or change it in the ☰ menu. It colours their name on the turn
+choose from). Colours are picked before the game, not during it. It colours their name on the turn
 screen, a dot and outline on the scoreboard, their half in Battle and their
 name on the reveal and the final scores.
 
@@ -139,8 +139,8 @@ year, the full rig for the winner). The strobe flashes once a beat, so never
 more than 3 times in any one second, the limit for people with photosensitive
 epilepsy; phones set to reduce motion skip the laser show altogether. Tap the
 🎉/🎆/🪩 button
-next to a name on the setup screen to switch (it shows it off), or change it
-mid-game in the ☰ menu. It plays when that player wins a card or hits the
+next to a name on the setup screen to switch (it shows it off); it can't be
+changed mid-game. It plays when that player wins a card or hits the
 exact year, and for the winner at the end. In Battle, each side that wins
 celebrates in its own style, so confetti and fireworks can go off together.
 
