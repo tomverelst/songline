@@ -1,5 +1,5 @@
 import type { GameSettings, GameState, Player, Slot, Song, Turn } from './types'
-import { AvoidDoubleYearsDeck, newGameDeck, SourceDeck, YearRangeDeck, type Deck } from './deck'
+import { AvoidDoubleYearsDeck, newGameDeck, SourceDeck, YearRangeDeck, type Deck, type YearRange } from './deck'
 import { withOriginalYear } from './songs'
 
 export { shuffle } from './deck'
@@ -95,6 +95,13 @@ export function insertSorted(timeline: Song[], song: Song): Song[] {
 
 export const MIN_YEAR = 1900
 export const MAX_YEAR = new Date().getFullYear()
+
+/** How many different years a range holds, up to this year (the 1980s: 10; the 2020s in 2026: 7). */
+export function yearsInRange(range: YearRange | undefined): number {
+  const from = Math.max(MIN_YEAR, range?.from ?? MIN_YEAR)
+  const to = Math.min(MAX_YEAR, range?.to ?? MAX_YEAR)
+  return Math.max(0, to - from + 1)
+}
 
 export function isValidYear(year: number | undefined): year is number {
   return year !== undefined && year >= MIN_YEAR && year <= MAX_YEAR

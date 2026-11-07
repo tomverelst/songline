@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import type { GameMode, GameState } from '../game/types'
-import { newGame, shuffle, withOriginalYear } from '../game/logic'
+import { newGame, shuffle, withOriginalYear, yearsInRange } from '../game/logic'
 import { inYearRange } from '../game/deck'
 import { LoadingScreen, type LoadingState, type StartingCardCheck } from './LoadingScreen'
 import { originalYear } from '../musicbrainz'
@@ -140,6 +140,11 @@ export function SetupScreen({ onStart, initialError }: Props) {
     draft.decadeFrom === null && draft.decadeTo === null
       ? undefined
       : { from: draft.decadeFrom ?? undefined, to: draft.decadeTo === null ? undefined : draft.decadeTo + 9 }
+  // With no double years, each card in a timeline is from another year, so
+  // (unless coins count too) nobody can get more points than there are years.
+  const yearLimited = draft.noDoubleYears && !draft.bonusCountsTowardsGoal
+  const maxPoints = Math.min(MAX_POINTS, yearLimited ? yearsInRange(yearRange) : Infinity)
+  const targetPoints = Math.min(draft.targetPoints, maxPoints)
 
   async function start() {
     requestMotionAccess()
@@ -162,6 +167,14 @@ export function SetupScreen({ onStart, initialError }: Props) {
           `Only ${inRange} ${inRange === 1 ? 'song' : 'songs'} in this playlist ${inRange === 1 ? 'is' : 'are'} ${decadesLabel(draft.decadeFrom, draft.decadeTo)}. Pick more decades or another playlist.`,
         )
       }
+      if (yearLimited) {
+        const years = new Set(songs.filter((s) => inYearRange(s.year, yearRange)).map((s) => s.year)).size
+        if (years < targetPoints) {
+          throw new Error(
+            `With no double years, nobody can reach ${targetPoints} points: the songs in this playlist${yearRange ? ` ${decadesLabel(draft.decadeFrom, draft.decadeTo)}` : ''} are from only ${years} different years. Lower the points to win to ${years}, turn off No double years or pick another playlist.`,
+          )
+        }
+      }
       const art = shuffle(songs.flatMap((s) => (s.albumArt ? [s.albumArt] : []))).slice(0, 5)
       setLoading({ phase: 'shuffle', playlistName, songCount: songs.length, art, checks: [] })
       await sleep(SHUFFLE_SHOW_MS)
@@ -171,7 +184,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
         names,
         {
           mode: draft.mode,
-          targetPoints: draft.targetPoints,
+          targetPoints,
           bonusCountsTowardsGoal: draft.bonusCountsTowardsGoal,
           autoplay: draft.autoplay,
           flipBetweenTurns: draft.flipBetweenTurns,
@@ -328,14 +341,25 @@ export function SetupScreen({ onStart, initialError }: Props) {
 
         <h3 className="mt-1 text-[0.95rem] font-bold">Points to win</h3>
         <div className="flex items-center justify-center gap-6">
-          <IconButton big onClick={() => update({ targetPoints: Math.max(2, draft.targetPoints - 1) })}>
+          <IconButton big onClick={() => update({ targetPoints: Math.max(2, targetPoints - 1) })}>
             −
           </IconButton>
-          <span className="min-w-[2ch] text-center text-[2.5rem] font-extrabold tabular-nums">{draft.targetPoints}</span>
-          <IconButton big onClick={() => update({ targetPoints: Math.min(50, draft.targetPoints + 1) })}>
+          <span className="min-w-[2ch] text-center text-[2.5rem] font-extrabold tabular-nums">{targetPoints}</span>
+          <IconButton
+            big
+            className="disabled:opacity-35"
+            disabled={targetPoints >= maxPoints}
+            onClick={() => update({ targetPoints: Math.min(maxPoints, targetPoints + 1) })}
+          >
             +
           </IconButton>
         </div>
+        {yearLimited && draft.targetPoints >= maxPoints && maxPoints < MAX_POINTS && (
+          <Muted>
+            With no double years, there are only {maxPoints} years {yearRange ? decadesLabel(draft.decadeFrom, draft.decadeTo) : 'to play'}, so{' '}
+            {maxPoints} points at most.
+          </Muted>
+        )}
         <Muted>
           Every card in your timeline is 1 point; you start with one. The exact year, the title and the artist each
           earn a bonus coin <Coin />
@@ -515,6 +539,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
 }
 
 const TIME_LIMITS = [0, 15, 30, 45, 60]
+const MAX_POINTS = 50
 /** The decades to choose from, by their first year. */
 const DECADES = Array.from({ length: Math.floor(new Date().getFullYear() / 10) - 195 + 1 }, (_, i) => 1950 + i * 10)
 

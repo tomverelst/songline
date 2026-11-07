@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  MAX_YEAR,
+  MIN_YEAR,
+  yearsInRange,
   endTurn,
   insertSorted,
   isPlacementCorrect,
@@ -409,5 +412,18 @@ describe('team colours', () => {
     expect(freeColor(2, TEAM_COLORS.map((c) => c.id)).id).toBe('yellow')
     expect(teamColor({}, 1).id).toBe('cyan')
     expect(teamColor({ color: 'green' }, 1).id).toBe('green')
+  })
+})
+
+describe('yearsInRange (the most points to win with no double years)', () => {
+  it('counts the years in whole decades', () => {
+    expect(yearsInRange({ from: 1980, to: 1989 })).toBe(10)
+    expect(yearsInRange({ from: 1960, to: 1989 })).toBe(30)
+  })
+
+  it('stops at this year, and an open end runs to the first or this year', () => {
+    expect(yearsInRange({ from: 2020, to: 2029 })).toBe(MAX_YEAR - 2020 + 1)
+    expect(yearsInRange({ to: 1959 })).toBe(1959 - MIN_YEAR + 1)
+    expect(yearsInRange(undefined)).toBe(MAX_YEAR - MIN_YEAR + 1)
   })
 })

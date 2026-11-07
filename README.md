@@ -59,6 +59,10 @@ in their personal timeline of songs.
   started before its year was known and the year clashes, the game puts that
   song back and plays another.
   When every song left clashes, they play anyway.
+  Since every card is then from another year, the points to win can't be set
+  higher than the years there are to play (10 for just the 1980s), unless
+  coins count as points; and a game won't start when the playlist's songs
+  cover fewer years than the points to win.
 - **Decades** (in Standard and Battle): play only songs from a range of
   decades, e.g. the 1960s to the 1980s. Each end can also be **Any**. Starting
   cards are from the range too. A song whose original year turns out to be
