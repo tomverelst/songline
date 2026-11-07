@@ -160,9 +160,13 @@ that won't play. The ☰ menu lets you switch the playback device, end the game
 early, or quit.
 
 **Tablets:** on a tablet-sized screen (768×600 or bigger, either way round)
-the whole game is drawn bigger: buttons, text and cards. Phones on their side
-keep the phone size. Rows of cards shrink to fit when there's less room, like
-a Battle half on a tablet held sideways.
+the whole game is drawn bigger, and the cards bigger still. There are no year
+buttons or ruler on a tablet: the guess starts on the middle card of your
+timeline, and you pick the year with the cards (drag the guess card or tap a
+card upright; swipe the cards under the guess card sideways and in Battle).
+In Battle, each team's name sits bottom left of their half and **Lock in**
+bottom right, as they see it. Phones, also on their side, look exactly as
+before.
 
 The game state is saved in the browser, so a refresh or an accidental tab
 close doesn't lose the game.

@@ -5,7 +5,7 @@ import { CardBack, CardFace } from './TimelineCards'
 import { cx } from './classes'
 import { HoldToOpen } from './SongDetails'
 import { rotateVector, useScreenRotation } from './rotation'
-import { useUiScale } from './scale'
+import { useCardScale, useUiScale } from './scale'
 
 // Sizes at phone scale (16px root); the row scales them with the UI.
 const BASE_CARD_W = 116
@@ -55,9 +55,11 @@ export function CardRow({
   const scroller = useRef<HTMLDivElement>(null)
   // Cards grow with the UI (bigger on tablets), and shrink when the row has
   // less height than that (a Battle half on a tablet on its side, say).
-  const scale = useUiScale()
+  const ui = useUiScale()
+  const big = useCardScale() // bigger again on tablets
+  const scale = ui * big
   const room = useHeight(scroller)
-  const padding = 2 * 20 * scale // py-5
+  const padding = 2 * 20 * ui // py-5
   const fit = room ? Math.max(MIN_FIT, Math.min(1, (room - padding) / (BASE_CARD_H * scale))) : 1
   const CARD_W = BASE_CARD_W * scale * fit
   const CARD_H = BASE_CARD_H * scale * fit
@@ -99,7 +101,7 @@ export function CardRow({
           width: count * SLOT - GAP,
           height: CARD_H,
           // Card text is in em: it shrinks along with the cards.
-          fontSize: `${fit}em`,
+          fontSize: `${big * fit}em`,
           // The whole row slides so the guess stays in the middle.
           transform: swipe ? `translateX(${-guessSlot * SLOT}px)` : undefined,
         }}

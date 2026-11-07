@@ -25,6 +25,7 @@ import { Artwork, BottomBar, Button, Card, CardTitle, IconButton, Muted, Screen,
 import { cx } from '../components/classes'
 import { teamColor, teamVars } from '../game/teams'
 import { ScreenRotation } from '../components/rotation'
+import { useIsTablet } from '../components/scale'
 import { requestMotionAccess, useDeviceTurn, useScreenAngle } from '../motion'
 import { useTurnSession } from './useTurnSession'
 
@@ -47,9 +48,20 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
   const { startTurn, skip, togglePause, lockIn, nextTurn } = session
 
   const player = game.players[game.currentPlayer]
+  const turn = game.turn
+  const tablet = useIsTablet()
+  // Without year buttons (tablets), the guess starts on the middle card of the timeline.
+  const needsStart = tablet && turn?.phase === 'guess' && turn.yearGuess === undefined
+  useEffect(() => {
+    if (!needsStart) return
+    onChange((g) =>
+      g.turn?.phase === 'guess' && g.turn.yearGuess === undefined
+        ? { ...g, turn: { ...g.turn, yearGuess: medianYear(g.players[g.currentPlayer].timeline) } }
+        : g,
+    )
+  }, [needsStart, onChange])
   const playerColor = teamColor(player, game.currentPlayer)
   const playerVars = teamVars(playerColor)
-  const turn = game.turn
 
   // Party when the answer is revealed (once per song, not on later corrections).
   const celebrated = useRef<string | null>(null)
@@ -165,7 +177,8 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
       </div>
     </section>
   )
-  const yearInput = turn?.phase === 'guess' && (
+  // On a tablet the cards pick the year: no year buttons.
+  const yearInput = turn?.phase === 'guess' && !tablet && (
     <YearInput
       value={turn.yearGuess}
       startYear={medianYear(player.timeline)}
@@ -377,6 +390,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
         lockDisabled={!guessSlot || checkingYear}
         onLock={() => lockIn()}
         swipeCards={!!game.settings.swipeCards}
+        cardsOnly={tablet}
       />
   ) : (
     screen

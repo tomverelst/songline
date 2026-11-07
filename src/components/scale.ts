@@ -19,3 +19,26 @@ function subscribe(onChange: () => void) {
   window.addEventListener('resize', onChange)
   return () => window.removeEventListener('resize', onChange)
 }
+
+/** Tablet-sized screens: the same rule as the bigger root size in index.css. */
+const TABLET_QUERY = '(min-width: 768px) and (min-height: 600px)'
+
+export function useIsTablet(): boolean {
+  return useSyncExternalStore(
+    (onChange) => {
+      const query = window.matchMedia(TABLET_QUERY)
+      query.addEventListener('change', onChange)
+      return () => query.removeEventListener('change', onChange)
+    },
+    () => window.matchMedia(TABLET_QUERY).matches,
+    () => false,
+  )
+}
+
+/** Cards on a tablet are this much bigger again than the rest of the UI. */
+export const TABLET_CARDS = 1.4
+
+/** How much bigger cards are drawn than the rest of the UI: only on tablets. */
+export function useCardScale(): number {
+  return useIsTablet() ? TABLET_CARDS : 1
+}

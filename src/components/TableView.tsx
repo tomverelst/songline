@@ -31,6 +31,8 @@ interface Props {
   onLock: () => void
   /** The guess card stays in the middle; swiping the cards changes the year. */
   swipeCards: boolean
+  /** Tablets: no ruler; the cards slide under the guess card and Lock in sits at the bottom right. */
+  cardsOnly?: boolean
 }
 
 
@@ -79,26 +81,40 @@ export function TableView(props: Props) {
         timeline={timeline}
         guessYear={yearGuess}
         onSelectYear={onSelectYear}
-        swipe={props.swipeCards ? { startYear, onMove: (year) => followRuler.current?.(year) } : undefined}
+        swipe={
+          props.swipeCards || props.cardsOnly ? { startYear, onMove: (year) => followRuler.current?.(year) } : undefined
+        }
       />
 
-      {/* The ruler runs the full width so its needle lines up under the guess card. */}
-      <footer className="relative pb-3">
-        <YearRuler
-          followRef={followRuler}
-          value={yearGuess}
-          startYear={startYear}
-          marks={timeline.map((s) => s.year)}
-          onChange={onSelectYear}
-        />
-        <button
-          className="absolute top-[calc(50%-0.375rem)] right-4 h-14 -translate-y-1/2 rounded-full bg-accent-gradient px-6 text-lg font-extrabold text-on-accent shadow-[0_8px_24px_rgb(255_77_141/0.35)] disabled:bg-none disabled:bg-surface-2 disabled:text-muted disabled:shadow-none"
-          disabled={props.lockDisabled}
-          onClick={props.onLock}
-        >
-          {props.lockLabel}
-        </button>
-      </footer>
+      {props.cardsOnly ? (
+        <footer className="flex justify-end px-4 pb-4">
+          <button
+            className="h-14 rounded-full bg-accent-gradient px-8 text-lg font-extrabold text-on-accent shadow-[0_8px_24px_rgb(255_77_141/0.35)] disabled:bg-none disabled:bg-surface-2 disabled:text-muted disabled:shadow-none"
+            disabled={props.lockDisabled}
+            onClick={props.onLock}
+          >
+            {props.lockLabel}
+          </button>
+        </footer>
+      ) : (
+        // The ruler runs the full width so its needle lines up under the guess card.
+        <footer className="relative pb-3">
+          <YearRuler
+            followRef={followRuler}
+            value={yearGuess}
+            startYear={startYear}
+            marks={timeline.map((s) => s.year)}
+            onChange={onSelectYear}
+          />
+          <button
+            className="absolute top-[calc(50%-0.375rem)] right-4 h-14 -translate-y-1/2 rounded-full bg-accent-gradient px-6 text-lg font-extrabold text-on-accent shadow-[0_8px_24px_rgb(255_77_141/0.35)] disabled:bg-none disabled:bg-surface-2 disabled:text-muted disabled:shadow-none"
+            disabled={props.lockDisabled}
+            onClick={props.onLock}
+          >
+            {props.lockLabel}
+          </button>
+        </footer>
+      )}
     </div>
   )
 }

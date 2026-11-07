@@ -4,7 +4,7 @@ import type { Song } from '../game/types'
 import { cx } from './classes'
 import { HoldToOpen } from './SongDetails'
 import { rotateVector, toLocal, useScreenRotation, type Point } from './rotation'
-import { useUiScale } from './scale'
+import { useCardScale, useUiScale } from './scale'
 
 interface Props {
   timeline: Song[]
@@ -71,9 +71,13 @@ function placementOf(songs: Song[], guessYear: number | undefined): Placement {
  */
 export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Props) {
   const scale = useUiScale()
-  const CARD_W = BASE_CARD_W * scale
-  const CARD_H = BASE_CARD_H * scale
-  const OVERLAP = BASE_OVERLAP * scale
+  // Tablets draw the cards bigger again; on a phone `big` is 1 and the hand
+  // keeps its plain classes (w-40, h-56).
+  const big = useCardScale()
+  const CARD_W = BASE_CARD_W * scale * big
+  const CARD_H = BASE_CARD_H * scale * big
+  const OVERLAP = BASE_OVERLAP * scale * big
+  const cardSize = big === 1 ? undefined : { width: CARD_W, height: CARD_H, fontSize: `${big}em` }
   const STEP = CARD_W - OVERLAP
   const EDGE = BASE_EDGE * scale
   /** How far the cards on either side of the drop gap move apart. */
@@ -338,9 +342,11 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
         ref={scroller}
         onScroll={(e) => setMiddle((e.currentTarget.scrollLeft - scrollFor(0)) / STEP)}
         className={cx(
-          'relative isolate flex overflow-x-auto px-[calc(50%-5rem)] pt-6 pb-14 [scrollbar-width:none]',
+          'relative isolate flex overflow-x-auto pt-6 pb-14 [scrollbar-width:none]',
+          big === 1 && 'px-[calc(50%-5rem)]',
           !dragging && 'snap-x snap-mandatory',
         )}
+        style={big === 1 ? undefined : { paddingInline: `calc(50% - ${CARD_W / 2}px)` }}
       >
         {cards.map((card) => {
           if (!card.collapsed) fanIndex++
@@ -363,8 +369,15 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
               role={tappable ? 'button' : undefined}
               aria-label={tappable ? `Guess ${card.year}` : undefined}
               onClick={tappable ? () => onSelectYear(card.year!) : undefined}
-              className={cx('relative h-56 flex-none snap-center', card.collapsed ? 'w-0' : 'w-40', tappable && 'cursor-pointer')}
+              className={cx(
+                'relative flex-none snap-center',
+                big === 1 && 'h-56',
+                card.collapsed ? 'w-0' : big === 1 && 'w-40',
+                tappable && 'cursor-pointer',
+              )}
               style={{
+                ...cardSize,
+                ...(card.collapsed && { width: 0 }),
                 marginLeft: i === 0 || card.collapsed ? 0 : -OVERLAP,
                 zIndex: 100 - Math.round(distance * 10),
               }}
@@ -397,8 +410,9 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
         // The picked-up guess card follows the finger.
         <div
           ref={held}
-          className="pointer-events-none absolute z-[200] h-56 w-40 drop-shadow-[0_18px_30px_rgb(0_0_0/0.6)]"
+          className={cx('pointer-events-none absolute z-[200] drop-shadow-[0_18px_30px_rgb(0_0_0/0.6)]', big === 1 && 'h-56 w-40')}
           style={{
+            ...cardSize,
             transform: 'scale(1.06)',
             // Keep most of the card on screen, however far the finger goes.
             left: Math.min(Math.max(drag.x - drag.grabX, -CARD_W / 3), (frame.current?.clientWidth ?? 0) - (CARD_W * 2) / 3),
