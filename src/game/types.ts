@@ -16,9 +16,14 @@ export interface Song {
   durationMs?: number
 }
 
+/** How a player's wins are celebrated. */
+export type CelebrationStyle = 'confetti' | 'fireworks'
+
 export interface Player {
   id: string
   name: string
+  /** Unset: the phone's default (confetti, unless fireworks were picked before). */
+  celebration?: CelebrationStyle
   timeline: Song[]
   /** Bonus coins: exact year, title and artist. */
   bonus: number

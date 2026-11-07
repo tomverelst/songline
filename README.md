@@ -122,10 +122,12 @@ For two players, or two teams, on one phone lying between them.
   earlier games. The table view and flip-between-turns options are Standard
   only.
 
-**Celebrations:** winning a card, hitting the exact year and winning the game
-are celebrated with confetti, or with fireworks: rockets that climb, burst
-and crackle out. Pick one under **Advanced options** → **Celebrations** or in
-the ☰ menu (tapping one shows it). The choice is saved on the phone.
+**Celebrations:** every player (or team) picks their own: confetti, or
+fireworks with rockets that climb, burst and crackle out. Tap the 🎉/🎆 button
+next to a name on the setup screen to switch (it shows it off), or change it
+mid-game in the ☰ menu. It plays when that player wins a card or hits the
+exact year, and for the winner at the end. In Battle, each side that wins
+celebrates in its own style, so confetti and fireworks can go off together.
 
 **Year looks off?** On the reveal, **🔍 Look up** searches the song's release
 year on DuckDuckGo, and **✎ Edit** lets you overwrite it right there; the card

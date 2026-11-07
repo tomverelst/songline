@@ -10,7 +10,7 @@ import {
   setFirstToName,
   updateBattleResult,
 } from '../game/battle'
-import { celebrateCard, celebrateExact } from '../party'
+import { celebrateCard, celebrateExact, celebrationOf, type CelebrationStyle } from '../party'
 import { CardRow } from '../components/CardRow'
 import { LikeButton } from '../components/LikeButton'
 import { SongDetailsProvider } from '../components/SongDetails'
@@ -59,15 +59,24 @@ export function BattleScreen({ game, onChange, onQuit }: Props) {
   // Party when the answer is revealed (once per song, not on later corrections).
   const celebrated = useRef<string | null>(null)
   const revealedSong = turn?.phase === 'reveal' ? turn.song.id : null
-  const results = turn?.guesses?.map((g) => g.result)
-  const exactHit = !!results?.some((r) => r?.exactYear)
-  const wonCard = !!results?.some((r) => r?.placementCorrect)
+  // Every side that won celebrates in its own style (once per style and kind).
+  const parties = [
+    ...new Set(
+      (turn?.guesses ?? []).flatMap((g, i) => {
+        const style = celebrationOf(game.players[i])
+        return g.result?.exactYear ? [`exact:${style}`] : g.result?.placementCorrect ? [`card:${style}`] : []
+      }),
+    ),
+  ].join()
   useEffect(() => {
     if (!revealedSong || celebrated.current === revealedSong) return
     celebrated.current = revealedSong
-    if (exactHit) celebrateExact()
-    else if (wonCard) celebrateCard()
-  }, [revealedSong, wonCard, exactHit])
+    for (const party of parties.split(',').filter(Boolean)) {
+      const [kind, style] = party.split(':') as ['exact' | 'card', CelebrationStyle]
+      if (kind === 'exact') celebrateExact(style)
+      else celebrateCard(style)
+    }
+  }, [revealedSong, parties])
 
   const menuButton = (
     <IconButton aria-label="Menu" onClick={() => setMenuOpen(true)}>

@@ -19,7 +19,8 @@ import { KEYS, load, save } from '../storage'
 import { GAME_MODES } from '../game/modes'
 import { BATTLE_PLAYERS } from '../game/battle'
 import { Coin } from '../components/Coins'
-import { CelebrationPicker } from '../components/GameParts'
+import { CelebrationButton } from '../components/GameParts'
+import { defaultCelebration, type CelebrationStyle } from '../party'
 import {
   Artwork,
   BottomBar,
@@ -42,6 +43,8 @@ import { enterFullscreen } from '../fullscreen'
 
 interface SetupDraft {
   names: string[]
+  /** Each player's celebration, by the same index as `names`. */
+  celebrations: (CelebrationStyle | null)[]
   mode: GameMode
   targetPoints: number
   bonusCountsTowardsGoal: boolean
@@ -66,6 +69,7 @@ interface SetupDraft {
 
 const DEFAULT_DRAFT: SetupDraft = {
   names: ['', ''],
+  celebrations: [],
   mode: 'standard',
   targetPoints: 10,
   bonusCountsTowardsGoal: false,
@@ -104,7 +108,12 @@ export function SetupScreen({ onStart, initialError }: Props) {
   const battle = draft.mode === 'battle'
   // Battle is always two players (or teams); extra names are kept for later.
   const nameFields = battle ? Array.from({ length: BATTLE_PLAYERS }, (_, i) => draft.names[i] ?? '') : draft.names
-  const names = nameFields.map((n) => n.trim()).filter(Boolean)
+  const celebrationAt = (i: number) => draft.celebrations[i] ?? defaultCelebration()
+  // Players are the filled-in names, each with the celebration picked next to it.
+  const entries = nameFields
+    .map((name, i) => ({ name: name.trim(), celebration: celebrationAt(i) }))
+    .filter((e) => e.name)
+  const names = entries.map((e) => e.name)
   const enoughPlayers = battle ? names.length === BATTLE_PLAYERS : names.length >= 1
   const canStart = enoughPlayers && !!draft.playlist && loggedIn && !loading
 
@@ -166,6 +175,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
         Math.random,
         draft.avoidPlayedSongs ? playedSongIds() : new Set(),
       )
+      game = { ...game, players: game.players.map((p, i) => ({ ...p, celebration: entries[i].celebration })) }
       const checks: StartingCardCheck[] = game.players.map((p) => ({
         player: p.name,
         title: p.timeline[0].title,
@@ -233,10 +243,24 @@ export function SetupScreen({ onStart, initialError }: Props) {
                 update({ names: next })
               }}
             />
+            <CelebrationButton
+              value={celebrationAt(i)}
+              onChange={(style) => {
+                const next = [...draft.celebrations]
+                while (next.length <= i) next.push(null)
+                next[i] = style
+                update({ celebrations: next })
+              }}
+            />
             {!battle && draft.names.length > 1 && (
               <IconButton
                 aria-label={`Remove player ${i + 1}`}
-                onClick={() => update({ names: draft.names.filter((_, j) => j !== i) })}
+                onClick={() =>
+                  update({
+                    names: draft.names.filter((_, j) => j !== i),
+                    celebrations: draft.celebrations.filter((_, j) => j !== i),
+                  })
+                }
               >
                 ✕
               </IconButton>
@@ -415,7 +439,6 @@ export function SetupScreen({ onStart, initialError }: Props) {
               Forget played songs
             </LinkButton>
           )}
-          <CelebrationPicker />
         </details>
       </Card>
 

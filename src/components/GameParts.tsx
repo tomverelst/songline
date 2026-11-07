@@ -1,11 +1,11 @@
-import { useState, type ReactNode } from 'react'
-import type { GameState, Song } from '../game/types'
+import type { ReactNode } from 'react'
+import type { GameState, Player, Song } from '../game/types'
 import { finish } from '../game/logic'
 import { useYearEditor } from './YearEdit'
 import { DevicePicker } from './DevicePicker'
 import { Coin } from './Coins'
-import { Button, CardTitle, IconButton, Muted, OptionButton, Switch } from './ui'
-import { celebrateCard, celebrationStyle, setCelebrationStyle, type CelebrationStyle } from '../party'
+import { Button, CardTitle, IconButton, Muted, Switch } from './ui'
+import { CELEBRATIONS, celebrateCard, celebrationOf, type CelebrationStyle } from '../party'
 import { cx } from './classes'
 import { canFullscreen, enterFullscreen, exitFullscreen, useFullscreen } from '../fullscreen'
 
@@ -162,7 +162,12 @@ export function GameMenu({
           onChange={(noDoubleYears) => onChange((g) => ({ ...g, settings: { ...g.settings, noDoubleYears } }))}
         />
         {children}
-        <CelebrationPicker />
+        <PlayerCelebrations
+          players={game.players}
+          onChange={(index, celebration) =>
+            onChange((g) => ({ ...g, players: g.players.map((p, i) => (i === index ? { ...p, celebration } : p)) }))
+          }
+        />
         {/* Pull-to-refresh can't reach the turned game screen; the game is saved, so this is safe. */}
         <Button onClick={() => window.location.reload()}>↻ Reload</Button>
         <Button
@@ -227,33 +232,62 @@ export function PointChip({
   )
 }
 
-const CELEBRATIONS: { id: CelebrationStyle; label: string }[] = [
-  { id: 'confetti', label: '🎉 Confetti' },
-  { id: 'fireworks', label: '🎆 Fireworks' },
-]
+/**
+ * A button that shows a player's celebration and switches to the next one
+ * when tapped, showing it off.
+ */
+export function CelebrationButton({
+  value,
+  onChange,
+  className,
+}: {
+  value: CelebrationStyle
+  onChange: (style: CelebrationStyle) => void
+  className?: string
+}) {
+  const current = CELEBRATIONS.find((c) => c.id === value) ?? CELEBRATIONS[0]
+  return (
+    <IconButton
+      aria-label={`Celebration: ${current.name}. Tap to change.`}
+      title={current.name}
+      className={className}
+      onClick={() => {
+        const next = CELEBRATIONS[(CELEBRATIONS.indexOf(current) + 1) % CELEBRATIONS.length]
+        onChange(next.id)
+        celebrateCard(next.id)
+      }}
+    >
+      {current.emoji}
+    </IconButton>
+  )
+}
 
-/** Confetti or fireworks when a card is won; saved on this phone. Picking one shows it. */
-export function CelebrationPicker() {
-  const [style, setStyle] = useState(celebrationStyle)
+/** Every player's celebration, to change mid-game. Picking one shows it. */
+export function PlayerCelebrations({ players, onChange }: { players: Player[]; onChange: (index: number, style: CelebrationStyle) => void }) {
   return (
     <div className="mt-2 flex flex-col gap-1.5">
       <span className="font-semibold">Celebrations</span>
-      <div className="grid grid-cols-2 gap-1.5">
-        {CELEBRATIONS.map((c) => (
-          <OptionButton
-            key={c.id}
-            className="min-h-11 items-center text-center font-semibold"
-            selected={style === c.id}
-            onClick={() => {
-              setCelebrationStyle(c.id)
-              setStyle(c.id)
-              celebrateCard()
-            }}
-          >
-            {c.label}
-          </OptionButton>
-        ))}
-      </div>
+      {players.map((p, index) => (
+        <div key={p.id} className="flex items-center gap-2">
+          <span className="min-w-0 flex-1 truncate font-semibold">{p.name}</span>
+          {CELEBRATIONS.map((c) => (
+            <button
+              key={c.id}
+              aria-pressed={celebrationOf(p) === c.id}
+              className={cx(
+                'flex min-h-10 flex-none items-center gap-1 rounded-full border px-3 text-sm font-semibold',
+                celebrationOf(p) === c.id ? 'border-accent bg-accent/12' : 'border-line bg-bg text-muted',
+              )}
+              onClick={() => {
+                onChange(index, c.id)
+                celebrateCard(c.id)
+              }}
+            >
+              {c.emoji} {c.name}
+            </button>
+          ))}
+        </div>
+      ))}
     </div>
   )
 }

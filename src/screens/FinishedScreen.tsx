@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import type { GameState } from '../game/types'
-import { celebrateWin } from '../party'
+import { celebrateWin, celebrationOf } from '../party'
 import { ranking, score } from '../game/logic'
 import { Timeline } from '../components/Timeline'
 import { SongDetailsProvider } from '../components/SongDetails'
@@ -8,8 +8,10 @@ import { Coins } from '../components/Coins'
 import { BottomBar, Button, Card, CardTitle, Logo, Screen } from '../components/ui'
 
 export function FinishedScreen({ game, onNewGame }: { game: GameState; onNewGame: () => void }) {
-  useEffect(() => celebrateWin(), [])
   const winners = game.players.filter((p) => game.winnerIds?.includes(p.id))
+  // The (first) winner's own style.
+  const style = celebrationOf(winners[0] ?? {})
+  useEffect(() => celebrateWin(style), [style])
   const ranked = ranking(game)
 
   return (

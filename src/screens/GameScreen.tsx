@@ -11,7 +11,7 @@ import {
   slotForYear,
   timeUp,
 } from '../game/logic'
-import { celebrateCard, celebrateExact } from '../party'
+import { celebrateCard, celebrateExact, celebrationOf } from '../party'
 import { TimelineCards } from '../components/TimelineCards'
 import { TableReveal, TableView } from '../components/TableView'
 import { LikeButton } from '../components/LikeButton'
@@ -53,12 +53,13 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
   const revealedSong = turn?.phase === 'reveal' ? turn.song.id : null
   const wonCard = !!turn?.result?.placementCorrect
   const exactHit = !!turn?.result?.exactYear
+  const style = celebrationOf(player)
   useEffect(() => {
     if (!revealedSong || celebrated.current === revealedSong) return
     celebrated.current = revealedSong
-    if (exactHit) celebrateExact()
-    else if (wonCard) celebrateCard()
-  }, [revealedSong, wonCard, exactHit])
+    if (exactHit) celebrateExact(style)
+    else if (wonCard) celebrateCard(style)
+  }, [revealedSong, wonCard, exactHit, style])
 
   const clock = session.timeLeft !== undefined && <GuessTimer ms={session.timeLeft} running={session.clockRunning} />
 
