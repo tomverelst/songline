@@ -265,6 +265,9 @@ Every push to `main` is tested, built and published to GitHub Pages at
   share lives in `useTurnSession.ts` (playback, autoplay, year lookup, guess
   clock) and `components/GameParts.tsx` (clock, reveal year, points, menu)
 - `src/components/`: shared UI (`ui.tsx`: buttons, cards, inputs, switches), the timeline and the device picker
-- Sizes are in rem, so tablets (a bigger root font size in `index.css`) scale everything; the few
-  sizes worked out in JavaScript multiply by `useUiScale()` (`components/scale.ts`)
+- Breakpoints live in CSS only: `index.css` defines the `tablet` variant once (768×600 and up; phones
+  on their side stay phones). Layout uses it as `tablet:` classes. It also sets a bigger root font size
+  (everything in rem grows) and the variables `--card-scale` and `--cards-only`, which JavaScript reads
+  through `components/scale.ts` for the few things it has to know: sizes for card maths and swiping
+  instead of year buttons. Don't repeat the media query in JavaScript.
 - Styling is Tailwind CSS v4: theme colours live in `@theme` in `src/index.css`; use utility classes and the components in `ui.tsx` rather than new CSS

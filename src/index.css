@@ -1,5 +1,11 @@
 @import 'tailwindcss';
 
+/* Tablets: the one place the breakpoint is defined. Phones on their side are
+   less than 600px tall, so they stay phones. Use it as `tablet:` in classes
+   and `@variant tablet` in CSS; JavaScript reads the variables it sets below. */
+@custom-variant tablet (@media (min-width: 768px) and (min-height: 600px));
+@custom-variant tablet-lg (@media (min-width: 1024px) and (min-height: 768px));
+
 @theme {
   --color-bg: #0f0d17;
   --color-surface: #1b1826;
@@ -81,17 +87,19 @@
   html {
     color-scheme: dark;
     -webkit-tap-highlight-color: transparent;
-  }
+    /* Read by JavaScript (components/scale.ts): how much bigger cards are
+       drawn than the rest of the UI, and whether the cards alone pick the
+       year (no year buttons or ruler). */
+    --card-scale: 1;
+    --cards-only: 0;
 
-  /* Tablets: everything sized in rem grows with the root size. Phones on
-     their side are less than 600px tall, so they keep the phone size. */
-  @media (min-width: 768px) and (min-height: 600px) {
-    html {
+    /* Tablets: everything sized in rem grows with the root size, cards more. */
+    @variant tablet {
       font-size: 19px;
+      --card-scale: 1.4;
+      --cards-only: 1;
     }
-  }
-  @media (min-width: 1024px) and (min-height: 768px) {
-    html {
+    @variant tablet-lg {
       font-size: 21px;
     }
   }

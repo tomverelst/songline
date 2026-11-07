@@ -25,7 +25,7 @@ import { Artwork, BottomBar, Button, Card, CardTitle, IconButton, Muted, Screen,
 import { cx } from '../components/classes'
 import { teamColor, teamVars } from '../game/teams'
 import { ScreenRotation } from '../components/rotation'
-import { useIsTablet } from '../components/scale'
+import { useCardsOnly } from '../components/scale'
 import { requestMotionAccess, useDeviceTurn, useScreenAngle } from '../motion'
 import { useTurnSession } from './useTurnSession'
 
@@ -49,9 +49,10 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
 
   const player = game.players[game.currentPlayer]
   const turn = game.turn
-  const tablet = useIsTablet()
-  // Without year buttons (tablets), the guess starts on the middle card of the timeline.
-  const needsStart = tablet && turn?.phase === 'guess' && turn.yearGuess === undefined
+  // Tablets have no year buttons (the cards pick the year), so the guess
+  // starts on the middle card of the timeline.
+  const cardsOnly = useCardsOnly()
+  const needsStart = cardsOnly && turn?.phase === 'guess' && turn.yearGuess === undefined
   useEffect(() => {
     if (!needsStart) return
     onChange((g) =>
@@ -177,12 +178,13 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
       </div>
     </section>
   )
-  // On a tablet the cards pick the year: no year buttons.
-  const yearInput = turn?.phase === 'guess' && !tablet && (
+  const yearInput = turn?.phase === 'guess' && (
     <YearInput
       value={turn.yearGuess}
       startYear={medianYear(player.timeline)}
       onChange={setYearGuess}
+      // On a tablet the cards pick the year.
+      className="tablet:hidden"
     />
   )
   const hand = turn?.phase === 'guess' && (
@@ -390,7 +392,6 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
         lockDisabled={!guessSlot || checkingYear}
         onLock={() => lockIn()}
         swipeCards={!!game.settings.swipeCards}
-        cardsOnly={tablet}
       />
   ) : (
     screen

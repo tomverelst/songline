@@ -1,4 +1,5 @@
 import { MAX_YEAR, MIN_YEAR } from '../game/logic'
+import { cx } from './classes'
 
 interface Props {
   value: number | undefined
@@ -7,10 +8,11 @@ interface Props {
   onChange: (year: number | undefined) => void
   /** Off: the year only changes with the buttons (no on-screen keyboard). */
   typing?: boolean
+  className?: string
 }
 
 /** The guess: −10 −1 [year] +1 +10 in one row. */
-export function YearInput({ value, startYear, onChange, typing = true }: Props) {
+export function YearInput({ value, startYear, onChange, typing = true, className }: Props) {
   const step = (delta: number) => {
     const base = value ?? startYear
     onChange(Math.min(MAX_YEAR, Math.max(MIN_YEAR, base + delta)))
@@ -45,7 +47,7 @@ export function YearInput({ value, startYear, onChange, typing = true }: Props) 
   )
 
   return (
-    <div className="grid grid-cols-[3rem_2.75rem_1fr_2.75rem_3rem] items-stretch gap-1.5">
+    <div className={cx('grid grid-cols-[3rem_2.75rem_1fr_2.75rem_3rem] items-stretch gap-1.5', className)}>
       {stepButton(-10)}
       {stepButton(-1)}
       {field}

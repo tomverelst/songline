@@ -23,7 +23,7 @@ import { Artwork, BottomBar, Button, Card, CardTitle, IconButton, Muted, Screen,
 import { cx } from '../components/classes'
 import { teamColor, teamVars, type TeamColor } from '../game/teams'
 import { ScreenRotation } from '../components/rotation'
-import { useIsTablet } from '../components/scale'
+import { useCardsOnly } from '../components/scale'
 import { useTurnSession } from './useTurnSession'
 
 interface Props {
@@ -48,11 +48,11 @@ export function BattleScreen({ game, onChange, onQuit }: Props) {
   const turn = game.turn
   const faceToFace = game.settings.faceToFace !== false
 
-  // On a tablet there are no year buttons: each side's guess starts on the
-  // middle card of their own timeline, ready to be swiped.
-  const tablet = useIsTablet()
+  // Tablets have no year buttons: each side's guess starts on the middle
+  // card of their own timeline, ready to be swiped.
+  const cardsOnly = useCardsOnly()
   const needsStart =
-    tablet && turn?.phase === 'guess' && !!turn.guesses?.some((g) => g.yearGuess === undefined && !g.locked)
+    cardsOnly && turn?.phase === 'guess' && !!turn.guesses?.some((g) => g.yearGuess === undefined && !g.locked)
   useEffect(() => {
     if (!needsStart) return
     onChange((g) =>
@@ -272,110 +272,71 @@ function GuessPanel({
   onLock: (locked: boolean) => void
 }) {
   const valid = isValidYear(guess.yearGuess)
-  const tablet = useIsTablet()
-  if (tablet) {
-    return <TabletGuessPanel {...{ player, settings, guess, color, upsideDown, checkingYear, onYear, onLock }} />
-  }
+  // Tablets pick the year with the cards alone: swipe them under the guess
+  // card. Everything else that differs is layout, in the tablet: classes.
+  const cardsOnly = useCardsOnly()
+  const locked = checkingYear ? 'Checking the year…' : '🔒 Locked in — waiting for the other side'
   return (
     <ScreenRotation value={upsideDown ? 180 : 0}>
       <section
         style={teamVars(color)}
         className={cx(
-          // On a tablet the controls stay a comfortable width; the cards still run edge to edge.
+          // Phones: name and Lock in on top, then the year buttons, then the cards.
           'flex min-h-0 flex-1 flex-col gap-2 bg-(--team)/[0.07] px-3 pt-3 pb-1 [&>*:not(:last-child)]:mx-auto [&>*:not(:last-child)]:w-full [&>*:not(:last-child)]:max-w-[40rem]',
+          // Tablets: no year buttons; the cards fill the half, with the name
+          // bottom left and Lock in bottom right, as the team sees it.
+          'tablet:gap-0 tablet:px-5 tablet:pt-0 tablet:pb-4 tablet:[&>*:not(:last-child)]:max-w-none',
           upsideDown && 'rotate-180',
         )}
       >
-        <div className="flex min-h-10 items-center gap-2">
+        <div className="flex min-h-10 items-center gap-2 tablet:order-last tablet:gap-3">
           <span className="min-w-0 truncate text-2xl font-black text-(--team)">{player.name}</span>
           <ScoreChip player={player} settings={settings} />
           {guess.locked ? (
-            <Button size="sm" variant="ghost" className="ml-auto px-4" disabled={checkingYear} onClick={() => onLock(false)}>
-              Change
-            </Button>
+            <>
+              <span className="hidden font-extrabold text-good tablet:ml-auto tablet:inline">{locked}</span>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="ml-auto px-4 tablet:ml-0 tablet:min-h-12 tablet:px-6 tablet:text-base"
+                disabled={checkingYear}
+                onClick={() => onLock(false)}
+              >
+                Change
+              </Button>
+            </>
           ) : (
-            <Button size="sm" variant="primary" className="ml-auto px-4" disabled={!valid} onClick={() => onLock(true)}>
+            <Button
+              size="sm"
+              variant="primary"
+              className="ml-auto px-4 tablet:min-h-14 tablet:px-8 tablet:text-lg"
+              disabled={!valid}
+              onClick={() => onLock(true)}
+            >
               {valid ? `Lock in ${guess.yearGuess}` : 'Pick a year'}
             </Button>
           )}
         </div>
         {guess.locked ? (
           // The year stays hidden, so the other side can't copy it.
-          <div className="grid min-h-14 place-items-center rounded-2xl border-2 border-good bg-good/12 text-lg font-extrabold text-good">
-            {checkingYear ? 'Checking the year…' : '🔒 Locked in — waiting for the other side'}
+          <div className="grid min-h-14 place-items-center rounded-2xl border-2 border-good bg-good/12 text-lg font-extrabold text-good tablet:hidden">
+            {locked}
           </div>
         ) : (
-          <YearInput value={guess.yearGuess} startYear={medianYear(player.timeline)} onChange={onYear} typing={false} />
+          <YearInput
+            value={guess.yearGuess}
+            startYear={medianYear(player.timeline)}
+            onChange={onYear}
+            typing={false}
+            className="tablet:hidden"
+          />
         )}
         <CardRow
           timeline={player.timeline}
           guessYear={guess.locked ? undefined : guess.yearGuess}
           onSelectYear={guess.locked ? undefined : onYear}
+          swipe={cardsOnly && !guess.locked ? { startYear: medianYear(player.timeline), onMove: () => {} } : undefined}
         />
-      </section>
-    </ScreenRotation>
-  )
-}
-
-/**
- * A team's half on a tablet: no year buttons, just big cards. Swipe them
- * under the guess card or tap one to take its year; Lock in sits at the
- * bottom right of the half, as the team sees it.
- */
-function TabletGuessPanel({
-  player,
-  settings,
-  guess,
-  color,
-  upsideDown,
-  checkingYear,
-  onYear,
-  onLock,
-}: {
-  player: Player
-  settings: GameSettings
-  guess: BattleGuess
-  color: TeamColor
-  upsideDown: boolean
-  checkingYear: boolean
-  onYear: (year: number | undefined) => void
-  onLock: (locked: boolean) => void
-}) {
-  const startYear = medianYear(player.timeline)
-  const valid = isValidYear(guess.yearGuess)
-  return (
-    <ScreenRotation value={upsideDown ? 180 : 0}>
-      <section
-        style={teamVars(color)}
-        className={cx('flex min-h-0 flex-1 flex-col bg-(--team)/[0.07] px-5 pb-4', upsideDown && 'rotate-180')}
-      >
-        <CardRow
-          timeline={player.timeline}
-          // The year stays hidden once locked in, so the other side can't copy it.
-          guessYear={guess.locked ? undefined : guess.yearGuess}
-          onSelectYear={guess.locked ? undefined : onYear}
-          swipe={guess.locked ? undefined : { startYear, onMove: () => {} }}
-        />
-        {/* Name and score bottom left, Lock in bottom right: the cards get the rest. */}
-        <div className="flex items-center gap-3">
-          <span className="min-w-0 truncate text-2xl font-black text-(--team)">{player.name}</span>
-          <ScoreChip player={player} settings={settings} />
-          <span className="flex-1" />
-          {guess.locked ? (
-            <>
-              <span className="font-extrabold text-good">
-                {checkingYear ? 'Checking the year…' : '🔒 Locked in — waiting for the other side'}
-              </span>
-              <Button variant="ghost" className="px-6" disabled={checkingYear} onClick={() => onLock(false)}>
-                Change
-              </Button>
-            </>
-          ) : (
-            <Button variant="primary" className="px-8" disabled={!valid} onClick={() => onLock(true)}>
-              {valid ? `Lock in ${guess.yearGuess}` : 'Pick a year'}
-            </Button>
-          )}
-        </div>
       </section>
     </ScreenRotation>
   )

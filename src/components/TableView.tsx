@@ -4,7 +4,7 @@ import type { Song } from '../game/types'
 import { cx } from './classes'
 import { CardRow } from './CardRow'
 import { teamVars, type TeamColor } from '../game/teams'
-import { useUiScale } from './scale'
+import { useCardsOnly, useUiScale } from './scale'
 import { PointChip } from './GameParts'
 import { useYearEditor } from './YearEdit'
 import { Artwork } from './ui'
@@ -31,8 +31,6 @@ interface Props {
   onLock: () => void
   /** The guess card stays in the middle; swiping the cards changes the year. */
   swipeCards: boolean
-  /** Tablets: no ruler; the cards slide under the guess card and Lock in sits at the bottom right. */
-  cardsOnly?: boolean
 }
 
 
@@ -42,6 +40,7 @@ interface Props {
  */
 export function TableView(props: Props) {
   const { scoreboard, playerName, timeline, yearGuess, startYear, onSelectYear, playing } = props
+  const cardsOnly = useCardsOnly()
   // Moves the ruler along with a swipe on the cards.
   const followRuler = useRef<((year: number) => void) | null>(null)
   return (
@@ -81,40 +80,37 @@ export function TableView(props: Props) {
         timeline={timeline}
         guessYear={yearGuess}
         onSelectYear={onSelectYear}
-        swipe={
-          props.swipeCards || props.cardsOnly ? { startYear, onMove: (year) => followRuler.current?.(year) } : undefined
-        }
+        // Tablets have no ruler: the cards always slide under the guess card.
+        swipe={props.swipeCards || cardsOnly ? { startYear, onMove: (year) => followRuler.current?.(year) } : undefined}
       />
 
-      {props.cardsOnly ? (
-        <footer className="flex justify-end px-4 pb-4">
-          <button
-            className="h-14 rounded-full bg-accent-gradient px-8 text-lg font-extrabold text-on-accent shadow-[0_8px_24px_rgb(255_77_141/0.35)] disabled:bg-none disabled:bg-surface-2 disabled:text-muted disabled:shadow-none"
-            disabled={props.lockDisabled}
-            onClick={props.onLock}
-          >
-            {props.lockLabel}
-          </button>
-        </footer>
-      ) : (
-        // The ruler runs the full width so its needle lines up under the guess card.
-        <footer className="relative pb-3">
-          <YearRuler
-            followRef={followRuler}
-            value={yearGuess}
-            startYear={startYear}
-            marks={timeline.map((s) => s.year)}
-            onChange={onSelectYear}
-          />
-          <button
-            className="absolute top-[calc(50%-0.375rem)] right-4 h-14 -translate-y-1/2 rounded-full bg-accent-gradient px-6 text-lg font-extrabold text-on-accent shadow-[0_8px_24px_rgb(255_77_141/0.35)] disabled:bg-none disabled:bg-surface-2 disabled:text-muted disabled:shadow-none"
-            disabled={props.lockDisabled}
-            onClick={props.onLock}
-          >
-            {props.lockLabel}
-          </button>
-        </footer>
-      )}
+      {/* The ruler runs the full width so its needle lines up under the guess card. */}
+      <footer className="relative pb-3 tablet:hidden">
+        <YearRuler
+          followRef={followRuler}
+          value={yearGuess}
+          startYear={startYear}
+          marks={timeline.map((s) => s.year)}
+          onChange={onSelectYear}
+        />
+        <button
+          className="absolute top-[calc(50%-0.375rem)] right-4 h-14 -translate-y-1/2 rounded-full bg-accent-gradient px-6 text-lg font-extrabold text-on-accent shadow-[0_8px_24px_rgb(255_77_141/0.35)] disabled:bg-none disabled:bg-surface-2 disabled:text-muted disabled:shadow-none"
+          disabled={props.lockDisabled}
+          onClick={props.onLock}
+        >
+          {props.lockLabel}
+        </button>
+      </footer>
+      {/* Tablets: no ruler, just Lock in at the bottom right. */}
+      <footer className="hidden justify-end px-4 pb-4 tablet:flex">
+        <button
+          className="h-14 rounded-full bg-accent-gradient px-8 text-lg font-extrabold text-on-accent shadow-[0_8px_24px_rgb(255_77_141/0.35)] disabled:bg-none disabled:bg-surface-2 disabled:text-muted disabled:shadow-none"
+          disabled={props.lockDisabled}
+          onClick={props.onLock}
+        >
+          {props.lockLabel}
+        </button>
+      </footer>
     </div>
   )
 }
