@@ -44,7 +44,8 @@ in their personal timeline of songs.
   tie on points.
 - **Time to guess** (Off, 15, 30, 45 or 60 seconds): a big countdown next to
   the play controls, the seconds in a ring (in the player's colour) that runs
-  down once the mystery song plays, and stops while it's paused. It turns red
+  down once the mystery song can be heard (it waits for the speaker to really
+  start, which can take a few seconds), and stops while it's paused. It turns red
   and beats for the last 10 seconds. When it runs out, the guess is
   locked in as it stands; with no year picked yet the card is lost (title and
   artist coins can still be ticked on the reveal).

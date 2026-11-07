@@ -236,6 +236,40 @@ async function isPlaying(uri: string): Promise<boolean> {
   return !!state?.is_playing && state.item?.uri === uri
 }
 
+interface PlaybackState {
+  is_playing?: boolean
+  progress_ms?: number | null
+  item?: { uri?: string } | null
+}
+
+/**
+ * Waits until the song can really be heard: Spotify takes the play command
+ * at once, but a speaker can take a few seconds to start. Resolves with how
+ * far the song already got past `fromMs` (where it was started; leave it out
+ * for a resume), or null when it didn't start within `timeoutMs` or
+ * `stillWanted` says to stop waiting.
+ */
+export async function whenAudible(
+  uri: string,
+  fromMs: number | undefined,
+  stillWanted: () => boolean,
+  timeoutMs = 10_000,
+): Promise<number | null> {
+  const giveUpAt = Date.now() + timeoutMs
+  while (Date.now() < giveUpAt && stillWanted()) {
+    const state = await request<PlaybackState | undefined>('/me/player').catch(() => undefined)
+    const progress = state?.progress_ms ?? 0
+    // Past where it was started, and not by much: the player from before can
+    // still report the old position for a moment.
+    const moving = fromMs === undefined || (progress > fromMs + 150 && progress < fromMs + 6000)
+    if (state?.is_playing && state.item?.uri === uri && moving) {
+      return fromMs === undefined ? 0 : progress - fromMs
+    }
+    await sleep(350)
+  }
+  return null
+}
+
 /** Wakes a device up by making it the active Spotify Connect device. */
 export async function transferPlayback(deviceId: string) {
   await request('/me/player', { method: 'PUT', body: JSON.stringify({ device_ids: [deviceId], play: false }) })

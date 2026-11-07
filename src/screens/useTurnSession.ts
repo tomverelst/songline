@@ -15,7 +15,7 @@ import {
 } from '../game/logic'
 import { originalYear } from '../musicbrainz'
 import { rememberSongs } from '../history'
-import { describePlaybackError, pause, playSong, resume, SpotifyError } from '../spotify/api'
+import { describePlaybackError, pause, playSong, resume, SpotifyError, whenAudible } from '../spotify/api'
 import { KEYS, load, save } from '../storage'
 
 /**
@@ -100,8 +100,25 @@ export function useTurnSession({ game, onChange, reveal, endTurn, holdAutoplay }
     lookup.yearFor(songToCheck).then((year) => onChange((g) => setTurnSongYear(g, id, year)))
   }, [songToCheck, onChange, lookup])
 
+  // Every play, pause and resume gets a number, so a wait for the song to be
+  // heard stops when something newer happened.
+  const playback = useRef(0)
+
+  /**
+   * Starts the guess clock once the song can be heard, counting what was
+   * already heard; if Spotify never says it started, after a while anyway.
+   */
+  async function startClockWhenAudible(uri: string, fromMs: number | undefined) {
+    const id = ++playback.current
+    const heardMs = await whenAudible(uri, fromMs, () => playback.current === id)
+    if (playback.current !== id) return
+    const startedAt = Date.now() - Math.max(0, Math.min(heardMs ?? 0, 3000))
+    onChange((g) => (g.turn?.song.uri === uri ? startClock(g, startedAt) : g))
+  }
+
   async function play(uri: string, positionMs?: number) {
     setError(null)
+    playback.current++
     try {
       try {
         await playSong(uri, deviceId ?? undefined, positionMs)
@@ -112,7 +129,7 @@ export function useTurnSession({ game, onChange, reveal, endTurn, holdAutoplay }
       }
       setPlaying(true)
       // The guess clock only runs once the song can be heard.
-      onChange((g) => (g.turn?.song.uri === uri ? startClock(g, Date.now()) : g))
+      startClockWhenAudible(uri, positionMs ?? 0)
     } catch (e) {
       setPlaying(false)
       setError(describePlaybackError(e))
@@ -122,9 +139,14 @@ export function useTurnSession({ game, onChange, reveal, endTurn, holdAutoplay }
   async function togglePause() {
     setError(null)
     try {
-      if (playing) await pause(deviceId ?? undefined)
-      else await resume(deviceId ?? undefined)
-      onChange((g) => (playing ? stopClock(g, Date.now()) : startClock(g, Date.now())))
+      playback.current++
+      if (playing) {
+        await pause(deviceId ?? undefined)
+        onChange((g) => stopClock(g, Date.now()))
+      } else {
+        await resume(deviceId ?? undefined)
+        if (turn) startClockWhenAudible(turn.song.uri, undefined)
+      }
       setPlaying(!playing)
     } catch (e) {
       setError(describePlaybackError(e))

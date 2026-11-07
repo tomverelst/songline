@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('./auth', () => ({ getAccessToken: () => Promise.resolve('token') }))
 
-const { describePlaybackError, pause, playSong, resume, SpotifyError } = await import('./api')
+const { describePlaybackError, pause, playSong, resume, SpotifyError, whenAudible } = await import('./api')
 
 const empty = (status = 204) => Promise.resolve(new Response(null, { status }))
 const json = (body: unknown, status = 200) => Promise.resolve(new Response(JSON.stringify(body), { status }))
@@ -88,5 +88,33 @@ describe('403 errors', () => {
     expect(calls(fetch).filter((c) => c.startsWith('PUT /me/player/play'))).toHaveLength(2)
     stubFetch(premium)
     await expect(playSong('spotify:track:x', 'dev1')).rejects.toMatchObject({ reason: 'PREMIUM_REQUIRED' })
+  })
+})
+
+describe('whenAudible (the guess clock waits until the song can be heard)', () => {
+  const state = (uri: string, is_playing: boolean, progress_ms: number) => () => json({ is_playing, progress_ms, item: { uri } })
+
+  it('waits for the song itself to be playing and moving past where it started', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true, advanceTimeDelta: 100 })
+    const fetch = stubFetch(
+      state('spotify:track:old', true, 90_000), // the song from before is still on
+      state('spotify:track:x', false, 30_000), // ours is loaded, not playing yet
+      state('spotify:track:x', true, 30_000), // playing, not moving yet
+      state('spotify:track:x', true, 30_600),
+    )
+    await expect(whenAudible('spotify:track:x', 30_000, () => true)).resolves.toBe(600)
+    expect(fetch).toHaveBeenCalledTimes(4)
+  })
+
+  it('after a resume, only waits for it to be playing', async () => {
+    stubFetch(state('spotify:track:x', true, 75_000))
+    await expect(whenAudible('spotify:track:x', undefined, () => true)).resolves.toBe(0)
+  })
+
+  it('stops waiting when no longer wanted, or after the time-out', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true, advanceTimeDelta: 200 })
+    vi.stubGlobal('fetch', vi.fn(state('spotify:track:x', false, 0)))
+    await expect(whenAudible('spotify:track:x', 0, () => false)).resolves.toBeNull()
+    await expect(whenAudible('spotify:track:x', 0, () => true, 1000)).resolves.toBeNull()
   })
 })
