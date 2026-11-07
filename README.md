@@ -101,8 +101,11 @@ in their personal timeline of songs.
 For two players, or two teams, on one phone lying between them.
 
 - Every turn, **both sides guess the same song at the same time**. The screen
-  is split in two: each half has its own name and score, year buttons, its
-  own row of cards and a **Lock in** button. Tap a card to guess its year.
+  is split in two, one half per side, and there are no year buttons: the
+  cards fill the half. Your guess starts on the middle card of your
+  timeline; swipe the cards under it to change the year, or tap a card to
+  take its year. Your name and score sit bottom left of your half and
+  **Lock in** bottom right, as you see it.
   With **Face each other** (on by default; Advanced options or the ☰ menu)
   the top half is upside down for the player across the table. Switch it off
   for players sitting side by side.
@@ -166,10 +169,8 @@ early, or quit.
 the whole game is drawn bigger, and the cards bigger still. There are no year
 buttons or ruler on a tablet: the guess starts on the middle card of your
 timeline, and you pick the year with the cards (drag the guess card or tap a
-card upright; swipe the cards under the guess card sideways and in Battle).
-In Battle, each team's name sits bottom left of their half and **Lock in**
-bottom right, as they see it. Phones, also on their side, look exactly as
-before.
+card upright; swipe the cards under the guess card sideways). Phones keep
+the year buttons and ruler in Standard.
 
 The game state is saved in the browser, so a refresh or an accidental tab
 close doesn't lose the game.
