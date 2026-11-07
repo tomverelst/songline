@@ -140,6 +140,14 @@ For two players, or two teams, on one phone lying between them.
   earlier games. The table view and turning the screen to each player are
   Standard only.
 
+**Remembered by name:** everyone's colour, celebration (with their emoji or
+scarf pattern) and painted card are saved on this phone under their name, as
+soon as they pick something and again when a game starts. Next time, typing
+the name brings it all back, in whichever slot they're in this time (a colour
+someone else already has is left out). Typing another name over theirs leaves
+their things behind. Names match whatever the capitals; the 40 most recent
+players are kept.
+
 **Paint your own card:** tap the little card next to a name on the setup
 screen to paint the back of that player's guess card, MS Paint style: pencil,
 brush, spray can, paint bucket and eraser in three sizes, the classic 28-colour

@@ -22,4 +22,6 @@ export const KEYS = {
   device: 'songline.device',
   playedSongs: 'songline.playedSongs',
   celebration: 'songline.celebration',
+  /** Players' colours, celebrations and cards, remembered by name (profiles.ts). */
+  profiles: 'songline.profiles',
 } as const

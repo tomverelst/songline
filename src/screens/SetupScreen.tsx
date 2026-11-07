@@ -21,6 +21,7 @@ import { BATTLE_PLAYERS } from '../game/battle'
 import { Coin } from '../components/Coins'
 import { CardButton, CelebrationButton, ColorButton } from '../components/PlayerButtons'
 import { SeatingPicker } from '../components/SeatingPicker'
+import { findProfile, saveProfile, type Profile } from '../profiles'
 import { freeColor, teamColorById } from '../game/teams'
 import { DEFAULT_EMOJI, defaultCelebration, type Celebration, type CelebrationStyle } from '../party'
 import {
@@ -121,6 +122,37 @@ export function SetupScreen({ onStart, initialError }: Props) {
   useEffect(() => save(KEYS.device, deviceId), [deviceId])
 
   const update = (patch: Partial<SetupDraft>) => setDraft((d) => ({ ...d, ...patch }))
+
+  /** What the player in slot `i` has now, as their profile. */
+  const slotProfile = (i: number): Profile => ({
+    color: draft.colors[i] ?? undefined,
+    celebration: draft.celebrations[i] ?? undefined,
+    emoji: draft.emojis[i] ?? undefined,
+    knitPattern: draft.knitPatterns?.[i] ?? undefined,
+    cardArt: draft.cardArts?.[i] ?? undefined,
+  })
+  /** Remembers slot `i`'s player by name, with these changes, for next time. */
+  const remember = (i: number, changes: Profile) => {
+    const name = draft.names[i]?.trim()
+    if (name) saveProfile(name, { ...slotProfile(i), ...changes })
+  }
+  /** Puts a profile in slot `i` (or clears it, for nobody's), leaving out a colour someone else has. */
+  const slotPatch = (i: number, profile: Profile | undefined): Partial<SetupDraft> => {
+    const set = <T,>(list: (T | null)[] | undefined, value: T | undefined) => {
+      const next = [...(list ?? [])]
+      while (next.length <= i) next.push(null)
+      next[i] = value ?? null
+      return next
+    }
+    const taken = draft.colors.some((c, j) => j !== i && c === profile?.color)
+    return {
+      colors: set(draft.colors, taken ? undefined : profile?.color),
+      celebrations: set(draft.celebrations, profile?.celebration),
+      emojis: set(draft.emojis, profile?.emoji),
+      knitPatterns: set(draft.knitPatterns, profile?.knitPattern),
+      cardArts: set(draft.cardArts, profile?.cardArt),
+    }
+  }
   const battle = draft.mode === 'battle'
   // Battle is always two players (or teams); extra names are kept for later.
   const nameFields = battle ? Array.from({ length: BATTLE_PLAYERS }, (_, i) => draft.names[i] ?? '') : draft.names
@@ -168,6 +200,10 @@ export function SetupScreen({ onStart, initialError }: Props) {
     const playlistName = draft.playlist.name
     // The players' colours, for the shuffling cards and their first cards.
     const colors = entries.map((e) => teamColorById(e.color) ?? colorAt(e.index))
+    // Remember everyone by name, as they play now, for next time.
+    entries.forEach((e) =>
+      saveProfile(e.name, { ...slotProfile(e.index), color: e.color, celebration: e.style, emoji: e.emoji, knitPattern: e.pattern }),
+    )
     setError(null)
     setLoading({ phase: 'playlist', playlistName, art: [], checks: [], colors })
     try {
@@ -295,7 +331,11 @@ export function SetupScreen({ onStart, initialError }: Props) {
                 const next = [...draft.names]
                 while (next.length <= i) next.push('')
                 next[i] = e.target.value
-                update({ names: next })
+                // A name we know brings back their colour, celebration and
+                // card; typing away from it leaves theirs behind.
+                const known = findProfile(e.target.value)
+                const leaving = !known && findProfile(draft.names[i] ?? '')
+                update({ names: next, ...(known ? slotPatch(i, known) : leaving ? slotPatch(i, undefined) : {}) })
               }}
             />
             <ColorButton
@@ -306,6 +346,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
                 while (next.length <= i) next.push(null)
                 next[i] = color
                 update({ colors: next })
+                remember(i, { color })
               }}
             />
             <CardButton
@@ -317,6 +358,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
                 while (cardArts.length <= i) cardArts.push(null)
                 cardArts[i] = art
                 update({ cardArts })
+                remember(i, { cardArt: art ?? undefined })
               }}
             />
             <CelebrationButton
@@ -333,6 +375,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
                 emojis[i] = emoji
                 knitPatterns[i] = pattern ?? null
                 update({ celebrations, emojis, knitPatterns })
+                remember(i, { celebration: style, emoji, knitPattern: pattern })
               }}
             />
             {!battle && draft.names.length > 1 && (
@@ -355,6 +398,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
             )}
           </div>
         ))}
+        <Muted>Everyone’s colour, celebration and card are remembered by name on this phone.</Muted>
         {battle ? (
           <Muted>Battle is for two: one player or one team on each side of the phone.</Muted>
         ) : (
