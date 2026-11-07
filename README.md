@@ -131,7 +131,10 @@ name on the reveal and the final scores.
 **Celebrations:** every player (or team) picks their own: confetti,
 fireworks with rockets that climb, burst and crackle out, or lasers: the
 screen dims like a club and fans of laser beams sweep from the corners to a
-128 BPM beat (gold for an exact year, the full rig for the winner). Tap the
+128 BPM beat, with a strobe flashing white on the beat (gold for an exact
+year, the full rig for the winner). The strobe flashes once a beat, so never
+more than 3 times in any one second, the limit for people with photosensitive
+epilepsy; phones set to reduce motion skip the laser show altogether. Tap the
 🎉/🎆/🪩 button
 next to a name on the setup screen to switch (it shows it off), or change it
 mid-game in the ☰ menu. It plays when that player wins a card or hits the

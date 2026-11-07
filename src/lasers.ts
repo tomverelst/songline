@@ -2,14 +2,15 @@
  * A techno-club laser show on a full-screen canvas: the page dims, and laser
  * heads all round the edge throw beams to a 128 BPM beat. Every head picks
  * its own pattern each bar (fan, criss-cross, scan, spin), beams cut in and
- * out on the sixteenths, and colours jump on the beat.
+ * out on the sixteenths, colours jump on the beat, and a strobe flashes on
+ * the beat (once a beat: never more than 3 flashes in any one second).
  */
 
 export interface LaserOptions {
   durationMs: number
   /** Beam colours, picked at random on the beat. */
   colors: string[]
-  /** More heads and beams, and a soft flash on every downbeat. */
+  /** More heads and beams, and a harder strobe. */
   big?: boolean
 }
 
@@ -17,6 +18,8 @@ const BPM = 128
 const BEAT_MS = 60_000 / BPM
 const FADE_IN_MS = 200
 const FADE_OUT_MS = 450
+/** How long a strobe flash lasts. */
+const STROBE_MS = 55
 
 type Pattern = 'fan' | 'criss' | 'scan' | 'spin'
 const PATTERNS: Pattern[] = ['fan', 'criss', 'scan', 'spin']
@@ -133,9 +136,17 @@ export function lasers(options: LaserOptions) {
       ctx!.fillRect(ox - 46, oy - 46, 92, 92)
     })
 
-    // The big show flashes softly on every downbeat (once a bar, not a strobe).
-    if (big && beatIndex % 4 === 0 && beat - beatIndex < 0.1) {
-      ctx!.fillStyle = `rgba(255, 255, 255, ${0.14 * envelope})`
+    // Strobe: a hard flash on the beat, after the first one. One flash a beat
+    // (128 BPM) is at most 3 flashes in any one second: the limit for people
+    // with photosensitive epilepsy. Never make it flash faster than the beat.
+    const sinceBeat = (beat - beatIndex) * BEAT_MS
+    if (beatIndex >= 1 && sinceBeat < STROBE_MS) {
+      // Mostly white; now and then a colour from the palette.
+      const flash = rand(seed, beatIndex, 0, 6) < 0.25 ? colors[beatIndex % colors.length] : '#ffffff'
+      // The downbeat hits hardest.
+      const strength = (beatIndex % 4 === 0 ? 0.95 : 0.82) * (big ? 1 : 0.85)
+      ctx!.globalCompositeOperation = 'source-over'
+      ctx!.fillStyle = rgba(flash, strength * envelope)
       ctx!.fillRect(0, 0, w, h)
     }
   }
