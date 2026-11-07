@@ -84,7 +84,7 @@ export function BattleScreen({ game, onChange, onQuit }: Props) {
         const kind = g.result?.exactYear ? 'exact' : g.result?.placementCorrect ? 'card' : null
         if (!kind) return []
         const party = { kind, ...celebrationOf(game.players[i]) }
-        return [[`${party.kind} ${party.style} ${party.emoji}`, party] as const]
+        return [[`${party.kind} ${party.style} ${party.emoji} ${party.pattern ?? ''}`, party] as const]
       }),
     ).values(),
   ])

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { CELEBRATIONS, celebrateCard, EMOJI_CHOICES, type Celebration, type CelebrationStyle } from '../party'
 import { firstEmoji } from '../emojiRain'
+import { DEFAULT_KNIT_PATTERN } from '../knitting'
+import { KnitDesigner } from './KnitDesigner'
 import { freeColor, TEAM_COLORS, teamVars, type TeamColor } from '../game/teams'
 import { Button, CardTitle, IconButton, Muted, OptionButton, TextInput } from './ui'
 import { cx } from './classes'
@@ -126,7 +128,7 @@ function CelebrationPicker({
                     'grid aspect-square place-items-center rounded-xl border text-2xl',
                     value.emoji === emoji ? 'border-accent bg-accent/15' : 'border-transparent',
                   )}
-                  onClick={() => pick({ style: 'emoji', emoji })}
+                  onClick={() => pick({ ...value, style: 'emoji', emoji })}
                 >
                   {emoji}
                 </button>
@@ -140,10 +142,18 @@ function CelebrationPicker({
               onChange={(e) => {
                 setTyped(e.target.value)
                 const emoji = firstEmoji(e.target.value)
-                if (emoji) pick({ style: 'emoji', emoji })
+                if (emoji) pick({ ...value, style: 'emoji', emoji })
               }}
             />
           </>
+        )}
+        {value.style === 'knitting' && (
+          <KnitDesigner
+            pattern={value.pattern ?? DEFAULT_KNIT_PATTERN}
+            // Painting doesn't set it off every stitch; the button below does.
+            onChange={(pattern) => onChange({ ...value, pattern })}
+            onPreview={() => celebrateCard({ ...value, pattern: value.pattern ?? DEFAULT_KNIT_PATTERN })}
+          />
         )}
         <Button variant="primary" block onClick={onClose}>
           Done

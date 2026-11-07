@@ -49,6 +49,8 @@ interface SetupDraft {
   celebrations: (CelebrationStyle | null)[]
   /** Each player's emoji for emoji rain, by the same index as `names`. */
   emojis: (string | null)[]
+  /** Each player's own knitting pattern, by the same index as `names`. */
+  knitPatterns?: (string | null)[]
   /** Each player's team colour id, by the same index as `names`. */
   colors: (string | null)[]
   mode: GameMode
@@ -123,6 +125,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
   const celebrationAt = (i: number): Celebration => ({
     style: draft.celebrations[i] ?? defaultCelebration(),
     emoji: draft.emojis[i] ?? DEFAULT_EMOJI,
+    ...(draft.knitPatterns?.[i] && { pattern: draft.knitPatterns[i] }),
   })
   // A player's colour: the one they picked, or else the next one nobody picked.
   const picked = nameFields.map((_, i) => teamColorById(draft.colors[i])?.id ?? null)
@@ -219,6 +222,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
           ...p,
           celebration: entries[i].style,
           emoji: entries[i].emoji,
+          ...(entries[i].pattern && { knitPattern: entries[i].pattern }),
           color: entries[i].color,
           ...(screenTurn === 'seats' && { seat: seatedEntries[i].seat }),
         })),
@@ -304,14 +308,17 @@ export function SetupScreen({ onStart, initialError }: Props) {
             <CelebrationButton
               playerName={name.trim()}
               value={celebrationAt(i)}
-              onChange={({ style, emoji }) => {
+              onChange={({ style, emoji, pattern }) => {
                 const celebrations = [...draft.celebrations]
                 const emojis = [...draft.emojis]
+                const knitPatterns = [...(draft.knitPatterns ?? [])]
                 while (celebrations.length <= i) celebrations.push(null)
                 while (emojis.length <= i) emojis.push(null)
+                while (knitPatterns.length <= i) knitPatterns.push(null)
                 celebrations[i] = style
                 emojis[i] = emoji
-                update({ celebrations, emojis })
+                knitPatterns[i] = pattern ?? null
+                update({ celebrations, emojis, knitPatterns })
               }}
             />
             {!battle && draft.names.length > 1 && (
@@ -322,6 +329,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
                     names: draft.names.filter((_, j) => j !== i),
                     celebrations: draft.celebrations.filter((_, j) => j !== i),
                     emojis: draft.emojis.filter((_, j) => j !== i),
+                    knitPatterns: draft.knitPatterns?.filter((_, j) => j !== i),
                     colors: draft.colors.filter((_, j) => j !== i),
                     seats: draft.seats?.filter((_, j) => j !== i),
                   })

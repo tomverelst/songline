@@ -12,8 +12,8 @@ import { BottomBar, Button, Card, CardTitle, Logo, Screen } from '../components/
 export function FinishedScreen({ game, onNewGame }: { game: GameState; onNewGame: () => void }) {
   const winners = game.players.filter((p) => game.winnerIds?.includes(p.id))
   // The (first) winner's own celebration, once.
-  const { style, emoji } = celebrationOf(winners[0] ?? {})
-  useEffect(() => celebrateWin({ style, emoji }), [style, emoji])
+  const { style, emoji, pattern } = celebrationOf(winners[0] ?? {})
+  useEffect(() => celebrateWin({ style, emoji, pattern }), [style, emoji, pattern])
   const ranked = ranking(game)
 
   return (

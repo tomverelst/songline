@@ -6,6 +6,53 @@
  * once (Battle).
  */
 
+/** The yarns a pattern is knitted in; a pattern stores each stitch as an index into these. */
+export const YARN_COLORS = ['#ff6f91', '#f6ead2', '#f2b33d', '#3fb8af', '#ffcc33', '#34406b', '#e2434b', '#8fbf88']
+
+/** A player's own pattern: stitches across and rows down, repeated along the scarf. */
+export const PATTERN_COLS = 10
+export const PATTERN_ROWS = 12
+
+/** Starting points for designing your own: each a string of yarn indices, row by row from the top. */
+export const KNIT_PRESETS: { name: string; pattern: string }[] = [
+  // Rose, cream, mustard and teal, three rows each.
+  { name: 'Stripes', pattern: rows((row) => String(Math.floor(row / 3) % 4).repeat(PATTERN_COLS)) },
+  {
+    name: 'Heart',
+    pattern: picture(['', '', '', '.##..##.', '########', '########', '.######.', '..####..', '...##...'], 1, '0', '1'),
+  },
+  { name: 'Checks', pattern: rows((row) => Array.from({ length: PATTERN_COLS }, (_, col) => ((Math.floor(row / 2) + Math.floor(col / 2)) % 2 ? '1' : '3')).join('')) },
+  // Mustard chevrons on navy, one every four rows.
+  {
+    name: 'Zigzag',
+    pattern: rows((row) => Array.from({ length: PATTERN_COLS }, (_, col) => (Math.abs((col % 6) - 3) === row % 4 ? '2' : '5')).join('')),
+  },
+]
+
+export const DEFAULT_KNIT_PATTERN = KNIT_PRESETS[0].pattern
+
+function rows(row: (index: number) => string): string {
+  return Array.from({ length: PATTERN_ROWS }, (_, i) => row(i)).join('')
+}
+
+/** A little picture ('#' marks) on a plain background, its rows from the top, centred across. */
+function picture(lines: string[], left: number, ink: string, background: string): string {
+  return rows((row) =>
+    Array.from({ length: PATTERN_COLS }, (_, col) => (lines[row]?.[col - left] === '#' ? ink : background)).join(''),
+  )
+}
+
+/** The yarn of a stitch in a pattern, which repeats down (and across) the scarf. */
+export function patternColor(pattern: string, row: number, col: number): string {
+  const index = Number(pattern[(row % PATTERN_ROWS) * PATTERN_COLS + (col % PATTERN_COLS)])
+  return YARN_COLORS[index] ?? YARN_COLORS[1]
+}
+
+/** Whether a stored pattern can be knitted (right size, known yarns). */
+export function isKnitPattern(pattern: unknown): pattern is string {
+  return typeof pattern === 'string' && pattern.length === PATTERN_COLS * PATTERN_ROWS && /^[0-7]+$/.test(pattern)
+}
+
 export interface KnittingOptions {
   /** Scarves knitted side by side. */
   scarves: number
@@ -18,6 +65,8 @@ export interface KnittingOptions {
   colors: string[]
   /** A heart knitted into the middle, in the first colour on the second. */
   heart?: boolean
+  /** The player's own pattern (see patternColor); instead of colours and heart. */
+  pattern?: string
   /** How long the finished scarves stay. */
   holdMs: number
 }
@@ -79,15 +128,21 @@ export function knitting(options: KnittingOptions) {
     // Side by side across most of the width (one alone stays scarf-narrow),
     // never so long they run into the yarn balls at the bottom.
     const lane = (w * 0.9) / o.scarves
-    const s = Math.min(lane / (o.cols + 2), (w * 0.5) / o.cols, (h * 0.66) / (o.rows * 0.8), 30)
+    const s = Math.min(lane / (o.cols + 2), (w * 0.44) / o.cols, (h * 0.66) / (o.rows * 0.8), 30)
     for (let i = 0; i < o.scarves; i++) {
-      const jitter = o.scarves > 1 ? (Math.random() - 0.5) * lane * 0.15 : (Math.random() - 0.5) * w * 0.2
-      const x = w * 0.05 + lane * (i + 0.5) - (o.cols * s) / 2 + jitter
+      const width = o.cols * s
+      const jitter = o.scarves > 1 ? (Math.random() - 0.5) * lane * 0.15 : 0
+      // One scarf alone goes where it overlaps the ones still on screen least
+      // (another player's in Battle, or a preview still being knitted).
+      const x = o.scarves > 1 ? w * 0.05 + lane * (i + 0.5) - width / 2 + jitter : freeSpot(width, now)
       const offset = Math.floor(Math.random() * o.colors.length)
       const stripe = (row: number) => o.colors[(Math.floor(row / 3) + offset + i) % o.colors.length]
       const heartTop = Math.floor((o.rows - HEART.length) / 2)
       const heartLeft = Math.floor((o.cols - HEART[0].length) / 2)
-      const colorAt = o.heart
+      const pattern = o.pattern
+      const colorAt = pattern
+        ? (row: number, col: number) => patternColor(pattern, row, col)
+        : o.heart
         ? (row: number, col: number) => (HEART[row - heartTop]?.[col - heartLeft] === '#' ? o.colors[0] : o.colors[1])
         : (row: number) => stripe(row)
       scarves.push({
@@ -104,6 +159,21 @@ export function knitting(options: KnittingOptions) {
       endAt = Math.max(endAt, now + i * 250 + 150 + o.knitMs + o.holdMs)
     }
     for (const sc of scarves) sc.fadeAt = endAt
+  }
+
+  /** Where a scarf this wide is clearest of the others still on screen. */
+  function freeSpot(width: number, now: number): number {
+    const others = scarves.filter((sc) => now < sc.fadeAt + FADE_MS)
+    const span = Math.max(0, w - width)
+    const overlap = (x: number) =>
+      others.reduce((sum, sc) => sum + Math.max(0, Math.min(x + width, sc.x + sc.cols * sc.s) - Math.max(x, sc.x)), 0)
+    // Alone, towards one side, leaving room for a second scarf beside it.
+    let best = span * (Math.random() < 0.5 ? 0.04 + Math.random() * 0.12 : 0.84 + Math.random() * 0.12)
+    for (let i = 0; i < 12 && others.length; i++) {
+      const x = (span * i) / 11
+      if (overlap(x) < overlap(best)) best = x
+    }
+    return best
   }
 
   function stop() {
@@ -241,7 +311,18 @@ export function knitting(options: KnittingOptions) {
   requestAnimationFrame(frame)
 }
 
-/** One knit stitch, a V of two loops, drawn once per colour and reused. */
+/**
+ * One knit stitch, a V of two loops, drawn once per colour and reused. Drawn
+ * at `s` wide for a stitch `s` wide, so rows (s * 0.8 apart) overlap like
+ * knitting; the pattern designer draws them the same way.
+ */
+export function drawStitch(c: CanvasRenderingContext2D, color: string, x: number, y: number, s: number) {
+  const rowH = s * 0.8
+  const sw = s * 1.08
+  const sh = rowH * 1.35
+  c.drawImage(stitchSprite(color), x + (s - sw) / 2, y + (rowH - sh) / 2, sw, sh)
+}
+
 function stitchSprite(color: string): HTMLCanvasElement {
   let sprite = stitchSprites.get(color)
   if (sprite) return sprite

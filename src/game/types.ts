@@ -39,6 +39,8 @@ export interface Player {
   celebration?: CelebrationStyle
   /** The emoji that rains down with the 'emoji' celebration. */
   emoji?: string
+  /** Their own pattern for the 'knitting' celebration (see knitting.ts). */
+  knitPattern?: string
   /** Team colour (an id from TEAM_COLORS); unset in older games: one by their place. */
   color?: string
   /** Where they sit around the phone, when the screen turns to each player's side. */

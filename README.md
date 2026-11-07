@@ -160,7 +160,11 @@ whole crowd for the winner). Or **knitting**: a striped scarf is knitted down
 from the top of the screen, row by row, with two wooden needles clicking at the
 working row and a ball of yarn at the bottom that turns as the yarn is pulled
 (a scarf with a gold heart knitted in for an exact year, three long scarves
-for the winner). Tap the celebration button next to a name on the
+for the winner). Pick knitting and you can **design your own scarf**: paint a
+10×12 grid of stitches in 8 yarns (tap or drag), or start from stripes, a
+heart, checks or a zigzag. The grid is drawn with the same stitches as the
+celebration, so what you paint is what gets knitted; it repeats down the scarf
+(two scarves of it for an exact year, three for the winner). Tap the celebration button next to a name on the
 setup screen to pick one (each shows itself off); for emoji rain pick one of
 24 emoji or type any other. It can't be changed mid-game. It plays when that player wins a card or hits the
 exact year, and for the winner at the end. In Battle, each side that wins
