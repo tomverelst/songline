@@ -24,13 +24,14 @@ export const EMOJI_CHOICES = [
   '🦄', '🍩', '🌮', '💥', '🎯', '🏆', '😎', '🤘',
 ]
 
-export const CELEBRATIONS: { id: CelebrationStyle; emoji: string; name: string }[] = [
+/** Each style's icon: an emoji, or none for one drawn by CelebrationIcon (tofu has no emoji). */
+export const CELEBRATIONS: { id: CelebrationStyle; emoji?: string; name: string }[] = [
   { id: 'confetti', emoji: '🎉', name: 'Confetti' },
   { id: 'fireworks', emoji: '🎆', name: 'Fireworks' },
   { id: 'lasers', emoji: '🪩', name: 'Lasers' },
   { id: 'emoji', emoji: '🌧️', name: 'Emoji rain' },
   { id: 'bravas', emoji: '🥔', name: 'Patatas bravas' },
-  { id: 'tofu', emoji: '🧊', name: 'Tofu' },
+  { id: 'tofu', name: 'Tofu' },
 ]
 
 /** The style for players who haven't picked one: what this phone used before. */

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CELEBRATIONS, celebrateCard, EMOJI_CHOICES, type Celebration } from '../party'
+import { CELEBRATIONS, celebrateCard, EMOJI_CHOICES, type Celebration, type CelebrationStyle } from '../party'
 import { firstEmoji } from '../emojiRain'
 import { freeColor, TEAM_COLORS, teamVars, type TeamColor } from '../game/teams'
 import { Button, CardTitle, IconButton, Muted, OptionButton, TextInput } from './ui'
@@ -23,16 +23,47 @@ export function CelebrationButton({
 }) {
   const [open, setOpen] = useState(false)
   const current = CELEBRATIONS.find((c) => c.id === value.style) ?? CELEBRATIONS[0]
-  const icon = value.style === 'emoji' ? value.emoji : current.emoji
   return (
     <>
       <IconButton aria-label={`Celebration: ${current.name}. Tap to change.`} title={current.name} onClick={() => setOpen(true)}>
-        {icon}
+        <CelebrationIcon style={current.id} emoji={value.emoji} />
       </IconButton>
       {open && (
         <CelebrationPicker playerName={playerName} value={value} onChange={onChange} onClose={() => setOpen(false)} />
       )}
     </>
+  )
+}
+
+/** A celebration's icon: its emoji, the player's own for emoji rain, or a drawn one. */
+function CelebrationIcon({ style, emoji }: { style: CelebrationStyle; emoji: string }) {
+  if (style === 'emoji') return <>{emoji}</>
+  if (style === 'tofu') return <TofuIcon />
+  return <>{CELEBRATIONS.find((c) => c.id === style)?.emoji}</>
+}
+
+/** A happy block of tofu, like the ones in the celebration, sized like an emoji. */
+function TofuIcon() {
+  return (
+    <svg viewBox="1.5 3.5 29 26" width="1.25em" height="1.25em" aria-hidden="true" className="inline-block align-[-0.2em]">
+      <defs>
+        <linearGradient id="tofu-body" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#fffdf6" />
+          <stop offset="0.7" stopColor="#f4edd9" />
+          <stop offset="1" stopColor="#ddd2b4" />
+        </linearGradient>
+      </defs>
+      <rect x="2.5" y="5" width="27" height="23" rx="5.5" fill="url(#tofu-body)" stroke="#c9bc98" strokeWidth="1.2" />
+      <rect x="5" y="6.8" width="22" height="4.6" rx="2.3" fill="#ffffff" opacity="0.85" />
+      <ellipse cx="24.6" cy="14.6" rx="1.5" ry="1" fill="#ffffff" transform="rotate(-28 24.6 14.6)" />
+      <g fill="none" stroke="#3b2f2a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9.2 19 L11.6 16.2 L14 19" />
+        <path d="M18 19 L20.4 16.2 L22.8 19" />
+        <path d="M14 21.4 Q16 23.6 18 21.4" />
+      </g>
+      <ellipse cx="7.6" cy="22" rx="2.2" ry="1.4" fill="#ff8296" opacity="0.6" />
+      <ellipse cx="24.4" cy="22" rx="2.2" ry="1.4" fill="#ff8296" opacity="0.6" />
+    </svg>
   )
 }
 
@@ -75,7 +106,9 @@ function CelebrationPicker({
               className="min-h-13 flex-row items-center justify-start gap-2 font-semibold"
               onClick={() => pick({ ...value, style: c.id })}
             >
-              <span className="text-xl">{c.id === 'emoji' ? value.emoji : c.emoji}</span>
+              <span className="text-xl">
+                <CelebrationIcon style={c.id} emoji={value.emoji} />
+              </span>
               {c.name}
             </OptionButton>
           ))}
