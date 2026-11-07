@@ -184,10 +184,37 @@ export function newGame(
   }
 }
 
+/**
+ * With "no double years", the years a mystery song must not be from: those
+ * in the guessing player's timeline (in Battle, in anyone's).
+ */
+export function blockedYears(state: GameState): Set<number> {
+  if (!state.settings.noDoubleYears) return new Set()
+  const guessing = state.settings.mode === 'battle' ? state.players : [state.players[state.currentPlayer]]
+  return new Set(guessing.flatMap((p) => p.timeline.map((s) => s.year)))
+}
+
+/**
+ * Whether the song being guessed is from a year the rules leave out, and a
+ * song from another year is left in the deck to replace it.
+ */
+export function isDoubleYear(state: GameState): boolean {
+  const turn = state.turn
+  if (!turn || turn.phase !== 'guess') return false
+  const blocked = blockedYears(state)
+  return blocked.has(turn.song.year) && state.deck.some((s) => !blocked.has(s.year))
+}
+
 export function drawSong(state: GameState, random: () => number = Math.random): GameState {
   if (state.deck.length === 0) return finish(state)
-  const deck = state.deck.slice(0, -1)
-  const song = state.deck[state.deck.length - 1]
+  // Cards are drawn from the end. Skip songs from a blocked year (they stay in
+  // the deck for later turns); when every song is blocked, take the next one anyway.
+  const blocked = blockedYears(state)
+  let index = state.deck.length - 1
+  while (index >= 0 && blocked.has(state.deck[index].year)) index--
+  if (index < 0) index = state.deck.length - 1
+  const song = state.deck[index]
+  const deck = state.deck.filter((_, i) => i !== index)
   const turn: Turn = { song, phase: 'guess' }
   if (state.settings.randomStart) turn.startMs = randomStartMs(song.durationMs, state.settings.guessTimeLimit, random)
   const limitMs = timeLimitMs(state.settings)
@@ -267,6 +294,17 @@ export function setTurnSongYear(state: GameState, songId: string, year: number |
   const turn = state.turn
   if (!turn || turn.phase !== 'guess' || turn.song.id !== songId) return state
   return { ...state, turn: { ...turn, song: withOriginalYear(turn.song, year) } }
+}
+
+/**
+ * The song turned out to be from a year that's already in the timeline (its
+ * original year came in after it was drawn): put it back at the bottom of the
+ * deck and draw another.
+ */
+export function redrawSong(state: GameState, random: () => number = Math.random): GameState {
+  const turn = state.turn
+  if (!turn) return state
+  return drawSong({ ...state, deck: [turn.song, ...state.deck], turn: undefined }, random)
 }
 
 /** Throw away the current song (e.g. wrong release year) and draw another. */

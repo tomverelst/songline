@@ -52,6 +52,12 @@ in their personal timeline of songs.
   the song), and early enough that the whole time limit (or half a minute
   without one) plus a margin fits before the end. **Restart** goes back to that
   same point. Songs too short for that start as late as fits, or at the start.
+- **No double years** (in Standard and Battle, and in the ☰ menu): a mystery
+  song is never from a year that's already in the guessing player's timeline
+  (in Battle, in either timeline). Songs from those years stay in the deck for
+  later turns. The original year is sometimes only known a moment after the
+  song starts; if it clashes, the game puts that song back and plays another.
+  When every song left clashes, they play anyway.
 - **Advanced options** → **Coins count as points**: makes coins count towards
   the target as well, so a perfect turn is worth 4 points.
 - **Advanced options** → **Autoplay** (on by default): the "whose turn" screen
@@ -102,7 +108,7 @@ For two players, or two teams, on one phone lying between them.
   turn, the higher score wins, then the most coins, and a full tie is shared.
 - **Same options as Standard:** points to win, time to guess (both sides
   share one clock, and when it runs out each guess counts as it stands), start
-  somewhere in the song, coins count as points, autoplay and avoid songs from
+  somewhere in the song, no double years, coins count as points, autoplay and avoid songs from
   earlier games. The table view and flip-between-turns options are Standard
   only.
 

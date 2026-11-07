@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { GameState } from '../game/types'
-import { drawSong, setTurnSongYear, skipSong, startClock, stopClock, timeLeftMs, timeLimitMs } from '../game/logic'
+import { drawSong, isDoubleYear, redrawSong, setTurnSongYear, skipSong, startClock, stopClock, timeLeftMs, timeLimitMs } from '../game/logic'
 import { originalYear } from '../musicbrainz'
 import { rememberSongs } from '../history'
 import { describePlaybackError, pause, playSong, resume, SpotifyError } from '../spotify/api'
@@ -109,6 +109,26 @@ export function useTurnSession({ game, onChange, reveal, endTurn, holdAutoplay }
     const next = skipSong(game)
     onChange(next)
     if (next.turn) play(next.turn.song.uri, next.turn.startMs)
+  }
+
+  // No double years: a song whose original year turns out to be in the
+  // timeline already goes back in the deck, and another one plays.
+  const doubleYearSong = isDoubleYear(game) && !checkingYear ? turn?.song.id : undefined
+  const redrawRef = useRef(redraw)
+  useEffect(() => {
+    redrawRef.current = redraw
+  })
+  useEffect(() => {
+    if (doubleYearSong) redrawRef.current()
+  }, [doubleYearSong])
+
+  function redraw() {
+    const year = turn?.song.year
+    const next = redrawSong(game)
+    onChange(next)
+    if (next.turn) play(next.turn.song.uri, next.turn.startMs)
+    // After play(), which clears old messages as it starts.
+    setError(`That song is from ${year}, a year that's already in the timeline. Here's another one.`)
   }
 
   /** Reveals the turn, waiting a moment for the original year if it's still being looked up. */

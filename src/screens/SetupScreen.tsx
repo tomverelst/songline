@@ -50,6 +50,7 @@ interface SetupDraft {
   /** Seconds to guess; 0 means no limit. */
   guessTimeLimit: number
   randomStart: boolean
+  noDoubleYears: boolean
   /** Battle: the second player's half is upside down. */
   faceToFace: boolean
   avoidPlayedSongs: boolean
@@ -67,6 +68,7 @@ const DEFAULT_DRAFT: SetupDraft = {
   swipeCards: false,
   guessTimeLimit: 0,
   randomStart: false,
+  noDoubleYears: false,
   faceToFace: true,
   avoidPlayedSongs: true,
   playlist: null,
@@ -132,6 +134,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
           swipeCards: draft.swipeCards,
           guessTimeLimit: draft.guessTimeLimit,
           randomStart: draft.randomStart,
+          noDoubleYears: draft.noDoubleYears,
           ...(battle && { faceToFace: draft.faceToFace }),
           playlistId: draft.playlist.id,
           playlistName,
@@ -281,6 +284,12 @@ export function SetupScreen({ onStart, initialError }: Props) {
           checked={draft.randomStart}
           onChange={(randomStart) => update({ randomStart })}
         />
+        <Switch
+          title="No double years"
+          description={NO_DOUBLE_YEARS[draft.mode]}
+          checked={draft.noDoubleYears}
+          onChange={(noDoubleYears) => update({ noDoubleYears })}
+        />
 
         <details className="group border-t border-line pt-3">
           <summary className="flex min-h-8 list-none items-center font-semibold text-accent-2 [&::-webkit-details-marker]:hidden">
@@ -389,6 +398,10 @@ export function SetupScreen({ onStart, initialError }: Props) {
 }
 
 const TIME_LIMITS = [0, 15, 30, 45, 60]
+const NO_DOUBLE_YEARS: Record<GameMode, string> = {
+  standard: 'Never play a song from a year that’s already in your timeline.',
+  battle: 'Never play a song from a year that’s already in either timeline.',
+}
 const STARTING_YEARS_DEADLINE_MS = 10_000
 /** Let the shuffle animation play for a moment even when loading is quick. */
 const SHUFFLE_SHOW_MS = 1400

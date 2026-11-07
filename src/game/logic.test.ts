@@ -21,8 +21,10 @@ import {
   stopClock,
   timeLeftMs,
   timeUp,
+  isDoubleYear,
+  redrawSong,
 } from './logic'
-import type { GameSettings, Song } from './types'
+import type { GameSettings, GameState, Song } from './types'
 
 const song = (year: number, title = `Song ${year}`, artists = ['Artist']): Song => ({
   id: `${title}-${year}`,
@@ -302,5 +304,64 @@ describe('time limit', () => {
     g = overwriteRevealedYear(g, 1999)
     expect(g.turn!.song.year).toBe(1999)
     expect(g.turn!.result!.exactYear).toBe(false)
+  })
+})
+
+describe('no double years', () => {
+  const settings: GameSettings = {
+    mode: 'standard',
+    targetPoints: 5,
+    bonusCountsTowardsGoal: false,
+    noDoubleYears: true,
+    playlistId: 'x',
+    playlistName: 'x',
+  }
+  const game = (mode: GameSettings['mode'], deck: number[]): GameState => {
+    const g = newGame(['Ann', 'Bob'], { ...settings, mode }, [song(1960), song(1970)], () => 0)
+    return {
+      ...g,
+      players: [
+        { ...g.players[0], timeline: [song(1980, 'A')] },
+        { ...g.players[1], timeline: [song(1990, 'B')] },
+      ],
+      deck: deck.map((y) => song(y)),
+    }
+  }
+
+  it("skips songs from a year in the guessing player's timeline, keeping them in the deck", () => {
+    const g = drawSong(game('standard', [2000, 1980]))
+    expect(g.turn!.song.year).toBe(2000)
+    expect(g.deck.map((s) => s.year)).toEqual([1980])
+    // Bob's 1990 doesn't count on Ann's turn.
+    expect(drawSong(game('standard', [1990])).turn!.song.year).toBe(1990)
+  })
+
+  it("in Battle, skips years from either side's timeline", () => {
+    expect(drawSong(game('battle', [2000, 1980, 1990])).turn!.song.year).toBe(2000)
+  })
+
+  it('takes the next song anyway when every song is blocked', () => {
+    expect(drawSong(game('standard', [1980])).turn!.song.year).toBe(1980)
+  })
+
+  it('is off unless chosen', () => {
+    const g = game('standard', [2000, 1980])
+    expect(drawSong({ ...g, settings: { ...g.settings, noDoubleYears: false } }).turn!.song.year).toBe(1980)
+  })
+
+  it('puts a song whose looked-up year clashes back in the deck and draws another', () => {
+    let g = drawSong(game('standard', [1980, 2005, 2000]))
+    g = { ...g, turn: { ...g.turn!, song: { ...g.turn!.song, year: 1980, yearSource: 'musicbrainz' } } }
+    expect(isDoubleYear(g)).toBe(true)
+    g = redrawSong(g)
+    expect(g.turn!.song.year).toBe(2005)
+    expect(g.deck.map((s) => s.year)).toEqual([1980, 1980])
+    expect(g.deck[0]).toMatchObject({ id: 'Song 2000-2000', yearSource: 'musicbrainz' })
+  })
+
+  it("doesn't swap when every song left clashes too", () => {
+    let g = drawSong(game('standard', [1980, 2000]))
+    g = { ...g, turn: { ...g.turn!, song: { ...g.turn!.song, year: 1980 } } }
+    expect(isDoubleYear(g)).toBe(false)
   })
 })

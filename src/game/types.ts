@@ -96,6 +96,8 @@ export interface GameSettings {
   guessTimeLimit?: number
   /** Start each mystery song at a random point, not at the beginning. */
   randomStart?: boolean
+  /** Never play a song from a year already in the guessing timeline(s). */
+  noDoubleYears?: boolean
   /** Battle: the second player's half of the screen is upside down. Unset means on. */
   faceToFace?: boolean
   playlistId: string

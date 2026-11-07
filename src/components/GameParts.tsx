@@ -154,6 +154,12 @@ export function GameMenu({
         ) : (
           <Muted>To hide the address bar, add Songline to your Home Screen (Share → Add to Home Screen) and play from there.</Muted>
         )}
+        <Switch
+          title="No double years"
+          description="Never play a song from a year that’s already in the timeline of whoever is guessing."
+          checked={!!game.settings.noDoubleYears}
+          onChange={(noDoubleYears) => onChange((g) => ({ ...g, settings: { ...g.settings, noDoubleYears } }))}
+        />
         {children}
         {/* Pull-to-refresh can't reach the turned game screen; the game is saved, so this is safe. */}
         <Button onClick={() => window.location.reload()}>↻ Reload</Button>
