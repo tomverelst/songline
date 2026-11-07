@@ -153,6 +153,11 @@ the game) and ⊕ saves it to Liked Songs or a playlist.
 that won't play. The ☰ menu lets you switch the playback device, end the game
 early, or quit.
 
+**Tablets:** on a tablet-sized screen (768×600 or bigger, either way round)
+the whole game is drawn bigger: buttons, text and cards. Phones on their side
+keep the phone size. Rows of cards shrink to fit when there's less room, like
+a Battle half on a tablet held sideways.
+
 The game state is saved in the browser, so a refresh or an accidental tab
 close doesn't lose the game.
 
@@ -247,4 +252,6 @@ Every push to `main` is tested, built and published to GitHub Pages at
   share lives in `useTurnSession.ts` (playback, autoplay, year lookup, guess
   clock) and `components/GameParts.tsx` (clock, reveal year, points, menu)
 - `src/components/`: shared UI (`ui.tsx`: buttons, cards, inputs, switches), the timeline and the device picker
+- Sizes are in rem, so tablets (a bigger root font size in `index.css`) scale everything; the few
+  sizes worked out in JavaScript multiply by `useUiScale()` (`components/scale.ts`)
 - Styling is Tailwind CSS v4: theme colours live in `@theme` in `src/index.css`; use utility classes and the components in `ui.tsx` rather than new CSS

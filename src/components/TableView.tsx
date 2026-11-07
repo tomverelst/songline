@@ -3,6 +3,7 @@ import { MAX_YEAR, MIN_YEAR } from '../game/logic'
 import type { Song } from '../game/types'
 import { cx } from './classes'
 import { CardRow } from './CardRow'
+import { useUiScale } from './scale'
 import { PointChip } from './GameParts'
 import { useYearEditor } from './YearEdit'
 import { Artwork } from './ui'
@@ -252,7 +253,8 @@ function PanelSong({
   )
 }
 
-const TICK = 12
+/** Space per year on the ruler, at phone scale. */
+const BASE_TICK = 12
 
 /**
  * A ruler of years to swipe along; the year under the needle is the guess.
@@ -272,6 +274,7 @@ function YearRuler({
   marks: number[]
   onChange: (year: number) => void
 }) {
+  const TICK = BASE_TICK * useUiScale()
   const ruler = useRef<HTMLDivElement>(null)
   // Set while the ruler scrolls to a year chosen elsewhere (e.g. a tapped card),
   // so the years it passes on the way aren't taken as the guess.
@@ -302,7 +305,7 @@ function YearRuler({
       followRef.current = null
       clearTimeout(live.current)
     }
-  }, [followRef])
+  }, [followRef, TICK])
 
   useEffect(() => {
     const el = ruler.current
@@ -314,7 +317,7 @@ function YearRuler({
     first.current = false
     const done = window.setTimeout(() => (following.current = false), 700)
     return () => clearTimeout(done)
-  }, [value, startYear])
+  }, [value, startYear, TICK])
 
   const years: number[] = []
   for (let y = MIN_YEAR; y <= MAX_YEAR; y++) years.push(y)

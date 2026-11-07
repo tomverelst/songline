@@ -83,6 +83,19 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* Tablets: everything sized in rem grows with the root size. Phones on
+     their side are less than 600px tall, so they keep the phone size. */
+  @media (min-width: 768px) and (min-height: 600px) {
+    html {
+      font-size: 19px;
+    }
+  }
+  @media (min-width: 1024px) and (min-height: 768px) {
+    html {
+      font-size: 21px;
+    }
+  }
+
   html,
   body {
     /* Never scroll the page sideways (e.g. when a dragged card pokes out). */

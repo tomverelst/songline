@@ -249,7 +249,13 @@ function GuessPanel({
   const valid = isValidYear(guess.yearGuess)
   return (
     <ScreenRotation value={upsideDown ? 180 : 0}>
-      <section className={cx('flex min-h-0 flex-1 flex-col gap-2 px-3 pt-3 pb-1', upsideDown && 'rotate-180')}>
+      <section
+        className={cx(
+          // On a tablet the controls stay a comfortable width; the cards still run edge to edge.
+          'flex min-h-0 flex-1 flex-col gap-2 px-3 pt-3 pb-1 [&>*:not(:last-child)]:mx-auto [&>*:not(:last-child)]:w-full [&>*:not(:last-child)]:max-w-[40rem]',
+          upsideDown && 'rotate-180',
+        )}
+      >
         <div className="flex min-h-10 items-center gap-2">
           <span className="text-accent-gradient min-w-0 truncate text-2xl font-black">{player.name}</span>
           <ScoreChip player={player} settings={settings} />

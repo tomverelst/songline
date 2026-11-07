@@ -132,7 +132,7 @@ export function GameMenu({
   return (
     <div className="fixed inset-0 z-30 flex items-end bg-black/60" onClick={onClose}>
       <div
-        className="mx-auto flex max-h-[85%] w-full max-w-[560px] animate-slide-up flex-col gap-3 overflow-y-auto rounded-t-[20px] bg-surface px-4 pt-5 pb-[calc(env(safe-area-inset-bottom)+20px)]"
+        className="mx-auto flex max-h-[85%] w-full max-w-[35rem] animate-slide-up flex-col gap-3 overflow-y-auto rounded-t-[20px] bg-surface px-4 pt-5 pb-[calc(env(safe-area-inset-bottom)+20px)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-2">

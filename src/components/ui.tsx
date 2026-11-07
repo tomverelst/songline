@@ -108,7 +108,7 @@ export function Screen({ className, ...props }: HTMLAttributes<HTMLDivElement>) 
   return (
     <div
       className={cx(
-        'mx-auto flex max-w-[560px] flex-col gap-4 px-4',
+        'mx-auto flex max-w-[35rem] flex-col gap-4 px-4',
         'pt-[calc(env(safe-area-inset-top)+16px)] pb-[calc(env(safe-area-inset-bottom)+104px)]',
         className,
       )}
@@ -121,7 +121,7 @@ export function Screen({ className, ...props }: HTMLAttributes<HTMLDivElement>) 
 export function BottomBar({ children }: { children: ReactNode }) {
   return (
     <div className="fixed inset-x-0 bottom-0 z-10 bg-linear-to-t from-bg from-70% to-transparent px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)]">
-      <div className="mx-auto max-w-[528px]">{children}</div>
+      <div className="mx-auto max-w-[33rem]">{children}</div>
     </div>
   )
 }
@@ -148,7 +148,7 @@ export function Logo({ children }: { children: ReactNode }) {
 export function Toast({ children, onDismiss }: { children: ReactNode; onDismiss: () => void }) {
   return (
     <div
-      className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+92px)] z-20 mx-auto max-w-[528px] animate-slide-up rounded-xl border border-bad bg-[#3a1620] px-4 py-3 text-sm"
+      className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+92px)] z-20 mx-auto max-w-[33rem] animate-slide-up rounded-xl border border-bad bg-[#3a1620] px-4 py-3 text-sm"
       role="alert"
       onClick={onDismiss}
     >

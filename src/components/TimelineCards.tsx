@@ -4,6 +4,7 @@ import type { Song } from '../game/types'
 import { cx } from './classes'
 import { HoldToOpen } from './SongDetails'
 import { rotateVector, toLocal, useScreenRotation, type Point } from './rotation'
+import { useUiScale } from './scale'
 
 interface Props {
   timeline: Song[]
@@ -15,23 +16,21 @@ interface Props {
   onSelectYear?: (year: number) => void
 }
 
-const CARD_W = 160 // w-40
-const CARD_H = 224 // h-56
-const OVERLAP = 52
-const STEP = CARD_W - OVERLAP
+// Sizes at phone scale (16px root); the component scales them with the UI.
+const BASE_CARD_W = 160 // w-40
+const BASE_CARD_H = 224 // h-56
+const BASE_OVERLAP = 52
 /** Press this long on the guess card to pick it up. */
 const HOLD_MS = 250
 /** Moving further than this before then means scrolling, not holding. */
 const HOLD_SLOP = 10
 /** Dragging this close to an edge scrolls the hand, faster nearer the edge. */
-const EDGE = 72
+const BASE_EDGE = 72
 const MAX_EDGE_SPEED = 14
 /** How a card tilts at `d` cards from the middle of the fan (degrees). */
 function fanTilt(d: number) {
   return Math.max(-24, Math.min(24, d * 8))
 }
-/** How far the cards on either side of the drop gap move apart. */
-const GAP_SPREAD = STEP * 0.35
 
 const VERDICT_RING = {
   none: 'ring-2 ring-white/60',
@@ -71,6 +70,14 @@ function placementOf(songs: Song[], guessYear: number | undefined): Placement {
  * and hold the guess card to drag it to another spot.
  */
 export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Props) {
+  const scale = useUiScale()
+  const CARD_W = BASE_CARD_W * scale
+  const CARD_H = BASE_CARD_H * scale
+  const OVERLAP = BASE_OVERLAP * scale
+  const STEP = CARD_W - OVERLAP
+  const EDGE = BASE_EDGE * scale
+  /** How far the cards on either side of the drop gap move apart. */
+  const GAP_SPREAD = STEP * 0.35
   const frame = useRef<HTMLDivElement>(null)
   const scroller = useRef<HTMLDivElement>(null)
   // How far each card is from the middle of the view, in cards.
@@ -115,7 +122,7 @@ export function TimelineCards({ timeline, guessYear, verdict, onSelectYear }: Pr
   useLayoutEffect(() => {
     if (dragging && closeGap.current && scroller.current) scroller.current.scrollLeft -= STEP / 2
     closeGap.current = false
-  }, [dragging])
+  }, [dragging, STEP])
 
   // Cards move like real cards: when the guess changes place, every card
   // slides from where it was to where it is now, and the guess flies over.
@@ -429,6 +436,8 @@ function slide(el: HTMLElement, from: Point, to: Point, angle: number, tilt = 0)
 
 const CARD = 'absolute inset-0 overflow-hidden rounded-2xl border-2 border-line shadow-[0_10px_30px_rgb(0_0_0/0.45)]'
 
+// Card text is in em, so a card drawn smaller (font-size on a parent) keeps its proportions.
+
 /** `highlight`: the dragged guess card would land on this card. */
 export function CardFace({ song, highlight }: { song: Song; highlight: boolean }) {
   return (
@@ -439,12 +448,12 @@ export function CardFace({ song, highlight }: { song: Song; highlight: boolean }
         <div className="absolute inset-0 bg-linear-160 from-surface-2 to-bg" />
       )}
       <div className="absolute inset-0 bg-linear-to-b from-black/10 via-transparent to-black/85" />
-      <span className="absolute inset-x-0 top-[38%] -translate-y-1/2 text-center text-4xl font-black text-white tabular-nums [text-shadow:0_2px_12px_rgb(0_0_0/0.85)]">
+      <span className="absolute inset-x-0 top-[38%] -translate-y-1/2 text-center text-[2.25em] font-black text-white tabular-nums [text-shadow:0_2px_12px_rgb(0_0_0/0.85)]">
         {song.year}
       </span>
       <span className="absolute inset-x-2.5 bottom-2.5 flex flex-col">
-        <span className="line-clamp-2 text-sm leading-tight font-bold text-white">{song.title}</span>
-        <span className="truncate text-xs text-white/70">{song.artists.join(', ')}</span>
+        <span className="line-clamp-2 text-[0.875em] leading-tight font-bold text-white">{song.title}</span>
+        <span className="truncate text-[0.75em] text-white/70">{song.artists.join(', ')}</span>
       </span>
     </div>
   )
@@ -456,8 +465,8 @@ export function CardBack({ year, ring }: { year: number; ring: string }) {
     <div className={cx(CARD, 'grid place-items-center bg-accent-gradient text-on-accent', ring)}>
       <div className="absolute inset-2.5 rounded-xl border-2 border-dashed border-on-accent/25" />
       <div className="relative flex flex-col items-center">
-        <span className="text-3xl">♪</span>
-        <span className="text-4xl font-black tabular-nums">{year}</span>
+        <span className="text-[1.875em]">♪</span>
+        <span className="text-[2.25em] font-black tabular-nums">{year}</span>
       </div>
     </div>
   )

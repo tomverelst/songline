@@ -1,15 +1,31 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { MAX_YEAR, MIN_YEAR } from '../game/logic'
 import type { Song } from '../game/types'
 import { CardBack, CardFace } from './TimelineCards'
 import { cx } from './classes'
 import { HoldToOpen } from './SongDetails'
 import { rotateVector, useScreenRotation } from './rotation'
+import { useUiScale } from './scale'
 
-const CARD_W = 116
-const CARD_H = 164
-const GAP = 14
-const SLOT = CARD_W + GAP
+// Sizes at phone scale (16px root); the row scales them with the UI.
+const BASE_CARD_W = 116
+const BASE_CARD_H = 164
+const BASE_GAP = 14
+/** Cards never shrink below this share of their size to fit the row. */
+const MIN_FIT = 0.55
+
+/** An element's height, kept up to date. */
+function useHeight(ref: { current: HTMLElement | null }) {
+  const [height, setHeight] = useState<number | null>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const observer = new ResizeObserver(() => setHeight(el.clientHeight))
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [ref])
+  return height
+}
 
 /**
  * The timeline as cards lying side by side. The guess card stands in its gap,
@@ -37,6 +53,16 @@ export function CardRow({
   swipe?: { startYear: number; onMove: (exactYear: number) => void }
 }) {
   const scroller = useRef<HTMLDivElement>(null)
+  // Cards grow with the UI (bigger on tablets), and shrink when the row has
+  // less height than that (a Battle half on a tablet on its side, say).
+  const scale = useUiScale()
+  const room = useHeight(scroller)
+  const padding = 2 * 20 * scale // py-5
+  const fit = room ? Math.max(MIN_FIT, Math.min(1, (room - padding) / (BASE_CARD_H * scale))) : 1
+  const CARD_W = BASE_CARD_W * scale * fit
+  const CARD_H = BASE_CARD_H * scale * fit
+  const GAP = BASE_GAP * scale * fit
+  const SLOT = CARD_W + GAP
   const swipeHandlers = useYearSwipe(
     guessYear ?? swipe?.startYear ?? 0,
     (year) => onSelectYear?.(year),
@@ -54,7 +80,7 @@ export function CardRow({
   // (A swiped row moves itself instead.)
   useEffect(() => {
     scroller.current?.scrollTo({ left: swipe ? 0 : guessSlot * SLOT, behavior: 'smooth' })
-  }, [guessSlot, swipe])
+  }, [guessSlot, swipe, SLOT])
 
   const glide = 'transition-transform duration-[350ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]'
   return (
@@ -72,6 +98,8 @@ export function CardRow({
         style={{
           width: count * SLOT - GAP,
           height: CARD_H,
+          // Card text is in em: it shrinks along with the cards.
+          fontSize: `${fit}em`,
           // The whole row slides so the guess stays in the middle.
           transform: swipe ? `translateX(${-guessSlot * SLOT}px)` : undefined,
         }}
