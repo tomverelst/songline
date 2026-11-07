@@ -23,6 +23,8 @@ import {
   timeUp,
   isDoubleYear,
   redrawSong,
+  upcomingSongs,
+  withKnownYears,
 } from './logic'
 import type { GameSettings, GameState, Song } from './types'
 
@@ -363,5 +365,35 @@ describe('no double years', () => {
     let g = drawSong(game('standard', [1980, 2000]))
     g = { ...g, turn: { ...g.turn!, song: { ...g.turn!.song, year: 1980 } } }
     expect(isDoubleYear(g)).toBe(false)
+  })
+})
+
+describe('looking up years ahead', () => {
+  const settings: GameSettings = {
+    mode: 'standard',
+    targetPoints: 5,
+    bonusCountsTowardsGoal: false,
+    noDoubleYears: true,
+    playlistId: 'x',
+    playlistName: 'x',
+  }
+  const game = (): GameState => {
+    const g = newGame(['Ann'], settings, [song(1960)], () => 0)
+    return { ...g, players: [{ ...g.players[0], timeline: [song(1980, 'A')] }], deck: [1970, 1971, 1972, 2001].map((y) => song(y)) }
+  }
+
+  it('looks ahead at the next songs to be drawn', () => {
+    expect(upcomingSongs(game().deck).map((s) => s.year)).toEqual([2001, 1972, 1971])
+  })
+
+  it('applies known years to the deck, so the draw sees the real year', () => {
+    // Spotify says 2001 (a remaster); it's really from 1980, which Ann has.
+    const known = new Map<string, number | null>([['Song 2001-2001', 1980], ['Song 1972-1972', null]])
+    const g = withKnownYears(game(), known)
+    expect(g.deck.slice(-2).map((s) => [s.year, s.yearSource])).toEqual([
+      [1972, 'spotify'],
+      [1980, 'musicbrainz'],
+    ])
+    expect(drawSong(g).turn!.song.year).toBe(1972)
   })
 })

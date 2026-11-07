@@ -289,6 +289,24 @@ export function withOriginalYear(song: Song, year: number | null): Song {
     : { ...song, year, yearSource: 'musicbrainz' }
 }
 
+/** How many songs from the top of the deck get their year looked up ahead of time. */
+export const LOOK_AHEAD = 3
+
+/** The songs that could be drawn next, whose original year should be ready by then. */
+export function upcomingSongs(deck: Song[]): Song[] {
+  return deck.slice(-LOOK_AHEAD).reverse()
+}
+
+/**
+ * Fills in original years looked up ahead of time (song id → year, null when
+ * the lookup found nothing) for the songs still in the deck.
+ */
+export function withKnownYears(state: GameState, years: ReadonlyMap<string, number | null>): GameState {
+  if (!state.deck.some((s) => !s.yearSource && years.has(s.id))) return state
+  const deck = state.deck.map((s) => (!s.yearSource && years.has(s.id) ? withOriginalYear(s, years.get(s.id)!) : s))
+  return { ...state, deck }
+}
+
 /** Applies a looked-up year to the song being guessed, if it is still in play. */
 export function setTurnSongYear(state: GameState, songId: string, year: number | null): GameState {
   const turn = state.turn

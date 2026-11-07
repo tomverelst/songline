@@ -54,9 +54,10 @@ in their personal timeline of songs.
   same point. Songs too short for that start as late as fits, or at the start.
 - **No double years** (in Standard and Battle, and in the ☰ menu): a mystery
   song is never from a year that's already in the guessing player's timeline
-  (in Battle, in either timeline). Songs from those years stay in the deck for
-  later turns. The original year is sometimes only known a moment after the
-  song starts; if it clashes, the game puts that song back and plays another.
+  (in Battle, in either timeline), going by the original year looked up ahead
+  of time. Songs from those years stay in the deck for later turns. If a song
+  started before its year was known and the year clashes, the game puts that
+  song back and plays another.
   When every song left clashes, they play anyway.
 - **Advanced options** → **Coins count as points**: makes coins count towards
   the target as well, so a perfect turn is worth 4 points.
@@ -170,9 +171,14 @@ Requirements and limitations:
   device recently for it to appear. Use a device that nobody is staring at,
   because the Spotify app shows the song title.
 - **Release years.** Spotify only knows the release date of the *album* a track is
-  on, which is wrong for remasters and compilations. While a song plays, the
-  game looks up its original release year in [MusicBrainz](https://musicbrainz.org),
-  first by ISRC and then by title and artist. If MusicBrainz is slow (4 s at
+  on, which is wrong for remasters and compilations. The game looks up each
+  song's original release year in [MusicBrainz](https://musicbrainz.org), first
+  by ISRC and then by title and artist. It does this ahead of time for the next
+  few songs in the deck, while the current turn is still going, so a song
+  starts with its real year already known. If those lookups aren't done yet
+  when the next song is due, **Play mystery song** shows "Getting the song
+  ready…" for up to 4 seconds. A song that still isn't ready plays anyway and
+  gets its year while it plays. If MusicBrainz is slow (4 s at
   lock-in), unreachable, or has no answer, the Spotify year is used. The reveal
   card shows which source the year came from. MusicBrainz data is mostly but not
   always right, so every point on the reveal screen (card, exact year, title,
