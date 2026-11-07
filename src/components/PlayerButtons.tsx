@@ -3,40 +3,10 @@ import { CELEBRATIONS, celebrateCard, EMOJI_CHOICES, type Celebration, type Cele
 import { firstEmoji } from '../emojiRain'
 import { DEFAULT_KNIT_PATTERN } from '../knitting'
 import { KnitDesigner } from './KnitDesigner'
-import { CardPainter } from './CardPainter'
-import { freeColor, TEAM_COLORS, teamVars, type TeamColor } from '../game/teams'
-import { Button, CardTitle, IconButton, Muted, OptionButton, TextInput } from './ui'
+import { Muted, OptionButton, TextInput } from './ui'
 import { cx } from './classes'
 
-// The buttons next to each name on the setup screen: a player's colour and
-// celebration are picked there, before the game.
-
-/**
- * A player's celebration: the button shows it, and a tap opens a picker with
- * every style (and, for emoji rain, which emoji). Picking one shows it off.
- */
-export function CelebrationButton({
-  playerName,
-  value,
-  onChange,
-}: {
-  playerName: string
-  value: Celebration
-  onChange: (celebration: Celebration) => void
-}) {
-  const [open, setOpen] = useState(false)
-  const current = CELEBRATIONS.find((c) => c.id === value.style) ?? CELEBRATIONS[0]
-  return (
-    <>
-      <IconButton aria-label={`Celebration: ${current.name}. Tap to change.`} title={current.name} onClick={() => setOpen(true)}>
-        <CelebrationIcon style={current.id} emoji={value.emoji} />
-      </IconButton>
-      {open && (
-        <CelebrationPicker playerName={playerName} value={value} onChange={onChange} onClose={() => setOpen(false)} />
-      )}
-    </>
-  )
-}
+// A player's celebration, picked in their card editor before the game.
 
 /** A celebration's icon: its emoji, the player's own for emoji rain, or a drawn one. */
 export function CelebrationIcon({ style, emoji }: { style: CelebrationStyle; emoji: string }) {
@@ -70,150 +40,74 @@ function TofuIcon() {
   )
 }
 
-function CelebrationPicker({
-  playerName,
-  value,
-  onChange,
-  onClose,
-}: {
-  playerName: string
-  value: Celebration
-  onChange: (celebration: Celebration) => void
-  onClose: () => void
-}) {
+/**
+ * Pick a celebration (and for emoji rain which emoji, for knitting the
+ * scarf's pattern), right in the player editor. Picking one shows it off.
+ */
+export function CelebrationChooser({ value, onChange }: { value: Celebration; onChange: (celebration: Celebration) => void }) {
   const [typed, setTyped] = useState('')
   const pick = (next: Celebration) => {
     onChange(next)
     celebrateCard(next)
   }
   return (
-    <div className="fixed inset-0 z-30 flex items-end bg-black/60" onClick={onClose}>
-      <div
-        role="dialog"
-        aria-label={`${playerName || 'Player'}'s celebration`}
-        className="mx-auto flex max-h-[85%] w-full max-w-[35rem] animate-slide-up flex-col gap-3 overflow-y-auto rounded-t-[20px] bg-surface px-4 pt-5 pb-[calc(env(safe-area-inset-bottom)+20px)]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle>{playerName ? `${playerName}'s celebration` : 'Celebration'}</CardTitle>
-          <IconButton aria-label="Close" onClick={onClose}>
-            ✕
-          </IconButton>
-        </div>
-        <Muted>Plays when they win a card, hit the exact year and win the game. Tap one to see it.</Muted>
-        <div className="grid grid-cols-2 gap-1.5">
-          {CELEBRATIONS.map((c) => (
-            <OptionButton
-              key={c.id}
-              selected={value.style === c.id}
-              className="min-h-13 flex-row items-center justify-start gap-2 font-semibold"
-              onClick={() => pick({ ...value, style: c.id })}
-            >
-              <span className="text-xl">
-                <CelebrationIcon style={c.id} emoji={value.emoji} />
-              </span>
-              {c.name}
-            </OptionButton>
-          ))}
-        </div>
-        {value.style === 'emoji' && (
-          <>
-            <span className="mt-1 font-semibold">Which emoji?</span>
-            <div className="grid grid-cols-8 gap-1">
-              {EMOJI_CHOICES.map((emoji) => (
-                <button
-                  key={emoji}
-                  aria-label={emoji}
-                  aria-pressed={value.emoji === emoji}
-                  className={cx(
-                    'grid aspect-square place-items-center rounded-xl border text-2xl',
-                    value.emoji === emoji ? 'border-accent bg-accent/15' : 'border-transparent',
-                  )}
-                  onClick={() => pick({ ...value, style: 'emoji', emoji })}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-            <TextInput
-              placeholder="Or type any emoji"
-              aria-label="Type any emoji"
-              value={typed}
-              autoComplete="off"
-              onChange={(e) => {
-                setTyped(e.target.value)
-                const emoji = firstEmoji(e.target.value)
-                if (emoji) pick({ ...value, style: 'emoji', emoji })
-              }}
-            />
-          </>
-        )}
-        {value.style === 'knitting' && (
-          <KnitDesigner
-            pattern={value.pattern ?? DEFAULT_KNIT_PATTERN}
-            // Painting doesn't set it off every stitch; the button below does.
-            onChange={(pattern) => onChange({ ...value, pattern })}
-            onPreview={() => celebrateCard({ ...value, pattern: value.pattern ?? DEFAULT_KNIT_PATTERN })}
-          />
-        )}
-        <Button variant="primary" block onClick={onClose}>
-          Done
-        </Button>
+    <div className="flex flex-col gap-3">
+      <Muted>Plays when they win a card, hit the exact year and win the game. Tap one to see it.</Muted>
+      <div className="grid grid-cols-2 gap-1.5">
+        {CELEBRATIONS.map((c) => (
+          <OptionButton
+            key={c.id}
+            selected={value.style === c.id}
+            className="min-h-13 flex-row items-center justify-start gap-2 font-semibold"
+            onClick={() => pick({ ...value, style: c.id })}
+          >
+            <span className="text-xl">
+              <CelebrationIcon style={c.id} emoji={value.emoji} />
+            </span>
+            {c.name}
+          </OptionButton>
+        ))}
       </div>
+      {value.style === 'emoji' && (
+        <>
+          <span className="mt-1 font-semibold">Which emoji?</span>
+          <div className="grid grid-cols-8 gap-1">
+            {EMOJI_CHOICES.map((emoji) => (
+              <button
+                key={emoji}
+                aria-label={emoji}
+                aria-pressed={value.emoji === emoji}
+                className={cx(
+                  'grid aspect-square place-items-center rounded-xl border text-2xl',
+                  value.emoji === emoji ? 'border-accent bg-accent/15' : 'border-transparent',
+                )}
+                onClick={() => pick({ ...value, style: 'emoji', emoji })}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+          <TextInput
+            placeholder="Or type any emoji"
+            aria-label="Type any emoji"
+            value={typed}
+            autoComplete="off"
+            onChange={(e) => {
+              setTyped(e.target.value)
+              const emoji = firstEmoji(e.target.value)
+              if (emoji) pick({ ...value, style: 'emoji', emoji })
+            }}
+          />
+        </>
+      )}
+      {value.style === 'knitting' && (
+        <KnitDesigner
+          pattern={value.pattern ?? DEFAULT_KNIT_PATTERN}
+          // Painting doesn't set it off every stitch; the button below does.
+          onChange={(pattern) => onChange({ ...value, pattern })}
+          onPreview={() => celebrateCard({ ...value, pattern: value.pattern ?? DEFAULT_KNIT_PATTERN })}
+        />
+      )}
     </div>
-  )
-}
-
-/**
- * A player's guess card: the button shows it in small (their painting, or a
- * plain card in their colour), and a tap opens the painter.
- */
-export function CardButton({
-  playerName,
-  art,
-  color,
-  onChange,
-}: {
-  playerName: string
-  art: string | undefined
-  color: TeamColor
-  onChange: (art: string | null) => void
-}) {
-  const [open, setOpen] = useState(false)
-  return (
-    <>
-      <IconButton aria-label={`${playerName || 'Player'}'s card: tap to paint it`} title="Paint your card" onClick={() => setOpen(true)}>
-        {art ? (
-          <img src={art} alt="" className="h-7 w-5 rounded-[3px] object-cover [image-rendering:pixelated]" />
-        ) : (
-          <span className="grid h-7 w-5 place-items-center rounded-[3px] bg-team-gradient text-[0.6rem] text-on-accent" style={teamVars(color)}>
-            🎨
-          </span>
-        )}
-      </IconButton>
-      {open && <CardPainter playerName={playerName} art={art} onSave={onChange} onClose={() => setOpen(false)} />}
-    </>
-  )
-}
-
-/** A swatch of a player's colour; a tap moves on to the next colour nobody else has. */
-export function ColorButton({
-  value,
-  taken,
-  onChange,
-}: {
-  value: TeamColor
-  /** Colours of the other players. */
-  taken: string[]
-  onChange: (id: string) => void
-}) {
-  return (
-    <IconButton
-      aria-label={`Colour: ${value.name}. Tap to change.`}
-      title={value.name}
-      onClick={() => onChange(freeColor(TEAM_COLORS.indexOf(value) + 1, taken).id)}
-    >
-      <span className="size-6 rounded-full border-2 border-white/80 bg-(--team)" style={teamVars(value)} />
-    </IconButton>
   )
 }

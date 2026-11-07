@@ -148,14 +148,15 @@ games they played and won, and their celebration as their move ("Makes it rain
 🦖"). Tap the cards of everyone who's playing; the order you tap them in is the
 turn order, shown on each card, and picked cards get a holo shine. In Battle the
 first two picked play (tapping a third swaps out the second). **＋ New player**
-makes one: name, colour, painted card and celebration, with the card shown as
-it'll look; **✎** on a card changes or deletes that player. A colour someone
+makes one, on a single screen: name and colour next to the card as it'll
+look, then a **🎨 Card** tab to paint it and a **🎉 Celebration** tab (no pop-ups
+on top of each other); tapping ✕ with unsaved changes asks first; **✎** on a card changes or deletes that player. A colour someone
 picked before them already has is swapped for a free one in that game. Every
 finished game counts on the cards of those who played it, and a win for the
 winner. Players typed in before cards existed became cards automatically.
 
-**Paint your own card:** in a player's card editor (**＋ New player** or **✎**), tap
-**Paint the card** to paint the back of that player's guess card, MS Paint style: pencil,
+**Paint your own card:** in a player's card editor (**＋ New player** or **✎**), the
+**🎨 Card** tab paints the back of that player's guess card, MS Paint style: pencil,
 brush, spray can, paint bucket and eraser in three sizes, the classic 28-colour
 palette, undo and clear, in chunky pixels. The guess card then shows the
 painting, with the guessed year on it in a dark pill at the bottom (shown while
@@ -188,7 +189,7 @@ for the winner). Pick knitting and you can **design your own scarf**: paint a
 10×12 grid of stitches in 8 yarns (tap or drag), or start from stripes, a
 heart, checks or a zigzag. The grid is drawn with the same stitches as the
 celebration, so what you paint is what gets knitted; it repeats down the scarf
-(two scarves of it for an exact year, three for the winner). Tap **Celebration** in a player's card editor to pick one (each shows itself off); for emoji rain pick one of
+(two scarves of it for an exact year, three for the winner). Open the **🎉 Celebration** tab in a player's card editor to pick one (each shows itself off); for emoji rain pick one of
 24 emoji or type any other. It can't be changed mid-game. It plays when that player wins a card or hits the
 exact year, and for the winner at the end. In Battle, each side that wins
 celebrates in its own style, so confetti and fireworks can go off together.

@@ -3,8 +3,9 @@ import { CELEBRATIONS, DEFAULT_EMOJI, defaultCelebration, type Celebration } fro
 import { TEAM_COLORS, teamColorById, teamVars, type TeamColor } from '../game/teams'
 import { findProfile, profileKey, type Profile, type RosterPlayer } from '../profiles'
 import { cx } from './classes'
-import { CardButton, CelebrationButton, CelebrationIcon } from './PlayerButtons'
-import { Button, CardTitle, IconButton, Muted, TextInput } from './ui'
+import { CelebrationChooser, CelebrationIcon } from './PlayerButtons'
+import { CardPainter } from './CardPainter'
+import { Button, IconButton, TextInput } from './ui'
 
 // The players on this phone as collectible cards, a bit like trading cards:
 // a frame in their colour, their name with a trophy count where the HP goes,
@@ -133,6 +134,7 @@ export function PlayerEditor({
   onClose: () => void
 }) {
   const [name, setName] = useState(player?.name ?? '')
+  const [tab, setTab] = useState<'card' | 'celebration'>('card')
   const [profile, setProfile] = useState<Profile>(() =>
     player
       ? { color: player.color, celebration: player.celebration, emoji: player.emoji, knitPattern: player.knitPattern, cardArt: player.cardArt }
@@ -157,21 +159,30 @@ export function PlayerEditor({
     if (!changed || confirm(player ? `Throw away your changes to ${player.name}?` : 'Throw away this new player?')) onClose()
   }
 
-  return (
-    <div className="fixed inset-0 z-30 flex items-end bg-black/60" onClick={leave}>
-      <div
-        role="dialog"
-        aria-label={player ? `Edit ${player.name}` : 'New player'}
-        className="mx-auto flex max-h-[92%] w-full max-w-[35rem] animate-slide-up flex-col gap-3 overflow-y-auto rounded-t-[20px] bg-surface px-4 pt-5 pb-[calc(env(safe-area-inset-bottom)+20px)]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle>{player ? `Edit ${player.name}` : 'New player'}</CardTitle>
-          <IconButton aria-label="Close" onClick={leave}>
-            ✕
-          </IconButton>
-        </div>
+  const save = () => {
+    onSave(trimmed, profile)
+    onClose()
+  }
 
+  // One screen, no pop-ups on top: the card and name up top, then the
+  // painting or the celebration below.
+  return (
+    <div
+      role="dialog"
+      aria-label={player ? `Edit ${player.name}` : 'New player'}
+      className="fixed inset-0 z-30 animate-slide-up overflow-y-auto overscroll-contain bg-bg"
+    >
+      <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-line bg-bg/95 px-4 pt-[calc(env(safe-area-inset-top)+10px)] pb-2.5 backdrop-blur">
+        <IconButton aria-label="Close" onClick={leave}>
+          ✕
+        </IconButton>
+        <h2 className="min-w-0 flex-1 truncate text-lg font-bold">{player ? `Edit ${player.name}` : 'New player'}</h2>
+        <Button size="sm" variant="primary" className="px-5" disabled={!trimmed || taken} onClick={save}>
+          {player ? 'Save' : 'Add'}
+        </Button>
+      </header>
+
+      <div className="mx-auto flex max-w-[35rem] flex-col gap-4 px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+24px)]">
         <div className="flex gap-4">
           <div className="w-[42%] max-w-48 flex-none">
             <PlayerCard player={preview} color={color} />
@@ -193,36 +204,38 @@ export function PlayerEditor({
                 />
               ))}
             </div>
-            <div className="mt-1 flex items-center gap-2">
-              <CardButton
-                playerName={trimmed}
-                art={profile.cardArt}
-                color={color}
-                onChange={(cardArt) => setProfile((p) => ({ ...p, cardArt: cardArt ?? undefined }))}
-              />
-              <span className="text-sm">Paint the card</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CelebrationButton
-                playerName={trimmed}
-                value={celebration}
-                onChange={({ style, emoji, pattern }) => setProfile((p) => ({ ...p, celebration: style, emoji, knitPattern: pattern }))}
-              />
-              <span className="text-sm">Celebration</span>
-            </div>
           </div>
         </div>
-        <Muted>Saved on this phone, to pick for every game.</Muted>
 
-        <Button
-          variant="primary"
-          block
-          disabled={!trimmed || taken}
-          onClick={() => {
-            onSave(trimmed, profile)
-            onClose()
-          }}
-        >
+        <div className="grid grid-cols-2 gap-1 rounded-full border border-line bg-surface p-1" role="tablist">
+          {(
+            [
+              ['card', '🎨 Card'],
+              ['celebration', '🎉 Celebration'],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              role="tab"
+              aria-selected={tab === id}
+              className={cx('min-h-10 rounded-full font-semibold', tab === id ? 'bg-surface-2 text-ink' : 'text-muted')}
+              onClick={() => setTab(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'card' ? (
+          <CardPainter art={profile.cardArt} onChange={(cardArt) => setProfile((p) => ({ ...p, cardArt }))} />
+        ) : (
+          <CelebrationChooser
+            value={celebration}
+            onChange={({ style, emoji, pattern }) => setProfile((p) => ({ ...p, celebration: style, emoji, knitPattern: pattern }))}
+          />
+        )}
+
+        <Button variant="primary" block disabled={!trimmed || taken} onClick={save}>
           {player ? 'Save' : 'Add player'}
         </Button>
         {onDelete && (
