@@ -1,6 +1,8 @@
 // Spotify Authorization Code flow with PKCE — runs entirely in the browser,
 // no backend or client secret needed.
 
+import { sha256 } from './sha256'
+
 const SCOPES = [
   'playlist-read-private',
   'playlist-read-collaborative',
@@ -47,11 +49,25 @@ function randomString(length: number): string {
 }
 
 async function challengeFor(verifier: string): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))
-  return btoa(String.fromCharCode(...new Uint8Array(digest)))
+  const data = new TextEncoder().encode(verifier)
+  return btoa(String.fromCharCode(...(await sha256Digest(data))))
     .replace(/=/g, '')
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
+}
+
+/**
+ * SHA-256 by the browser where it can. crypto.subtle is missing on some
+ * older iPhones and on pages that aren't on https, so fall back to our own.
+ */
+async function sha256Digest(data: Uint8Array<ArrayBuffer>): Promise<Uint8Array> {
+  const subtle = (globalThis.crypto as Crypto | undefined)?.subtle as SubtleCrypto | undefined
+  try {
+    if (subtle) return new Uint8Array(await subtle.digest('SHA-256', data))
+  } catch {
+    // Fall through to the plain JavaScript version.
+  }
+  return sha256(data)
 }
 
 export async function login() {
