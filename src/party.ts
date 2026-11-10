@@ -1,4 +1,4 @@
-import confetti from 'canvas-confetti'
+import { confettiAt } from './effectAngle'
 import { fireworks } from './fireworks'
 import { lasers } from './lasers'
 import { emojiRain } from './emojiRain'
@@ -69,7 +69,7 @@ export function celebrateCard({ style, emoji, pattern }: Celebration) {
   if (style === 'bravas') return bravas({ cubes: 28, overMs: 400, minSize: 26, maxSize: 40, sauces: 1, holdMs: 700 })
   if (style === 'knitting') return knitting({ scarves: 1, cols: 10, rows: pattern ? 24 : 22, knitMs: 1600, colors: YARN, pattern, holdMs: 700 })
   if (style === 'tofu') return tofu({ blocks: 7, overMs: 500, minSize: 60, maxSize: 95, hops: 2, holdMs: 300 })
-  confetti({ ...base, particleCount: 80, spread: 70, startVelocity: 40, origin: { y: 0.35 }, colors: PARTY })
+  confettiAt()({ ...base, particleCount: 80, spread: 70, startVelocity: 40, origin: { y: 0.35 }, colors: PARTY })
 }
 
 /** Exact year: a shower of gold coins from both sides. */
@@ -85,6 +85,8 @@ export function celebrateExact({ style, emoji, pattern }: Celebration) {
   if (style === 'knitting' && pattern) return knitting({ scarves: 2, cols: 10, rows: 24, knitMs: 2300, colors: YARN, pattern, holdMs: 1100 })
   if (style === 'knitting') return knitting({ scarves: 1, cols: 15, rows: 24, knitMs: 2300, colors: ['#ffcc33', '#f6ead2'], heart: true, holdMs: 1100 })
   if (style === 'tofu') return tofu({ blocks: 14, overMs: 800, minSize: 70, maxSize: 130, hops: 3, holdMs: 400 })
+  // Turned the way the screen faces now, the later bursts too.
+  const confetti = confettiAt()
   const shot = (x: number, angle: number) =>
     confetti({
       ...base,
@@ -110,6 +112,7 @@ export function celebrateWin({ style, emoji, pattern }: Celebration) {
   if (style === 'bravas') return bravas({ cubes: 110, overMs: 2000, minSize: 28, maxSize: 58, sauces: 2, pimenton: true, holdMs: 1500 })
   if (style === 'knitting') return knitting({ scarves: 3, cols: pattern ? 10 : 8, rows: 36, knitMs: 4000, colors: YARN, pattern, holdMs: 1500 })
   if (style === 'tofu') return tofu({ blocks: 32, overMs: 2500, minSize: 50, maxSize: 140, hops: 4, holdMs: 600 })
+  const confetti = confettiAt()
   const end = Date.now() + 3500
   const burst = () => {
     confetti({

@@ -1,3 +1,4 @@
+import { fitOverlay, overlayCanvas } from './effectAngle'
 /**
  * Real fireworks on a full-screen canvas: rockets with a trail climb from the
  * bottom, burst into glowing sparks that slow down, fall and crackle out.
@@ -46,10 +47,7 @@ export function fireworks(options: FireworksOptions) {
   if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
   // One canvas at a time; a new show joins the one already running.
   if (active) return active.add(options)
-  const canvas = document.createElement('canvas')
-  canvas.setAttribute('aria-hidden', 'true')
-  Object.assign(canvas.style, { position: 'fixed', inset: '0', width: '100%', height: '100%', pointerEvents: 'none', zIndex: '50' })
-  document.body.appendChild(canvas)
+  const canvas = overlayCanvas()
   const ctx = canvas.getContext('2d')
   if (!ctx) return canvas.remove()
 
@@ -57,10 +55,7 @@ export function fireworks(options: FireworksOptions) {
   let h = 0
   const resize = () => {
     const dpr = Math.min(window.devicePixelRatio || 1, 2)
-    w = window.innerWidth
-    h = window.innerHeight
-    canvas.width = w * dpr
-    canvas.height = h * dpr
+    ;({ w, h } = fitOverlay(canvas, dpr))
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
   }
   resize()

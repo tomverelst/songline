@@ -35,6 +35,7 @@ import { SeatingPicker } from '../components/SeatingPicker'
 import { CardArtContext } from '../components/cardArt'
 import { requestMotionAccess, shortestTurn, useDeviceTurn, useScreenAngle } from '../motion'
 import { useTurnSession } from './useTurnSession'
+import { setEffectAngle } from '../effectAngle'
 
 interface Props {
   game: GameState
@@ -71,18 +72,6 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
   const playerColor = teamColor(player, game.currentPlayer)
   const playerVars = teamVars(playerColor)
 
-  // Party when the answer is revealed (once per song, not on later corrections).
-  const celebrated = useRef<string | null>(null)
-  const revealedSong = turn?.phase === 'reveal' ? turn.song.id : null
-  const wonCard = !!turn?.result?.placementCorrect
-  const exactHit = !!turn?.result?.exactYear
-  const style = celebrationOf(player)
-  useEffect(() => {
-    if (!revealedSong || celebrated.current === revealedSong) return
-    celebrated.current = revealedSong
-    if (exactHit) celebrateExact(style)
-    else if (wonCard) celebrateCard(style)
-  }, [revealedSong, wonCard, exactHit, style])
 
   const clock = session.timeLeft !== undefined && (
     <GuessTimer ms={session.timeLeft} totalMs={timeLimitMs(game.settings)} running={session.clockRunning} />
@@ -120,6 +109,22 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
   // it faces the player's side of the table whatever the screen.
   if (angle % 180 !== 0 && !(tablePhase && tableViewEnabled)) angle = flipAngle
   const turned = angle % 180 !== 0
+
+  // Party when the answer is revealed (once per song, not on later corrections).
+  const celebrated = useRef<string | null>(null)
+  const revealedSong = turn?.phase === 'reveal' ? turn.song.id : null
+  const wonCard = !!turn?.result?.placementCorrect
+  const exactHit = !!turn?.result?.exactYear
+  const style = celebrationOf(player)
+  useEffect(() => {
+    if (!revealedSong || celebrated.current === revealedSong) return
+    celebrated.current = revealedSong
+    // Turned the way the screen faces, so it rains down towards the player.
+    setEffectAngle(angle)
+    if (exactHit) celebrateExact(style)
+    else if (wonCard) celebrateCard(style)
+    setEffectAngle(0)
+  }, [revealedSong, wonCard, exactHit, style, angle])
   // The frame turns the shortest way round to it.
   const [shownAngle, setShownAngle] = useState(angle)
   const nextShownAngle = shortestTurn(shownAngle, angle)

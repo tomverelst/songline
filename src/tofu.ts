@@ -1,3 +1,4 @@
+import { fitOverlay, overlayCanvas } from './effectAngle'
 /**
  * Happy tofu on a full-screen canvas: wobbly white blocks of tofu with little
  * faces drop in from the top, land with a squish, jiggle like jelly and hop
@@ -51,10 +52,7 @@ export function tofu(options: TofuOptions) {
   if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
   if (active) return active.add(options)
 
-  const canvas = document.createElement('canvas')
-  canvas.setAttribute('aria-hidden', 'true')
-  Object.assign(canvas.style, { position: 'fixed', inset: '0', width: '100%', height: '100%', pointerEvents: 'none', zIndex: '50' })
-  document.body.appendChild(canvas)
+  const canvas = overlayCanvas()
   const ctx = canvas.getContext('2d')
   if (!ctx) return canvas.remove()
 
@@ -62,10 +60,7 @@ export function tofu(options: TofuOptions) {
   let h = 0
   const resize = () => {
     const dpr = Math.min(window.devicePixelRatio || 1, 2)
-    w = window.innerWidth
-    h = window.innerHeight
-    canvas.width = w * dpr
-    canvas.height = h * dpr
+    ;({ w, h } = fitOverlay(canvas, dpr))
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
   }
   resize()

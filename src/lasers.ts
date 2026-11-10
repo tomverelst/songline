@@ -1,3 +1,4 @@
+import { fitOverlay, overlayCanvas } from './effectAngle'
 /**
  * A techno-club laser show on a full-screen canvas: the page dims, and laser
  * heads all round the edge throw beams to a 128 BPM beat. Every head picks
@@ -40,10 +41,7 @@ export function lasers(options: LaserOptions) {
   // A show that's already on just runs longer (and gets bigger if asked).
   if (active) return active.extend(options)
 
-  const canvas = document.createElement('canvas')
-  canvas.setAttribute('aria-hidden', 'true')
-  Object.assign(canvas.style, { position: 'fixed', inset: '0', width: '100%', height: '100%', pointerEvents: 'none', zIndex: '50' })
-  document.body.appendChild(canvas)
+  const canvas = overlayCanvas()
   const ctx = canvas.getContext('2d')
   if (!ctx) return canvas.remove()
 
@@ -51,10 +49,7 @@ export function lasers(options: LaserOptions) {
   let h = 0
   const resize = () => {
     const dpr = Math.min(window.devicePixelRatio || 1, 2)
-    w = window.innerWidth
-    h = window.innerHeight
-    canvas.width = w * dpr
-    canvas.height = h * dpr
+    ;({ w, h } = fitOverlay(canvas, dpr))
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
   }
   resize()

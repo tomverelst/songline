@@ -25,6 +25,7 @@ import { cx } from '../components/classes'
 import { teamColor, teamVars, type TeamColor } from '../game/teams'
 import { ScreenRotation } from '../components/rotation'
 import { useTurnSession } from './useTurnSession'
+import { setEffectAngle } from '../effectAngle'
 
 interface Props {
   game: GameState
@@ -84,7 +85,8 @@ export function BattleScreen({ game, onChange, onQuit }: Props) {
       (turn?.guesses ?? []).flatMap((g, i) => {
         const kind = g.result?.exactYear ? 'exact' : g.result?.placementCorrect ? 'card' : null
         if (!kind) return []
-        const party = { kind, ...celebrationOf(game.players[i]) }
+        // Face to face, the top side's party is upside down, like their half.
+        const party = { kind, ...celebrationOf(game.players[i]), angle: i === 1 && faceToFace ? 180 : 0 }
         return [[`${party.kind} ${party.style} ${party.emoji} ${party.pattern ?? ''}`, party] as const]
       }),
     ).values(),
@@ -92,10 +94,12 @@ export function BattleScreen({ game, onChange, onQuit }: Props) {
   useEffect(() => {
     if (!revealedSong || celebrated.current === revealedSong) return
     celebrated.current = revealedSong
-    for (const { kind, ...celebration } of JSON.parse(parties) as ({ kind: 'exact' | 'card' } & Celebration)[]) {
+    for (const { kind, angle, ...celebration } of JSON.parse(parties) as ({ kind: 'exact' | 'card'; angle: number } & Celebration)[]) {
+      setEffectAngle(angle)
       if (kind === 'exact') celebrateExact(celebration)
       else celebrateCard(celebration)
     }
+    setEffectAngle(0)
   }, [revealedSong, parties])
 
   const menuButton = (
