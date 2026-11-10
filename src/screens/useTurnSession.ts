@@ -3,6 +3,7 @@ import type { GameState, Song } from '../game/types'
 import { playingDeck, type Deck } from '../game/deck'
 import {
   blockedYears,
+  deckOwner,
   drawSong,
   isDoubleYear,
   redrawSong,
@@ -61,13 +62,20 @@ export function useTurnSession({ game, onChange, reveal, endTurn, holdAutoplay }
   // The game's deck as a stream of cards: original years are looked up a few
   // cards ahead in the background, and no double years holds songs back.
   // Built once from what's left of the deck; every draw goes through it.
-  const [{ deck, lookup }] = useState(() =>
-    playingDeck(game.deck, {
-      lookUp: cachedOriginalYear,
-      blockedYears: () => blockedYears(gameRef.current),
-      yearRange: game.settings.yearRange,
-    }),
-  )
+  // With a playlist per player, each playlist has its own.
+  const [decks] = useState(() => {
+    const build = (songs: Song[]) =>
+      playingDeck(songs, {
+        lookUp: cachedOriginalYear,
+        blockedYears: () => blockedYears(gameRef.current),
+        yearRange: game.settings.yearRange,
+      })
+    if (!game.settings.playlistPerPlayer) return new Map([[SHARED, build(game.deck)]])
+    return new Map(Object.entries(game.playlistDecks ?? {}).map(([id, songs]) => [id, build(songs)]))
+  })
+  /** The deck the next (or current) mystery song comes from. */
+  const deckFor = (g: GameState) => decks.get(deckOwner(g)?.playlist?.id ?? SHARED) ?? decks.values().next().value!
+  const { lookup } = deckFor(game)
 
   // Autoplay: start the mystery song by itself a few seconds after the
   // "whose turn" screen appears.
@@ -160,7 +168,7 @@ export function useTurnSession({ game, onChange, reveal, endTurn, holdAutoplay }
 
   /** Draws the next song from the deck and plays it. Never waits. */
   function drawNext(draw: (game: GameState, random: () => number, deck: Deck) => GameState) {
-    const next = draw(game, Math.random, deck)
+    const next = draw(game, Math.random, deckFor(game).deck)
     onChange(next)
     if (next.turn) play(next.turn.song.uri, next.turn.startMs)
   }
@@ -278,5 +286,7 @@ export function scrollToTop() {
   document.querySelector('[data-scroller]')?.scrollTo(0, 0)
 }
 
+/** The key of the one deck when everyone plays the same playlist. */
+const SHARED = ''
 const YEAR_CHECK_WAIT_MS = 4000
 const AUTOPLAY_MS = 2500

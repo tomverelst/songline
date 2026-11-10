@@ -193,34 +193,80 @@ export function slotForYear(timeline: Song[], year: number): Slot {
  * Starts a game: shuffles the playlist (keeping the chosen years, spread over
  * the decades when wanted) and deals everyone a starting card. Songs in
  * `alreadyPlayed` come up (and are dealt) only once the fresh ones run out.
+ *
+ * With a playlist per player, `songs` holds each playlist's songs by id and
+ * `playlists` each player's playlist (by the same index as `names`): every
+ * playlist gets its own deck, shared by the players who picked it, and
+ * everyone's starting card comes from their own playlist.
  */
 export function newGame(
   names: string[],
   settings: GameSettings,
-  songs: Song[],
+  songs: Song[] | Record<string, Song[]>,
   random: () => number = Math.random,
   alreadyPlayed: ReadonlySet<string> = new Set(),
+  playlists?: { id: string; name: string }[],
 ): GameState {
-  const deck = newGameDeck(songs, {
-    yearRange: settings.yearRange,
-    spreadDecades: settings.spreadDecades,
-    heard: alreadyPlayed,
-    random,
-  })
+  const deckFor = (songs: Song[]) =>
+    newGameDeck(songs, {
+      yearRange: settings.yearRange,
+      spreadDecades: settings.spreadDecades,
+      heard: alreadyPlayed,
+      random,
+    })
+  const base = { status: 'playing' as const, settings, currentPlayer: 0, round: 1 }
+  if (Array.isArray(songs)) {
+    const deck = deckFor(songs)
+    const players: Player[] = names.map((name, i) => ({ id: `p${i}`, name, timeline: [deck.draw()!], bonus: 0 }))
+    return { ...base, players, deck: deck.remaining() }
+  }
+  const decks = new Map(Object.entries(songs).map(([id, list]) => [id, deckFor(list)]))
   const players: Player[] = names.map((name, i) => ({
     id: `p${i}`,
     name,
-    timeline: [deck.draw()!],
+    playlist: playlists![i],
+    timeline: [decks.get(playlists![i].id)!.draw()!],
     bonus: 0,
   }))
-  return {
-    status: 'playing',
-    settings,
-    players,
-    currentPlayer: 0,
-    round: 1,
-    deck: deck.remaining(),
-  }
+  const playlistDecks = Object.fromEntries([...decks].map(([id, deck]) => [id, deck.remaining()]))
+  return { ...base, settings: { ...settings, playlistPerPlayer: true }, players, deck: [], playlistDecks }
+}
+
+// ---------- Where the songs come from ----------
+
+/**
+ * With a playlist per player, the player whose playlist the next (or
+ * current) mystery song comes from: whoever guesses, or in Battle each side
+ * in turn, round by round. Undefined when everyone plays one playlist.
+ */
+export function deckOwner(state: Pick<GameState, 'settings' | 'players' | 'currentPlayer' | 'round'>): Player | undefined {
+  if (!state.settings.playlistPerPlayer) return undefined
+  const index = state.settings.mode === 'battle' ? (state.round - 1) % state.players.length : state.currentPlayer
+  return state.players[index]
+}
+
+/** The songs still to come for the next (or current) mystery song. */
+export function songsLeft(state: GameState): Song[] {
+  const playlist = deckOwner(state)?.playlist
+  return playlist ? (state.playlistDecks?.[playlist.id] ?? []) : state.deck
+}
+
+/** The game with what's left of the deck the next (or current) mystery song comes from. */
+export function withSongsLeft(state: GameState, songs: Song[]): GameState {
+  const playlist = deckOwner(state)?.playlist
+  if (!playlist) return { ...state, deck: songs }
+  return { ...state, playlistDecks: { ...state.playlistDecks, [playlist.id]: songs } }
+}
+
+/** Every song still to come, in all the game's playlists together. */
+export function totalSongsLeft(state: GameState): number {
+  if (!state.settings.playlistPerPlayer) return state.deck.length
+  return Object.values(state.playlistDecks ?? {}).reduce((n, songs) => n + songs.length, 0)
+}
+
+/** The playlist the current mystery song comes from. */
+export function playlistIdOf(state: GameState): string {
+  return deckOwner(state)?.playlist?.id ?? state.settings.playlistId
 }
 
 /**
@@ -241,7 +287,7 @@ export function isDoubleYear(state: GameState): boolean {
   const turn = state.turn
   if (!turn || turn.phase !== 'guess') return false
   const blocked = blockedYears(state)
-  return blocked.has(turn.song.year) && state.deck.some((s) => !blocked.has(s.year))
+  return blocked.has(turn.song.year) && songsLeft(state).some((s) => !blocked.has(s.year))
 }
 
 /**
@@ -249,7 +295,7 @@ export function isDoubleYear(state: GameState): boolean {
  * of the game's songs, in the chosen years, with no double years when chosen.
  */
 export function deckOf(state: GameState): Deck {
-  const inRange = new YearRangeDeck(new SourceDeck(state.deck), state.settings.yearRange ?? {})
+  const inRange = new YearRangeDeck(new SourceDeck(songsLeft(state)), state.settings.yearRange ?? {})
   return new AvoidDoubleYearsDeck(inRange, () => blockedYears(state))
 }
 
@@ -259,13 +305,13 @@ export function deckOf(state: GameState): Deck {
  */
 export function drawSong(state: GameState, random: () => number = Math.random, deck: Deck = deckOf(state)): GameState {
   const song = deck.draw()
-  if (!song) return finish({ ...state, deck: [] })
+  if (!song) return finish(withSongsLeft(state, []))
   const turn: Turn = { song, phase: 'guess' }
   if (state.settings.randomStart) turn.startMs = randomStartMs(song.durationMs, state.settings.guessTimeLimit, random)
   const limitMs = timeLimitMs(state.settings)
   if (limitMs) turn.clock = { leftMs: limitMs }
   if (state.settings.mode === 'battle') turn.guesses = state.players.map(() => ({}))
-  return { ...state, deck: deck.remaining(), turn }
+  return { ...withSongsLeft(state, deck.remaining()), turn }
 }
 
 /** Never start in the first bit of a song (intros all sound alike)… */
@@ -475,9 +521,9 @@ export function endTurn(state: GameState): GameState {
   if (score(players[state.currentPlayer], state.settings) >= state.settings.targetPoints) {
     return { ...next, status: 'finished', winnerIds: [players[state.currentPlayer].id] }
   }
-  if (next.deck.length === 0) return finish(next)
   const nextPlayer = (state.currentPlayer + 1) % players.length
-  return { ...next, currentPlayer: nextPlayer, round: nextPlayer === 0 ? state.round + 1 : state.round }
+  const after = { ...next, currentPlayer: nextPlayer, round: nextPlayer === 0 ? state.round + 1 : state.round }
+  return songsLeft(after).length === 0 ? finish(next) : after
 }
 
 /**

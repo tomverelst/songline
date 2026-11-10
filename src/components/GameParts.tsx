@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import type { GameState, Song } from '../game/types'
-import { finish } from '../game/logic'
+import { deckOwner, finish, totalSongsLeft } from '../game/logic'
 import { useYearEditor } from './YearEdit'
 import { DevicePicker } from './DevicePicker'
 import { Coin } from './Coins'
@@ -165,9 +165,18 @@ export function GameMenu({
             ✕
           </IconButton>
         </div>
-        <Muted>
-          Playlist: {game.settings.playlistName} · {game.deck.length} songs left
-        </Muted>
+        {game.settings.playlistPerPlayer ? (
+          <Muted>
+            Songs from {game.settings.mode === 'battle' ? 'each side’s playlist in turn' : 'the playlist of whoever guesses'}:{' '}
+            {game.players.map((p) => `${p.name}: ${p.playlist?.name ?? '?'}`).join(' · ')} ·{' '}
+            {totalSongsLeft(game)} songs left
+            {deckOwner(game) && ` · now playing from ${deckOwner(game)!.name}’s`}
+          </Muted>
+        ) : (
+          <Muted>
+            Playlist: {game.settings.playlistName} · {game.deck.length} songs left
+          </Muted>
+        )}
         <DevicePicker deviceId={deviceId} onChange={onDeviceChange} />
         {canFullscreen() ? (
           <Switch

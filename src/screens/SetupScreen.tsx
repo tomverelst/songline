@@ -81,6 +81,10 @@ interface SetupDraft {
   faceToFace: boolean
   avoidPlayedSongs: boolean
   playlist: PlaylistSummary | null
+  /** Each player (or team) picks their own playlist; the mystery songs come from whoever guesses. */
+  playlistPerPlayer?: boolean
+  /** With a playlist per player: the ones picked, by player (profileKey); the others play `playlist`. */
+  playerPlaylists?: Record<string, PlaylistSummary>
 }
 
 const DEFAULT_DRAFT: SetupDraft = {
@@ -165,7 +169,13 @@ export function SetupScreen({ onStart, initialError }: Props) {
   const seatedEntries = entries.map((e, n) => ({ ...e, seat: draft.seats?.[e.index] ?? defaultSeats(entries.length)[n] }))
   const names = entries.map((e) => e.name)
   const enoughPlayers = battle ? names.length === BATTLE_PLAYERS : names.length >= 1
-  const canStart = enoughPlayers && !!draft.playlist && loggedIn && !loading
+  // Each player's playlist: their own with a playlist per player, else the game's.
+  const playlistOf = (name: string): PlaylistSummary | null =>
+    (draft.playlistPerPlayer && draft.playerPlaylists?.[profileKey(name)]) || draft.playlist
+  const playlists = names.map(playlistOf)
+  const everyoneHasPlaylist = names.length > 0 && playlists.every((p) => p !== null)
+  const canStart = enoughPlayers && everyoneHasPlaylist && loggedIn && !loading
+  const [pickingFor, setPickingFor] = useState<string | null>(null)
 
   // Each start gets an id; cancelling bumps it so late results are ignored.
   const run = useRef(0)
@@ -184,34 +194,47 @@ export function SetupScreen({ onStart, initialError }: Props) {
   async function start() {
     requestMotionAccess()
     enterFullscreen()
-    if (!draft.playlist) return
+    if (!everyoneHasPlaylist) return
     const id = ++run.current
     const alive = () => run.current === id
-    const playlistName = draft.playlist.name
+    const chosen = playlists as PlaylistSummary[]
+    // The playlists to load, each once, with how many players play it.
+    const distinct = [...new Map(chosen.map((p) => [p.id, p])).values()]
+    const perPlayer = distinct.length > 1
+    const playlistName = perPlayer ? `${distinct.length} playlists` : chosen[0].name
+    const usersOf = (playlistId: string) => chosen.filter((p) => p.id === playlistId).length
     // The players' colours, for the shuffling cards and their first cards.
     const colors = entries.map((e) => teamColorById(e.color) ?? colorAt(e.index))
     setError(null)
     setLoading({ phase: 'playlist', playlistName, art: [], checks: [], colors })
     try {
-      const songs = await getPlaylistSongs(draft.playlist.id)
+      const loaded = await Promise.all(distinct.map((p) => getPlaylistSongs(p.id)))
       if (!alive()) return
-      if (songs.length < names.length + 1) {
-        throw new Error(`This playlist only has ${songs.length} usable songs — pick a bigger one.`)
-      }
-      const inRange = songs.filter((s) => inYearRange(s.year, yearRange)).length
-      if (inRange < names.length + 1) {
-        throw new Error(
-          `Only ${inRange} ${inRange === 1 ? 'song' : 'songs'} in this playlist ${inRange === 1 ? 'is' : 'are'} ${decadesLabel(draft.decadeFrom, draft.decadeTo)}. Pick more decades or another playlist.`,
-        )
-      }
-      if (yearLimited) {
-        const years = new Set(songs.filter((s) => inYearRange(s.year, yearRange)).map((s) => s.year)).size
-        if (years < targetPoints) {
+      const songsOf = Object.fromEntries(distinct.map((p, i) => [p.id, loaded[i]]))
+      for (const playlist of distinct) {
+        const songs = songsOf[playlist.id]
+        // Each player playing it gets a starting card, and one is left to guess.
+        const needed = usersOf(playlist.id) + 1
+        const which = perPlayer ? `“${playlist.name}”` : 'This playlist'
+        if (songs.length < needed) {
+          throw new Error(`${which} only has ${songs.length} usable songs — pick a bigger one.`)
+        }
+        const inRange = songs.filter((s) => inYearRange(s.year, yearRange)).length
+        if (inRange < needed) {
           throw new Error(
-            `With no double years, nobody can reach ${targetPoints} points: the songs in this playlist${yearRange ? ` ${decadesLabel(draft.decadeFrom, draft.decadeTo)}` : ''} are from only ${years} different years. Lower the points to win to ${years}, turn off No double years or pick another playlist.`,
+            `Only ${inRange} ${inRange === 1 ? 'song' : 'songs'} in ${perPlayer ? which : 'this playlist'} ${inRange === 1 ? 'is' : 'are'} ${decadesLabel(draft.decadeFrom, draft.decadeTo)}. Pick more decades or another playlist.`,
           )
         }
+        if (yearLimited) {
+          const years = new Set(songs.filter((s) => inYearRange(s.year, yearRange)).map((s) => s.year)).size
+          if (years < targetPoints) {
+            throw new Error(
+              `With no double years, nobody can reach ${targetPoints} points: the songs in ${perPlayer ? which : 'this playlist'}${yearRange ? ` ${decadesLabel(draft.decadeFrom, draft.decadeTo)}` : ''} are from only ${years} different years. Lower the points to win to ${years}, turn off No double years or pick another playlist.`,
+            )
+          }
+        }
       }
+      const songs = loaded.flat()
       const art = shuffle(songs.flatMap((s) => (s.albumArt ? [s.albumArt] : []))).slice(0, 5)
       setLoading({ phase: 'shuffle', playlistName, songCount: songs.length, art, checks: [], colors })
       await sleep(SHUFFLE_SHOW_MS)
@@ -233,12 +256,13 @@ export function SetupScreen({ onStart, initialError }: Props) {
           ...(yearRange && { yearRange }),
           spreadDecades: draft.spreadDecades,
           ...(battle && { faceToFace: draft.faceToFace }),
-          playlistId: draft.playlist.id,
-          playlistName,
+          playlistId: chosen[0].id,
+          playlistName: chosen[0].name,
         },
-        songs,
+        perPlayer ? songsOf : songs,
         Math.random,
         draft.avoidPlayedSongs ? playedSongIds() : new Set(),
+        perPlayer ? chosen.map((p) => ({ id: p.id, name: p.name })) : undefined,
       )
       game = {
         ...game,
@@ -563,6 +587,63 @@ export function SetupScreen({ onStart, initialError }: Props) {
         ) : (
           <>
             <PlaylistPicker selected={draft.playlist} onSelect={(playlist) => update({ playlist })} onError={setError} />
+            <Switch
+              title={battle ? 'A playlist per side' : 'A playlist per player'}
+              description={
+                battle
+                  ? 'Each side picks their own playlist; the mystery songs come from each side’s playlist in turn.'
+                  : 'Each player (or team) picks their own playlist, and guesses songs from it. Players without one play the playlist above.'
+              }
+              checked={!!draft.playlistPerPlayer}
+              onChange={(playlistPerPlayer) => update({ playlistPerPlayer })}
+            />
+            {draft.playlistPerPlayer && (
+              <div className="flex flex-col gap-1.5">
+                {entries.length === 0 && <Muted>Pick who’s playing first.</Muted>}
+                {entries.map((e) => {
+                  const key = profileKey(e.name)
+                  const own = draft.playerPlaylists?.[key]
+                  const color = teamColorById(e.color) ?? colorAt(e.index)
+                  const setOwn = (playlist: PlaylistSummary | undefined) => {
+                    const rest = Object.fromEntries(Object.entries(draft.playerPlaylists ?? {}).filter(([k]) => k !== key))
+                    update({ playerPlaylists: playlist ? { ...rest, [key]: playlist } : rest })
+                  }
+                  return (
+                    <div key={key} className="flex flex-col gap-2 rounded-xl border border-line bg-bg p-2.5">
+                      <div className="flex items-center gap-3">
+                        <Artwork src={(own ?? draft.playlist)?.image} className="size-10 rounded-md" />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate font-semibold" style={{ color: color.hex }}>
+                            {e.name}
+                          </div>
+                          <div className="truncate text-sm text-muted">
+                            {own ? own.name : draft.playlist ? `${draft.playlist.name} (above)` : 'No playlist yet'}
+                          </div>
+                        </div>
+                        {own && (
+                          <IconButton aria-label={`Use the playlist above for ${e.name}`} onClick={() => setOwn(undefined)}>
+                            ✕
+                          </IconButton>
+                        )}
+                        <Button onClick={() => setPickingFor(pickingFor === key ? null : key)}>
+                          {pickingFor === key ? 'Done' : own ? 'Change' : 'Pick'}
+                        </Button>
+                      </div>
+                      {pickingFor === key && (
+                        <PlaylistPicker
+                          selected={own ?? null}
+                          onSelect={(playlist) => {
+                            setOwn(playlist)
+                            setPickingFor(null)
+                          }}
+                          onError={setError}
+                        />
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
             <DevicePicker deviceId={deviceId} onChange={setDeviceId} />
             <LinkButton
               onClick={() => {

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { BattleGuess, GameSettings, GameState, Player, TurnResult } from '../game/types'
-import { isValidYear, overwriteCardYear, overwriteRevealedYear, score, timeLimitMs } from '../game/logic'
+import { isValidYear, overwriteCardYear, overwriteRevealedYear, playlistIdOf, score, timeLimitMs } from '../game/logic'
 import {
   allLockedIn,
   endBattleTurn,
@@ -355,7 +355,7 @@ function BattleReveal({
       >
         <div className="relative flex-none">
           <Artwork src={turn.song.albumArt} className="size-28 rounded-xl text-4xl shadow-[0_12px_32px_rgb(0_0_0/0.5)]" />
-          <LikeButton song={turn.song} playlistId={game.settings.playlistId} onArt iconOnly className="absolute -right-2 -bottom-2" />
+          <LikeButton song={turn.song} playlistId={playlistIdOf(game)} onArt iconOnly className="absolute -right-2 -bottom-2" />
         </div>
         <div className="flex min-w-0 flex-1 flex-col items-start">
           <RevealYear key={turn.song.id} song={turn.song} exact={anyExact} onSave={onEditYear} />

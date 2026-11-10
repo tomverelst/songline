@@ -4,7 +4,7 @@
  * right wins a copy of the card; but when both picked the same year, only
  * the side that locked it in first does.
  */
-import { finish, firstToLockWins, insertSorted, isPlacementCorrect, isValidYear, ranking, slotForYear, score } from './logic'
+import { finish, firstToLockWins, insertSorted, isPlacementCorrect, isValidYear, ranking, slotForYear, score, songsLeft } from './logic'
 import type { BattleGuess, GameState, Player, TurnResult } from './types'
 
 export const BATTLE_PLAYERS = 2
@@ -107,6 +107,6 @@ export function endBattleTurn(state: GameState): GameState {
       score(p, state.settings) === score(best, state.settings) && p.bonus === best.bonus
     return { ...next, status: 'finished', winnerIds: reached.filter(level).map((p) => p.id) }
   }
-  if (next.deck.length === 0) return finish(next)
-  return { ...next, round: state.round + 1 }
+  const after = { ...next, round: state.round + 1 }
+  return songsLeft(after).length === 0 ? finish(next) : after
 }

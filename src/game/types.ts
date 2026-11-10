@@ -47,6 +47,8 @@ export interface Player {
   color?: string
   /** Where they sit around the phone, when the screen turns to each player's side. */
   seat?: Seat
+  /** With a playlist per player: the playlist their mystery songs come from. */
+  playlist?: { id: string; name: string }
   timeline: Song[]
   /** Bonus coins: exact year, title and artist. */
   bonus: number
@@ -138,6 +140,12 @@ export interface GameSettings {
   spreadDecades?: boolean
   /** Battle: the second player's half of the screen is upside down. Unset means on. */
   faceToFace?: boolean
+  /**
+   * Each player (or team) has their own playlist (Player.playlist), and the
+   * mystery songs come from the playlist of whoever guesses (Battle: each
+   * side's in turn). playlistId and playlistName are then the first player's.
+   */
+  playlistPerPlayer?: boolean
   playlistId: string
   playlistName: string
 }
@@ -155,8 +163,10 @@ export interface GameState {
   players: Player[]
   currentPlayer: number
   round: number
-  /** The songs still to come, in the order they'll be drawn. */
+  /** The songs still to come, in the order they'll be drawn (empty with a playlist per player). */
   deck: Song[]
+  /** With a playlist per player: the songs still to come of each playlist, by playlist id. */
+  playlistDecks?: Record<string, Song[]>
   turn?: Turn
   winnerIds?: string[]
   /** Every song revealed this game, in the order they came up. */

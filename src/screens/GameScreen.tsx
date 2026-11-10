@@ -9,6 +9,7 @@ import {
   isValidYear,
   overwriteCardYear,
   overwriteRevealedYear,
+  playlistIdOf,
   reveal,
   score,
   slotForYear,
@@ -251,7 +252,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
           >
             <div className="relative">
               <Artwork src={turn.song.albumArt} className="size-45 rounded-xl text-5xl shadow-[0_12px_32px_rgb(0_0_0/0.5)] tablet:size-36" />
-              <LikeButton song={turn.song} playlistId={game.settings.playlistId} onArt className="absolute right-2 bottom-2" />
+              <LikeButton song={turn.song} playlistId={playlistIdOf(game)} onArt className="absolute right-2 bottom-2" />
             </div>
             <RevealYear key={turn.song.id} song={turn.song} exact={turn.result.exactYear} onSave={overwriteYear} />
             <div className="text-xl font-bold [overflow-wrap:anywhere]">{turn.song.title}</div>
@@ -373,7 +374,7 @@ export function GameScreen({ game, onChange, onQuit }: Props) {
         yearSource={<YearSource song={turn.song} />}
         onEditYear={overwriteYear}
         likeButton={
-          <LikeButton song={turn.song} playlistId={game.settings.playlistId} onArt iconOnly className="absolute -right-2 -bottom-2" />
+          <LikeButton song={turn.song} playlistId={playlistIdOf(game)} onArt iconOnly className="absolute -right-2 -bottom-2" />
         }
         points={[
           { label: 'Card', value: turn.result.placementCorrect, onChange: (placementCorrect) => updateResult({ placementCorrect }) },

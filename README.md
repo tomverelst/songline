@@ -74,6 +74,12 @@ in their personal timeline of songs.
 - **Spread the years**: deals by picking a decade at random, then a song from
   it, so every decade in the playlist comes up about equally often. A playlist
   that's mostly 80s still gives you the 60s and the 2000s regularly.
+- **A playlist per player** (under Spotify): each player (or team) picks their
+  own playlist for this game, and their starting card and mystery songs come
+  from it; anyone who doesn't pick one plays the main playlist. In Battle, the
+  songs come from each side's playlist in turn. Players on the same playlist
+  share its songs, so nobody gets a card twice from it. The game ends when the
+  playlist of whoever is up next runs out.
 - **Advanced options** → **Coins count as points**: makes coins count towards
   the target as well, so a perfect turn is worth 4 points.
 - **Advanced options** → **Autoplay** (on by default): the "whose turn" screen
