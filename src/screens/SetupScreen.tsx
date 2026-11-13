@@ -43,6 +43,7 @@ import {
 import { cx } from '../components/classes'
 import { requestMotionAccess } from '../motion'
 import { enterFullscreen } from '../fullscreen'
+import { unlockSpeech } from '../speech'
 
 interface SetupDraft {
   names: string[]
@@ -149,6 +150,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
   }
 
   const battle = draft.mode === 'battle'
+  const driver = draft.mode === 'driver'
   // Battle is always two players (or teams); extra names are kept for later.
   const nameFields = battle ? Array.from({ length: BATTLE_PLAYERS }, (_, i) => draft.names[i] ?? '') : draft.names
   const celebrationAt = (i: number): Celebration => ({
@@ -174,7 +176,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
     (draft.playlistPerPlayer && draft.playerPlaylists?.[profileKey(name)]) || draft.playlist
   const playlists = names.map(playlistOf)
   const everyoneHasPlaylist = names.length > 0 && playlists.every((p) => p !== null)
-  const canStart = enoughPlayers && everyoneHasPlaylist && loggedIn && !loading
+  const canStart = (driver ? !!draft.playlist : enoughPlayers && everyoneHasPlaylist) && loggedIn && !loading
   const [pickingFor, setPickingFor] = useState<string | null>(null)
 
   // Each start gets an id; cancelling bumps it so late results are ignored.
@@ -192,6 +194,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
   const targetPoints = Math.min(draft.targetPoints, maxPoints)
 
   async function start() {
+    if (driver) return startDriving()
     requestMotionAccess()
     enterFullscreen()
     if (!everyoneHasPlaylist) return
@@ -315,6 +318,55 @@ export function SetupScreen({ onStart, initialError }: Props) {
     }
   }
 
+  /** Driver mode: no players and no starting cards, just the playlist's songs. */
+  async function startDriving() {
+    const playlist = draft.playlist
+    if (!playlist) return
+    // From the tap, so the year can be said out loud later on (iPhones).
+    unlockSpeech()
+    enterFullscreen()
+    const id = ++run.current
+    const alive = () => run.current === id
+    setError(null)
+    setLoading({ phase: 'playlist', playlistName: playlist.name, art: [], checks: [] })
+    try {
+      const songs = (await getPlaylistSongs(playlist.id)).filter((s) => inYearRange(s.year, yearRange))
+      if (!alive()) return
+      if (!songs.length) {
+        throw new Error(
+          yearRange
+            ? `No songs in this playlist are ${decadesLabel(draft.decadeFrom, draft.decadeTo)}. Pick more decades or another playlist.`
+            : 'This playlist has no songs that can be played.',
+        )
+      }
+      const art = shuffle(songs.flatMap((s) => (s.albumArt ? [s.albumArt] : []))).slice(0, 5)
+      setLoading({ phase: 'shuffle', playlistName: playlist.name, songCount: songs.length, art, checks: [] })
+      await sleep(SHUFFLE_SHOW_MS)
+      if (!alive()) return
+      const game = newGame(
+        [],
+        {
+          mode: 'driver',
+          targetPoints: 0,
+          bonusCountsTowardsGoal: false,
+          ...(yearRange && { yearRange }),
+          spreadDecades: draft.spreadDecades,
+          playlistId: playlist.id,
+          playlistName: playlist.name,
+        },
+        songs,
+        Math.random,
+        draft.avoidPlayedSongs ? playedSongIds() : new Set(),
+      )
+      setLoading(null)
+      onStart(game)
+    } catch (e) {
+      if (!alive()) return
+      setLoading(null)
+      setError((e as Error).message)
+    }
+  }
+
   function cancel() {
     run.current++
     setLoading(null)
@@ -328,68 +380,70 @@ export function SetupScreen({ onStart, initialError }: Props) {
         <p className="text-muted">Guess the year. Build your timeline. First to the target wins.</p>
       </header>
 
-      <Card>
-        <CardTitle>Who’s playing?</CardTitle>
-        <Muted>
-          {battle
-            ? 'Pick two players or teams, one for each side of the phone.'
-            : 'Tap everyone who’s playing, in turn order. ✎ changes a player.'}
-        </Muted>
-        <div className="grid grid-cols-2 gap-x-3.5 gap-y-4 pt-2 pb-1 min-[480px]:grid-cols-3 tablet:grid-cols-4">
-          {roster.map((player) => {
-            const at = nameFields.findIndex((n) => profileKey(n) === profileKey(player.name))
-            return (
-              <PlayerCard
-                key={profileKey(player.name)}
-                player={player}
-                color={at >= 0 ? colorAt(at) : (teamColorById(player.color) ?? TEAM_COLORS[0])}
-                order={at >= 0 ? at + 1 : undefined}
-                onSelect={() => toggle(player.name)}
-                onEdit={() => setEditing(player)}
-              />
-            )
-          })}
-          <button
-            type="button"
-            className="grid aspect-[63/88] w-full place-items-center rounded-[0.9rem] border-2 border-dashed border-line text-muted active:bg-surface-2"
-            onClick={() => setEditing('new')}
-          >
-            <span className="flex flex-col items-center gap-1">
-              <span className="text-3xl leading-none">＋</span>
-              <span className="text-sm font-semibold">New player</span>
-            </span>
-          </button>
-        </div>
-        {editing && (
-          <PlayerEditor
-            player={editing === 'new' ? undefined : editing}
-            onClose={() => setEditing(null)}
-            onSave={(name, profile) => {
-              const before = editing === 'new' ? undefined : editing.name
-              saveProfile(name, profile, Date.now(), before)
-              setRoster(loadRoster())
-              const names = draft.names.filter((n) => n.trim())
-              // A new player is picked straight away; a renamed one keeps their place.
-              pick(
-                before === undefined
-                  ? battle && names.length >= BATTLE_PLAYERS
-                    ? names
-                    : [...names, name]
-                  : names.map((n) => (profileKey(n) === profileKey(before) ? name : n)),
+      {!driver && (
+        <Card>
+          <CardTitle>Who’s playing?</CardTitle>
+          <Muted>
+            {battle
+              ? 'Pick two players or teams, one for each side of the phone.'
+              : 'Tap everyone who’s playing, in turn order. ✎ changes a player.'}
+          </Muted>
+          <div className="grid grid-cols-2 gap-x-3.5 gap-y-4 pt-2 pb-1 min-[480px]:grid-cols-3 tablet:grid-cols-4">
+            {roster.map((player) => {
+              const at = nameFields.findIndex((n) => profileKey(n) === profileKey(player.name))
+              return (
+                <PlayerCard
+                  key={profileKey(player.name)}
+                  player={player}
+                  color={at >= 0 ? colorAt(at) : (teamColorById(player.color) ?? TEAM_COLORS[0])}
+                  order={at >= 0 ? at + 1 : undefined}
+                  onSelect={() => toggle(player.name)}
+                  onEdit={() => setEditing(player)}
+                />
               )
-            }}
-            onDelete={
-              editing === 'new'
-                ? undefined
-                : () => {
-                    deleteProfile(editing.name)
-                    setRoster(loadRoster())
-                    pick(draft.names.filter((n) => n.trim() && profileKey(n) !== profileKey(editing.name)))
-                  }
-            }
-          />
-        )}
-      </Card>
+            })}
+            <button
+              type="button"
+              className="grid aspect-[63/88] w-full place-items-center rounded-[0.9rem] border-2 border-dashed border-line text-muted active:bg-surface-2"
+              onClick={() => setEditing('new')}
+            >
+              <span className="flex flex-col items-center gap-1">
+                <span className="text-3xl leading-none">＋</span>
+                <span className="text-sm font-semibold">New player</span>
+              </span>
+            </button>
+          </div>
+          {editing && (
+            <PlayerEditor
+              player={editing === 'new' ? undefined : editing}
+              onClose={() => setEditing(null)}
+              onSave={(name, profile) => {
+                const before = editing === 'new' ? undefined : editing.name
+                saveProfile(name, profile, Date.now(), before)
+                setRoster(loadRoster())
+                const names = draft.names.filter((n) => n.trim())
+                // A new player is picked straight away; a renamed one keeps their place.
+                pick(
+                  before === undefined
+                    ? battle && names.length >= BATTLE_PLAYERS
+                      ? names
+                      : [...names, name]
+                    : names.map((n) => (profileKey(n) === profileKey(before) ? name : n)),
+                )
+              }}
+              onDelete={
+                editing === 'new'
+                  ? undefined
+                  : () => {
+                      deleteProfile(editing.name)
+                      setRoster(loadRoster())
+                      pick(draft.names.filter((n) => n.trim() && profileKey(n) !== profileKey(editing.name)))
+                    }
+              }
+            />
+          )}
+        </Card>
+      )}
 
       <Card>
         <CardTitle>Game mode</CardTitle>
@@ -402,26 +456,28 @@ export function SetupScreen({ onStart, initialError }: Props) {
           ))}
         </div>
 
-        <h3 className="mt-1 text-[0.95rem] font-bold">Points to win</h3>
-        <div className="flex items-center justify-center gap-6">
-          <IconButton big onClick={() => update({ targetPoints: Math.max(2, targetPoints - 1) })}>
-            −
-          </IconButton>
-          <span className="min-w-[2ch] text-center text-[2.5rem] font-extrabold tabular-nums">{targetPoints}</span>
-          <IconButton
-            big
-            className="disabled:opacity-35"
-            disabled={targetPoints >= maxPoints}
-            onClick={() => update({ targetPoints: Math.min(maxPoints, targetPoints + 1) })}
-          >
-            +
-          </IconButton>
-        </div>
-        {yearLimited && draft.targetPoints >= maxPoints && maxPoints < MAX_POINTS && (
-          <Muted>
-            With no double years, there are only {maxPoints} years {yearRange ? decadesLabel(draft.decadeFrom, draft.decadeTo) : 'to play'}, so{' '}
-            {maxPoints} points at most.
-          </Muted>
+        {!driver && (
+          <>
+            <h3 className="mt-1 text-[0.95rem] font-bold">Points to win</h3>
+            <div className="flex items-center justify-center gap-6">
+              <IconButton big onClick={() => update({ targetPoints: Math.max(2, targetPoints - 1) })}>
+                −
+              </IconButton>
+              <span className="min-w-[2ch] text-center text-[2.5rem] font-extrabold tabular-nums">{targetPoints}</span>
+              <IconButton
+                big
+                className="disabled:opacity-35"
+                disabled={targetPoints >= maxPoints}
+                onClick={() => update({ targetPoints: Math.min(maxPoints, targetPoints + 1) })}
+              >
+                +
+              </IconButton>
+            </div>
+            {yearLimited && draft.targetPoints >= maxPoints && maxPoints < MAX_POINTS && (
+              <Muted>
+                With no double years, there are only {maxPoints} years {yearRange ? decadesLabel(draft.decadeFrom, draft.decadeTo) : 'to play'}, so{' '}
+                {maxPoints} points at most.
+            </Muted>
         )}
         <Muted>
           Every card in your timeline is 1 point; you start with one. The exact year, the title and the artist each
@@ -463,6 +519,14 @@ export function SetupScreen({ onStart, initialError }: Props) {
           checked={draft.noDoubleYears}
           onChange={(noDoubleYears) => update({ noDoubleYears })}
         />
+        </>
+        )}
+        {driver && (
+          <Muted>
+            Put the phone in its holder and drive: nothing needs a tap. Each song plays to the end, its year is
+            shown and said out loud, and a few seconds later the next song starts. The screen stays on.
+          </Muted>
+        )}
 
         <h3 className="mt-1 text-[0.95rem] font-bold">Decades</h3>
         <div className="grid grid-cols-2 gap-2">
@@ -500,25 +564,27 @@ export function SetupScreen({ onStart, initialError }: Props) {
             <span className="mr-2 inline-block transition-transform group-open:rotate-90">▸</span>
             Advanced options
           </summary>
-          <Switch
-            title="Coins count as points"
-            description="Bonus coins also count towards the points to win."
-            checked={draft.bonusCountsTowardsGoal}
-            onChange={(bonusCountsTowardsGoal) => update({ bonusCountsTowardsGoal })}
-          />
-          <Switch
-            title="Autoplay"
-            description="Start the next mystery song by itself 2.5 seconds after showing whose turn it is."
-            checked={draft.autoplay}
-            onChange={(autoplay) => update({ autoplay })}
-          />
-          {battle && (
-            <Switch
-              title="Face each other"
-              description="The top half of the screen is upside down, for players across the table. Off for players side by side."
-              checked={draft.faceToFace}
-              onChange={(faceToFace) => update({ faceToFace })}
-            />
+          {!driver && (
+            <>
+              <Switch
+                title="Coins count as points"
+                description="Bonus coins also count towards the points to win."
+                checked={draft.bonusCountsTowardsGoal}
+                onChange={(bonusCountsTowardsGoal) => update({ bonusCountsTowardsGoal })}
+              />
+              <Switch
+                title="Autoplay"
+                description="Start the next mystery song by itself 2.5 seconds after showing whose turn it is."
+                checked={draft.autoplay}
+                onChange={(autoplay) => update({ autoplay })}
+              />
+              {battle && (
+                <Switch
+                  title="Face each other"
+                  description="The top half of the screen is upside down, for players across the table. Off for players side by side."
+                  checked={draft.faceToFace}
+                  onChange={(faceToFace) => update({ faceToFace })}
+              />
           )}
           {!battle && (
             <Switch
@@ -556,6 +622,8 @@ export function SetupScreen({ onStart, initialError }: Props) {
               }}
             />
           )}
+          </>
+          )}
           <Switch
             title="Avoid songs from earlier games"
             description={
@@ -587,17 +655,19 @@ export function SetupScreen({ onStart, initialError }: Props) {
         ) : (
           <>
             <PlaylistPicker selected={draft.playlist} onSelect={(playlist) => update({ playlist })} onError={setError} />
-            <Switch
-              title={battle ? 'A playlist per side' : 'A playlist per player'}
-              description={
-                battle
-                  ? 'Each side picks their own playlist; the mystery songs come from each side’s playlist in turn.'
-                  : 'Each player (or team) picks their own playlist, and guesses songs from it. Players without one play the playlist above.'
-              }
-              checked={!!draft.playlistPerPlayer}
-              onChange={(playlistPerPlayer) => update({ playlistPerPlayer })}
-            />
-            {draft.playlistPerPlayer && (
+            {!driver && (
+              <Switch
+                title={battle ? 'A playlist per side' : 'A playlist per player'}
+                description={
+                  battle
+                    ? 'Each side picks their own playlist; the mystery songs come from each side’s playlist in turn.'
+                    : 'Each player (or team) picks their own playlist, and guesses songs from it. Players without one play the playlist above.'
+                }
+                checked={!!draft.playlistPerPlayer}
+                onChange={(playlistPerPlayer) => update({ playlistPerPlayer })}
+              />
+            )}
+            {!driver && draft.playlistPerPlayer && (
               <div className="flex flex-col gap-1.5">
                 {entries.length === 0 && <Muted>Pick who’s playing first.</Muted>}
                 {entries.map((e) => {
@@ -663,7 +733,7 @@ export function SetupScreen({ onStart, initialError }: Props) {
 
       <BottomBar>
         <Button variant="primary" block disabled={!canStart} onClick={start}>
-          Start game
+          {driver ? '🚗 Start driving' : 'Start game'}
         </Button>
       </BottomBar>
     </Screen>
@@ -718,6 +788,7 @@ function DecadeStepper({
 const NO_DOUBLE_YEARS: Record<GameMode, string> = {
   standard: 'Never play a song from a year that’s already in your timeline.',
   battle: 'Never play a song from a year that’s already in either timeline.',
+  driver: '',
 }
 const STARTING_YEARS_DEADLINE_MS = 10_000
 /** Let the shuffle animation play for a moment even when loading is quick. */

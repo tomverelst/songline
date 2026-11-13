@@ -110,7 +110,7 @@ export interface GuessClock {
   leftMs: number
 }
 
-export type GameMode = 'standard' | 'battle'
+export type GameMode = 'standard' | 'battle' | 'driver'
 
 export interface GameSettings {
   mode: GameMode
@@ -138,6 +138,8 @@ export interface GameSettings {
   yearRange?: { from?: number; to?: number }
   /** Every decade in the playlist comes up about equally often. */
   spreadDecades?: boolean
+  /** Driver mode: read the year (and the song) out loud when a song ends. Unset means on. */
+  sayYear?: boolean
   /** Battle: the second player's half of the screen is upside down. Unset means on. */
   faceToFace?: boolean
   /**

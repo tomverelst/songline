@@ -1,4 +1,5 @@
 import type { Song } from '../game/types'
+import type { PlayerSnapshot } from '../game/drive'
 import { getAccessToken } from './auth'
 
 const API = 'https://api.spotify.com/v1'
@@ -275,7 +276,12 @@ export async function transferPlayback(deviceId: string) {
   await request('/me/player', { method: 'PUT', body: JSON.stringify({ device_ids: [deviceId], play: false }) })
 }
 
-export async function playSong(uri: string, deviceId?: string, positionMs = 0) {
+/**
+ * Plays one song. `loop` (on by default) repeats it while players think;
+ * off, the song plays once and stops.
+ */
+export async function playSong(uri: string, deviceId?: string, positionMs = 0, loop = true) {
+  const after = () => (loop ? loopTrack(deviceId) : playOnce(deviceId))
   const start = () =>
     request(`/me/player/play${deviceQuery(deviceId)}`, {
       method: 'PUT',
@@ -290,12 +296,28 @@ export async function playSong(uri: string, deviceId?: string, positionMs = 0) {
     // the device by transferring playback to it and try once more.
     if (!(e instanceof SpotifyError) || !(e.status >= 500 || isRestriction(e))) throw e
     await sleep(1000)
-    if (await isPlaying(uri).catch(() => false)) return loopTrack(deviceId)
+    if (await isPlaying(uri).catch(() => false)) return after()
     if (deviceId) await transferPlayback(deviceId).catch(() => {})
     await sleep(1000)
     await start()
   }
-  loopTrack(deviceId)
+  after()
+}
+
+function playOnce(deviceId?: string) {
+  request(`/me/player/repeat?state=off${deviceQuery(deviceId, '&')}`, { method: 'PUT' }).catch(() => {})
+}
+
+/** What the Spotify player is doing right now; null when nothing is playing anywhere. */
+export async function getPlayerSnapshot(): Promise<PlayerSnapshot | null> {
+  const state = await request<(PlaybackState & { item?: { duration_ms?: number } | null }) | undefined>('/me/player')
+  if (!state) return null
+  return {
+    isPlaying: !!state.is_playing,
+    uri: state.item?.uri,
+    progressMs: state.progress_ms ?? 0,
+    durationMs: state.item?.duration_ms,
+  }
 }
 
 function loopTrack(deviceId?: string) {

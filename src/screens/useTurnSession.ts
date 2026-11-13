@@ -24,7 +24,7 @@ import { KEYS, load, save } from '../storage'
  * again (React may run the deck's initializer twice in development).
  */
 const yearLookups = new Map<string, Promise<number | null>>()
-function cachedOriginalYear(song: Song) {
+export function cachedOriginalYear(song: Song) {
   let lookup = yearLookups.get(song.id)
   if (!lookup) yearLookups.set(song.id, (lookup = originalYear(song)))
   return lookup

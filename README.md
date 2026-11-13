@@ -6,7 +6,7 @@ in their personal timeline of songs.
 
 ## How to play
 
-1. **Setup:** pick who's playing from the player cards (or make new ones), pick a **game mode** (Standard, or Battle for two) and the number of points
+1. **Setup:** pick who's playing from the player cards (or make new ones), pick a **game mode** (Standard, Battle for two, or Driver mode for the car) and the number of points
    needed to win, connect Spotify, pick a playlist and choose the device the
    music plays on.
 2. Every player starts with one random song card (the year is shown).
@@ -145,6 +145,30 @@ For two players, or two teams, on one phone lying between them.
   somewhere in the song, no double years, coins count as points, autoplay and avoid songs from
   earlier games. The table view and turning the screen to each player are
   Standard only.
+
+### Driver mode
+
+For the car: no players, no turns and no score, so nobody has to touch the
+phone. Pick **Driver mode**, a playlist and a device, and tap **🚗 Start
+driving**.
+
+- Songs from the playlist play one after another, each from the start to the
+  end. Nothing about the song is shown while it plays: just a spinning record
+  and how far the song has got.
+- When a song ends, its **year fills the screen** (the original year, looked up
+  as in the game), with the title and artist under it, and the phone **says it
+  out loud** ("1984. Take on Me, by a-ha."). 🔊 at the top switches the voice
+  off or on.
+- Eight seconds later the next song starts by itself, and so on until the
+  playlist runs out. **Next song** starts it straight away, **Wait** keeps the
+  year on screen.
+- While a song plays, **Pause** pauses it and **Show year** ends it early.
+  Pausing, or skipping, with the car's own buttons works too: a skipped song
+  shows its year as if it had ended.
+- The screen stays on (where the browser allows it), and the song plays once
+  instead of on repeat. Decades, **Spread the years** and **Avoid songs from
+  earlier games** work as in the game; the ☰ menu switches the playback device
+  or stops.
 
 **Players as cards:** players are made once and kept on the phone. On the
 setup screen, **Who's playing?** shows everyone as a collectible card, a bit like
@@ -323,7 +347,8 @@ Every push to `main` is tested, built and published to GitHub Pages at
   order.
 - `src/game/battle.ts`: Battle mode's rules (simultaneous guesses, shared wins, first to lock in wins a shared year), with tests
 - `src/screens/`: the setup, results and game screens. Each game mode has its
-  own screen (`GameScreen` for Standard, `BattleScreen` for Battle); what they
+  own screen (`GameScreen` for Standard, `BattleScreen` for Battle,
+  `DriverScreen` for Driver mode, with its rules in `game/drive.ts`); what they
   share lives in `useTurnSession.ts` (playback, autoplay, year lookup, guess
   clock) and `components/GameParts.tsx` (clock, reveal year, points, menu)
 - `src/components/`: shared UI (`ui.tsx`: buttons, cards, inputs, switches), the timeline and the device picker

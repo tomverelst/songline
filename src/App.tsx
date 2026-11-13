@@ -6,6 +6,7 @@ import { SetupScreen } from './screens/SetupScreen'
 import { GameScreen } from './screens/GameScreen'
 import { BattleScreen } from './screens/BattleScreen'
 import { FinishedScreen } from './screens/FinishedScreen'
+import { DriverScreen } from './screens/DriverScreen'
 
 export default function App() {
   const [game, setGame] = useState<GameState | null>(() => load<GameState | null>(KEYS.game, null))
@@ -28,6 +29,7 @@ export default function App() {
   if (!authReady) return <div className="grid min-h-dvh place-items-center text-muted">Loading…</div>
 
   if (!game) return <SetupScreen onStart={setGame} initialError={authError} />
+  if (game.settings.mode === 'driver') return <DriverScreen game={game} onChange={updateGame} onQuit={() => setGame(null)} />
   if (game.status === 'finished') return <FinishedScreen game={game} onNewGame={() => setGame(null)} />
   const Screen = game.settings.mode === 'battle' ? BattleScreen : GameScreen
   return <Screen game={game} onChange={updateGame} onQuit={() => setGame(null)} />

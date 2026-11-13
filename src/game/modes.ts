@@ -17,4 +17,9 @@ export const GAME_MODES: GameModeInfo[] = [
     name: 'Battle',
     description: 'Two players or teams guess every song at the same time, each in their own timeline.',
   },
+  {
+    id: 'driver',
+    name: 'Driver mode',
+    description: 'For the car. No players, no score: songs play one after another, and when one ends its year fills the screen.',
+  },
 ]
