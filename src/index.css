@@ -5,6 +5,9 @@
    and `@variant tablet` in CSS; JavaScript reads the variables it sets below. */
 @custom-variant tablet (@media (min-width: 768px) and (min-height: 600px));
 @custom-variant tablet-lg (@media (min-width: 1024px) and (min-height: 768px));
+/* Short windows: a phone on its side, or the browser sharing the screen with
+   the map in split-screen. Screens that fill the height squeeze up there. */
+@custom-variant short (@media (max-height: 520px));
 
 @theme {
   --color-bg: #0f0d17;

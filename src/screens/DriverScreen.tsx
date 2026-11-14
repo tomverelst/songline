@@ -200,8 +200,8 @@ export function DriverScreen({ game, onChange, onQuit }: Props) {
   const fraction = progress?.durationMs ? Math.min(1, progress.ms / progress.durationMs) : 0
 
   return (
-    <div className="mx-auto flex h-dvh max-w-[60rem] flex-col gap-3 px-4 pt-[calc(env(safe-area-inset-top)+12px)] pb-[calc(env(safe-area-inset-bottom)+16px)]">
-      <header className="flex items-center gap-3">
+    <div className="mx-auto flex h-dvh max-w-[60rem] flex-col gap-3 px-4 pt-[calc(env(safe-area-inset-top)+12px)] pb-[calc(env(safe-area-inset-bottom)+16px)] short:gap-2 short:pt-[calc(env(safe-area-inset-top)+8px)] short:pb-[calc(env(safe-area-inset-bottom)+8px)]">
+      <header className="flex shrink-0 items-center gap-3">
         <span className="text-2xl" aria-hidden>
           🚗
         </span>
@@ -217,7 +217,7 @@ export function DriverScreen({ game, onChange, onQuit }: Props) {
         </IconButton>
       </header>
 
-      <main className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 text-center">
+      <main className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 overflow-hidden text-center short:gap-2">
         {finished ? (
           <>
             <div className="text-6xl">🏁</div>
@@ -228,37 +228,46 @@ export function DriverScreen({ game, onChange, onQuit }: Props) {
           <>
             <div
               key={song.id}
-              className="animate-pop text-accent-gradient leading-[0.9] font-black tabular-nums text-[min(34vw,42dvh)] tablet:text-[min(30vw,46dvh)]"
+              className="animate-pop text-accent-gradient leading-[0.9] font-black tabular-nums text-[min(30vw,34dvh)] short:text-[min(26vw,28dvh)] tablet:text-[min(30vw,40dvh)]"
             >
               {song.year}
             </div>
             <div className="flex max-w-full items-center gap-3 text-left">
-              <Artwork src={song.albumArt} className="size-16 rounded-lg landscape:size-12" />
+              <Artwork src={song.albumArt} className="size-16 shrink-0 rounded-lg short:size-11" />
               <div className="min-w-0">
-                <div className="truncate text-2xl font-bold landscape:text-xl">{song.title}</div>
-                <div className="truncate text-lg text-muted landscape:text-base">{song.artists.join(', ')}</div>
+                <div className="truncate text-2xl font-bold short:text-lg">{song.title}</div>
+                <div className="truncate text-lg text-muted short:text-sm">{song.artists.join(', ')}</div>
               </div>
             </div>
           </>
         ) : (
           <>
-            {/* The record spins; the question mark on it stays upright. */}
-            <div aria-hidden className="relative grid size-[min(60vw,42dvh)] place-items-center">
-              <span className={cx('vinyl-grooves absolute inset-0 rounded-full ring-2 ring-line', playing && 'animate-vinyl')} />
-              <span className="relative grid size-1/3 place-items-center rounded-full bg-accent-gradient text-[min(12vw,8dvh)] font-black text-on-accent">
-                ?
-              </span>
-            </div>
-            <p className="text-2xl font-bold">{playing ? 'Which year?' : starting ? 'Starting the music…' : 'Paused'}</p>
-            <div className="h-2 w-full max-w-md overflow-hidden rounded-full bg-surface-2">
-              <div className="h-full rounded-full bg-accent-gradient transition-[width] duration-1000 ease-linear" style={{ width: `${fraction * 100}%` }} />
+            {/* The record spins; the question mark on it stays upright. A fixed
+                square that never shrinks, so it stays round in any window. In a
+                short window it sits beside the text instead of above it. */}
+            <div className="flex w-full max-w-md items-center justify-center gap-4 short:flex-row flex-col">
+              <div
+                aria-hidden
+                className="relative grid aspect-square size-[clamp(4rem,min(36vw,24dvh),11rem)] shrink-0 place-items-center short:size-[clamp(3rem,22dvh,6rem)]"
+              >
+                <span className={cx('vinyl-grooves absolute inset-0 rounded-full ring-2 ring-line', playing && 'animate-vinyl')} />
+                <span className="relative grid size-1/3 place-items-center rounded-full bg-accent-gradient text-[clamp(1.25rem,min(9vw,6dvh),3.5rem)] font-black text-on-accent short:text-[clamp(1rem,6dvh,1.75rem)]">
+                  ?
+                </span>
+              </div>
+              <div className="flex w-full min-w-0 flex-col items-center gap-3 short:items-start short:gap-2">
+                <p className="text-2xl font-bold short:text-xl">{playing ? 'Which year?' : starting ? 'Starting the music…' : 'Paused'}</p>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-surface-2">
+                  <div className="h-full rounded-full bg-accent-gradient transition-[width] duration-1000 ease-linear" style={{ width: `${fraction * 100}%` }} />
+                </div>
+              </div>
             </div>
           </>
         )}
       </main>
 
       {revealed && !finished && (
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
+        <div className="h-1.5 w-full shrink-0 overflow-hidden rounded-full bg-surface-2">
           {waiting && (
             <div
               key={songId}
@@ -269,26 +278,30 @@ export function DriverScreen({ game, onChange, onQuit }: Props) {
         </div>
       )}
 
-      <footer className="grid grid-cols-2 gap-3">
+      <footer className={cx('grid shrink-0 gap-3 short:gap-2', !finished && !revealed ? 'grid-cols-[1fr_1fr_1.3fr]' : 'grid-cols-2')}>
         {finished ? (
-          <Button variant="primary" className="col-span-2 min-h-20 text-xl" onClick={quit}>
+          <Button variant="primary" className={cx('col-span-2', BIG)} onClick={quit}>
             Done
           </Button>
         ) : revealed ? (
           <>
-            <Button className="min-h-20 text-xl" onClick={() => setHeld(!held)}>
+            <Button className={BIG} onClick={() => setHeld(!held)}>
               {held ? '▶ Keep going' : '❚❚ Wait'}
             </Button>
-            <Button variant="primary" className="min-h-20 text-xl" onClick={next}>
+            <Button variant="primary" className={BIG} onClick={next}>
               Next song <SkipIcon />
             </Button>
           </>
         ) : (
           <>
-            <Button className="min-h-20 text-xl" disabled={!turn} onClick={togglePause}>
+            <Button className={BIG} disabled={!turn} onClick={togglePause}>
               {playing ? '❚❚ Pause' : '▶ Play'}
             </Button>
-            <Button variant="primary" className="min-h-20 text-xl" disabled={!turn} onClick={() => showYear(true)}>
+            {/* Skip: on to the next song without showing this one's year. */}
+            <Button className={BIG} disabled={!turn} onClick={next}>
+              Skip <SkipIcon />
+            </Button>
+            <Button variant="primary" className={BIG} disabled={!turn} onClick={() => showYear(true)}>
               Show year
             </Button>
           </>
@@ -339,6 +352,9 @@ export function DriverScreen({ game, onChange, onQuit }: Props) {
     </div>
   )
 }
+
+/** The footer buttons: big enough to hit while driving, a bit smaller in a short window. */
+const BIG = 'min-h-20 text-xl short:min-h-14 short:text-lg'
 
 /** How often the player is asked how the song is getting on. */
 const POLL_MS = 1000
