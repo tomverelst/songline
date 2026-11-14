@@ -245,7 +245,7 @@ export function DriverScreen({ game, onChange, onQuit }: Props) {
             {/* The record spins; the question mark on it stays upright. A fixed
                 square that never shrinks, so it stays round in any window. In a
                 short window it sits beside the text instead of above it. */}
-            <div className="flex w-full max-w-md items-center justify-center gap-4 short:flex-row flex-col">
+            <div className="flex flex-col items-center justify-center gap-4 short:flex-row">
               <div
                 aria-hidden
                 className="relative grid aspect-square size-[clamp(4rem,min(36vw,24dvh),11rem)] shrink-0 place-items-center short:size-[clamp(3rem,22dvh,6rem)]"
@@ -255,20 +255,19 @@ export function DriverScreen({ game, onChange, onQuit }: Props) {
                   ?
                 </span>
               </div>
-              <div className="flex w-full min-w-0 flex-col items-center gap-3 short:items-start short:gap-2">
-                <p className="text-2xl font-bold short:text-xl">{playing ? 'Which year?' : starting ? 'Starting the music…' : 'Paused'}</p>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-surface-2">
-                  <div className="h-full rounded-full bg-accent-gradient transition-[width] duration-1000 ease-linear" style={{ width: `${fraction * 100}%` }} />
-                </div>
-              </div>
+              <p className="text-2xl font-bold short:text-xl">{playing ? 'Which year?' : starting ? 'Starting the music…' : 'Paused'}</p>
             </div>
           </>
         )}
       </main>
 
-      {revealed && !finished && (
+      {/* Just above the buttons: how far the song is, then the wait for the next one. */}
+      {!finished && (
         <div className="h-1.5 w-full shrink-0 overflow-hidden rounded-full bg-surface-2">
-          {waiting && (
+          {!revealed && (
+            <div className="h-full rounded-full bg-accent-gradient transition-[width] duration-1000 ease-linear" style={{ width: `${fraction * 100}%` }} />
+          )}
+          {revealed && waiting && (
             <div
               key={songId}
               className="h-full animate-timer-fill rounded-full bg-accent-gradient"
