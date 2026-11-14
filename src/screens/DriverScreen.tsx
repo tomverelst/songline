@@ -10,6 +10,7 @@ import { say, stopSpeaking, unlockSpeech } from '../speech'
 import { useWakeLock } from '../wakeLock'
 import { DevicePicker } from '../components/DevicePicker'
 import { DriveLikeButton } from '../components/DriveLikeButton'
+import { DriveButton, PauseIcon, PlayIcon, RevealIcon } from '../components/DriveButton'
 import { hasAllScopes, login } from '../spotify/auth'
 import { Artwork, Button, CardTitle, IconButton, Muted, SkipIcon, Switch, Toast } from '../components/ui'
 import { cx } from '../components/classes'
@@ -257,7 +258,8 @@ export function DriverScreen({ game, onChange, onQuit }: Props) {
                   ?
                 </span>
               </div>
-              <p className="text-2xl font-bold short:text-xl">{playing ? 'Which year?' : starting ? 'Starting the music…' : 'Paused'}</p>
+              {/* Only while the music starts; playing or paused shows on the record and the Play/Pause button. */}
+              {starting && <p className="text-xl font-bold text-muted">Starting the music…</p>}
             </div>
           </>
         )}
@@ -279,36 +281,25 @@ export function DriverScreen({ game, onChange, onQuit }: Props) {
         </div>
       )}
 
-      {/* Two rows of two big buttons: nothing small to look for while driving.
-          The like button is always bottom left, the main action bottom right. */}
-      <footer className="grid shrink-0 grid-cols-2 gap-3 short:gap-2">
+      {/* One row of tall, nearly square buttons: nothing small to look for
+          while driving. The like button is always just left of the main
+          action, which is always on the right. */}
+      <footer className={cx('grid shrink-0 gap-2', finished ? 'grid-cols-1' : revealed ? 'grid-cols-3' : 'grid-cols-4')}>
         {finished ? (
-          <Button variant="primary" className={cx('col-span-2', BIG)} onClick={quit}>
-            Done
-          </Button>
+          <DriveButton variant="primary" icon="🏁" label="Done" onClick={quit} />
         ) : revealed ? (
           <>
-            <Button className={cx('col-span-2', BIG)} onClick={() => setHeld(!held)}>
-              {held ? '▶ Keep going' : '❚❚ Wait'}
-            </Button>
-            <DriveLikeButton uri={turn?.song.uri} onError={setError} className={BIG} />
-            <Button variant="primary" className={BIG} onClick={next}>
-              Next song <SkipIcon />
-            </Button>
+            <DriveButton icon={held ? <PlayIcon /> : <PauseIcon />} label={held ? 'Go on' : 'Wait'} onClick={() => setHeld(!held)} />
+            <DriveLikeButton uri={turn?.song.uri} onError={setError} />
+            <DriveButton variant="primary" icon={<SkipIcon />} label="Next song" onClick={next} />
           </>
         ) : (
           <>
-            <Button className={BIG} disabled={!turn} onClick={togglePause}>
-              {playing ? '❚❚ Pause' : '▶ Play'}
-            </Button>
+            <DriveButton icon={playing ? <PauseIcon /> : <PlayIcon />} label={playing ? 'Pause' : 'Play'} disabled={!turn} onClick={togglePause} />
             {/* Skip: on to the next song without showing this one's year. */}
-            <Button className={BIG} disabled={!turn} onClick={next}>
-              Skip <SkipIcon />
-            </Button>
-            <DriveLikeButton uri={turn?.song.uri} onError={setError} className={BIG} />
-            <Button variant="primary" className={BIG} disabled={!turn} onClick={() => showYear(true)}>
-              Show year
-            </Button>
+            <DriveButton icon={<SkipIcon />} label="Skip" disabled={!turn} onClick={next} />
+            <DriveLikeButton uri={turn?.song.uri} onError={setError} />
+            <DriveButton variant="primary" icon={<RevealIcon />} label="Show year" disabled={!turn} onClick={() => showYear(true)} />
           </>
         )}
       </footer>
@@ -363,9 +354,6 @@ export function DriverScreen({ game, onChange, onQuit }: Props) {
   )
 }
 
-/** The footer buttons: big enough to hit while driving without looking long, a bit lower in a short window. */
-// `!` because the button's own size (the main button's especially) sets these too.
-const BIG = 'min-h-20! text-2xl! short:min-h-16! short:text-xl!'
 
 /** How often the player is asked how the song is getting on. */
 const POLL_MS = 1000
