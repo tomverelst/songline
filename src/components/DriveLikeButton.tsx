@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { isLiked, setLiked } from '../spotify/api'
 import { hasAllScopes } from '../spotify/auth'
 import { cx } from './classes'
@@ -19,6 +19,7 @@ interface Props {
  */
 export function DriveLikeButton({ uri, onError, className }: Props) {
   const allowed = hasAllScopes()
+  const gradient = useId()
   const [liked, setLikedState] = useState<{ uri: string; liked: boolean } | null>(null)
   const on = !!uri && liked?.uri === uri && liked.liked
 
@@ -58,10 +59,17 @@ export function DriveLikeButton({ uri, onError, className }: Props) {
       label={on ? 'Liked' : 'Like'}
       icon={
         <svg key={String(on)} viewBox="0 0 24 24" className={cx('size-full', on && 'animate-pop')}>
+          {/* Liked: filled with the app's own pink-to-orange, like the year. */}
+          <defs>
+            <linearGradient id={gradient} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor="var(--color-accent)" />
+              <stop offset="1" stopColor="var(--color-accent-2)" />
+            </linearGradient>
+          </defs>
           <path
             d="M12 20.5s-7.5-4.6-9.2-9.4C1.6 7.6 3.9 4.5 7.2 4.5c2 0 3.6 1.1 4.8 2.8 1.2-1.7 2.8-2.8 4.8-2.8 3.3 0 5.6 3.1 4.4 6.6-1.7 4.8-9.2 9.4-9.2 9.4z"
-            fill={on ? 'currentColor' : 'none'}
-            stroke="currentColor"
+            fill={on ? `url(#${gradient})` : 'none'}
+            stroke={on ? 'none' : 'currentColor'}
             strokeWidth="1.8"
             strokeLinejoin="round"
           />
