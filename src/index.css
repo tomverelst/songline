@@ -8,9 +8,6 @@
 /* Short windows: a phone on its side, or the browser sharing the screen with
    the map in split-screen. Screens that fill the height squeeze up there. */
 @custom-variant short (@media (max-height: 520px));
-/* Narrow windows (a phone upright, or half a screen): rows of big buttons
-   show just their icons there. */
-@custom-variant narrow (@media (max-width: 520px));
 
 @theme {
   --color-bg: #0f0d17;

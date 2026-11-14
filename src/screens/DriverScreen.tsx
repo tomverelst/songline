@@ -230,7 +230,7 @@ export function DriverScreen({ game, onChange, onQuit }: Props) {
           <>
             <div
               key={song.id}
-              className="animate-pop text-accent-gradient leading-[0.9] font-black tabular-nums text-[min(30vw,34dvh)] short:text-[min(26vw,28dvh)] tablet:text-[min(30vw,40dvh)]"
+              className="animate-pop text-accent-gradient leading-[0.9] font-black tabular-nums text-[min(30vw,34dvh)] short:text-[min(26vw,19dvh)] tablet:text-[min(30vw,40dvh)]"
             >
               {song.year}
             </div>
@@ -279,38 +279,34 @@ export function DriverScreen({ game, onChange, onQuit }: Props) {
         </div>
       )}
 
-      {/* Every button down here is big, the like button too: nothing small to look for while driving. */}
-      <footer
-        className={cx(
-          'grid shrink-0 gap-3 short:gap-2 narrow:gap-2',
-          finished ? 'grid-cols-2' : revealed ? 'grid-cols-[1fr_1fr_1.4fr]' : 'grid-cols-[1fr_1fr_1fr_1.4fr]',
-        )}
-      >
+      {/* Two rows of two big buttons: nothing small to look for while driving.
+          The like button is always bottom left, the main action bottom right. */}
+      <footer className="grid shrink-0 grid-cols-2 gap-3 short:gap-2">
         {finished ? (
           <Button variant="primary" className={cx('col-span-2', BIG)} onClick={quit}>
             Done
           </Button>
         ) : revealed ? (
           <>
-            <Button className={ICON} aria-label={held ? 'Keep going' : 'Wait'} onClick={() => setHeld(!held)}>
-              {held ? '▶' : '❚❚'} <span className="narrow:sr-only">{held ? 'Go on' : 'Wait'}</span>
+            <Button className={cx('col-span-2', BIG)} onClick={() => setHeld(!held)}>
+              {held ? '▶ Keep going' : '❚❚ Wait'}
             </Button>
-            <DriveLikeButton uri={turn?.song.uri} onError={setError} className={ICON} />
+            <DriveLikeButton uri={turn?.song.uri} onError={setError} className={BIG} />
             <Button variant="primary" className={BIG} onClick={next}>
               Next song <SkipIcon />
             </Button>
           </>
         ) : (
           <>
-            <Button className={ICON} aria-label={playing ? 'Pause' : 'Play'} disabled={!turn} onClick={togglePause}>
-              {playing ? '❚❚' : '▶'} <span className="narrow:sr-only">{playing ? 'Pause' : 'Play'}</span>
+            <Button className={BIG} disabled={!turn} onClick={togglePause}>
+              {playing ? '❚❚ Pause' : '▶ Play'}
             </Button>
             {/* Skip: on to the next song without showing this one's year. */}
-            <Button className={ICON} aria-label="Skip" disabled={!turn} onClick={next}>
-              <span className="narrow:sr-only">Skip</span> <SkipIcon />
+            <Button className={BIG} disabled={!turn} onClick={next}>
+              Skip <SkipIcon />
             </Button>
-            <DriveLikeButton uri={turn?.song.uri} onError={setError} className={ICON} />
-            <Button variant="primary" className={cx(BIG, 'leading-tight')} disabled={!turn} onClick={() => showYear(true)}>
+            <DriveLikeButton uri={turn?.song.uri} onError={setError} className={BIG} />
+            <Button variant="primary" className={BIG} disabled={!turn} onClick={() => showYear(true)}>
               Show year
             </Button>
           </>
@@ -367,10 +363,9 @@ export function DriverScreen({ game, onChange, onQuit }: Props) {
   )
 }
 
-/** The footer buttons: big enough to hit while driving, a bit smaller in a short window. */
-const BIG = 'min-h-20 text-xl short:min-h-14 short:text-lg narrow:px-2'
-/** The same, for the buttons that are just an icon in a narrow window: a bigger icon. */
-const ICON = `${BIG} narrow:text-[1.75rem]`
+/** The footer buttons: big enough to hit while driving without looking long, a bit lower in a short window. */
+// `!` because the button's own size (the main button's especially) sets these too.
+const BIG = 'min-h-20! text-2xl! short:min-h-16! short:text-xl!'
 
 /** How often the player is asked how the song is getting on. */
 const POLL_MS = 1000

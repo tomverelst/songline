@@ -67,7 +67,7 @@ export function DriveLikeButton({ uri, onError, className }: Props) {
           strokeLinejoin="round"
         />
       </svg>
-      <span className="narrow:sr-only">{on ? 'Liked' : 'Like'}</span>
+      <span>{on ? 'Liked' : 'Like'}</span>
     </button>
   )
 }
