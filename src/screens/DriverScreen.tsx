@@ -203,8 +203,8 @@ export function DriverScreen({ game, onChange, onQuit }: Props) {
   const fraction = progress?.durationMs ? Math.min(1, progress.ms / progress.durationMs) : 0
 
   return (
-    <div className="mx-auto flex h-dvh max-w-[60rem] flex-col gap-3 px-4 pt-[calc(env(safe-area-inset-top)+12px)] pb-[calc(env(safe-area-inset-bottom)+16px)] short:gap-2 short:pt-[calc(env(safe-area-inset-top)+8px)] short:pb-[calc(env(safe-area-inset-bottom)+8px)]">
-      <header className="flex shrink-0 items-center gap-3">
+    <div className="relative mx-auto flex h-dvh max-w-[60rem] flex-col gap-3 overflow-hidden px-4 pt-[calc(env(safe-area-inset-top)+12px)] pb-[calc(env(safe-area-inset-bottom)+16px)] short:gap-2 short:pt-[calc(env(safe-area-inset-top)+8px)] short:pb-[calc(env(safe-area-inset-bottom)+8px)]">
+      <header className="relative z-10 flex shrink-0 items-center gap-3">
         <span className="text-2xl" aria-hidden>
           🚗
         </span>
@@ -220,7 +220,13 @@ export function DriverScreen({ game, onChange, onQuit }: Props) {
         </IconButton>
       </header>
 
-      <main className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 overflow-hidden text-center short:gap-2">
+      <main
+        className={cx(
+          'relative flex min-h-0 flex-1 flex-col items-center justify-center gap-4 text-center short:gap-2',
+          // The record behind a song may reach past the middle; the year stays inside it.
+          finished || revealed ? 'overflow-hidden' : 'overflow-visible',
+        )}
+      >
         {finished ? (
           <>
             <div className="text-6xl">🏁</div>
@@ -245,29 +251,33 @@ export function DriverScreen({ game, onChange, onQuit }: Props) {
           </>
         ) : (
           <>
-            {/* The record spins; the question mark on it stays upright. A fixed
-                square that never shrinks, so it stays round in any window. In a
-                short window it sits beside the text instead of above it. */}
-            <div className="flex flex-col items-center justify-center gap-4 short:flex-row">
-              <div
-                aria-hidden
-                className="relative grid aspect-square size-[clamp(4rem,min(36vw,24dvh),11rem)] shrink-0 place-items-center short:size-[clamp(3rem,22dvh,6rem)]"
-              >
-                <span className={cx('vinyl-grooves absolute inset-0 rounded-full ring-2 ring-line', playing && 'animate-vinyl')} />
-                <span className="relative grid size-1/3 place-items-center rounded-full bg-accent-gradient text-[clamp(1.25rem,min(9vw,6dvh),3.5rem)] font-black text-on-accent short:text-[clamp(1rem,6dvh,1.75rem)]">
-                  ?
-                </span>
+            {/* The record: a big disc in the background, centred on the middle of
+                the screen. It may reach past the edges and behind the header and
+                buttons, but takes no room, so nothing moves for it. It turns while
+                the music plays and stops where it is on pause; the question mark
+                on it stays upright. */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute top-1/2 left-1/2 size-[min(108vw,68dvh,46rem)] -translate-x-1/2 -translate-y-1/2 [container-type:inline-size]"
+            >
+              <div className={cx('vinyl-disc absolute inset-0 animate-vinyl rounded-full', !playing && '[animation-play-state:paused]')}>
+                <div className="absolute inset-[33%] rounded-full bg-accent-gradient">
+                  <div className="absolute inset-[44%] rounded-full bg-bg" />
+                </div>
               </div>
-              {/* Only while the music starts; playing or paused shows on the record and the Play/Pause button. */}
-              {starting && <p className="text-xl font-bold text-muted">Starting the music…</p>}
+              <span className="absolute inset-0 grid place-items-center text-[17cqw] font-black text-on-accent">?</span>
             </div>
+            {/* Only while the music starts; playing or paused shows on the record and the Play/Pause button. */}
+            {starting && (
+              <p className="relative rounded-full bg-bg/80 px-4 py-1 text-xl font-bold text-muted">Starting the music…</p>
+            )}
           </>
         )}
       </main>
 
       {/* Just above the buttons: how far the song is, then the wait for the next one. */}
       {!finished && (
-        <div className="h-1.5 w-full shrink-0 overflow-hidden rounded-full bg-surface-2">
+        <div className="relative z-10 h-1.5 w-full shrink-0 overflow-hidden rounded-full bg-surface-2">
           {!revealed && (
             <div className="h-full rounded-full bg-accent-gradient transition-[width] duration-1000 ease-linear" style={{ width: `${fraction * 100}%` }} />
           )}
@@ -284,7 +294,7 @@ export function DriverScreen({ game, onChange, onQuit }: Props) {
       {/* One row of tall, nearly square buttons: nothing small to look for
           while driving. The like button is always just left of the main
           action, which is always on the right. */}
-      <footer className={cx('grid shrink-0 gap-2', finished ? 'grid-cols-1' : revealed ? 'grid-cols-3' : 'grid-cols-4')}>
+      <footer className={cx('relative z-10 grid shrink-0 gap-2', finished ? 'grid-cols-1' : revealed ? 'grid-cols-3' : 'grid-cols-4')}>
         {finished ? (
           <DriveButton variant="primary" icon="🏁" label="Done" onClick={quit} />
         ) : revealed ? (

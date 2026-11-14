@@ -173,6 +173,24 @@
   color: transparent;
 }
 
+/* A record seen from above: grooves, plus two soft shine wedges that turn
+   with it, so a spinning record looks like it spins. */
+@utility vinyl-disc {
+  background:
+    conic-gradient(
+      from 30deg,
+      transparent 0deg,
+      rgb(255 255 255 / 0.1) 22deg,
+      transparent 50deg 180deg,
+      rgb(255 255 255 / 0.1) 202deg,
+      transparent 230deg
+    ),
+    repeating-radial-gradient(circle, #111 0 2px, #1c1c1c 2px 4px);
+  box-shadow:
+    0 0 0 2px var(--color-line),
+    0 24px 70px rgb(0 0 0 / 0.55);
+}
+
 @utility vinyl-grooves {
   background: repeating-radial-gradient(circle, #111 0 2px, #1d1d1d 2px 4px);
 }
