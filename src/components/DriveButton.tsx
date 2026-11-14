@@ -5,7 +5,7 @@ import { cx } from './classes'
  * Driver mode's buttons: tall, nearly square tiles with a big icon over a
  * short label, in one row, so they're easy to hit without looking long.
  */
-export function driveButtonClass(variant: 'default' | 'primary' | 'liked' = 'default'): string {
+function driveButtonClass(variant: 'default' | 'primary' | 'liked' = 'default'): string {
   return cx(
     'flex h-[clamp(6rem,13dvh,7.5rem)] min-w-0 flex-col items-center justify-center gap-1 rounded-3xl px-1 text-base leading-tight font-semibold transition-transform active:scale-95 disabled:opacity-45 short:h-[clamp(4.25rem,22dvh,6rem)] short:gap-0.5 short:text-sm',
     variant === 'primary' && 'bg-accent-gradient text-on-accent shadow-[0_8px_24px_rgb(255_93_143/0.3)] disabled:shadow-none',
