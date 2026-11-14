@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { drawSong, newGame } from './logic'
-import { END_MS, revealDriveSong, songNumber, songProgress, yearAnnouncement } from './drive'
+import { END_MS, revealDriveSong, songNumber, songProgress, spokenYear, yearAnnouncement } from './drive'
 import type { GameSettings, Song } from './types'
 
 const song = (year: number, title = `Song ${year}`): Song => ({
@@ -88,6 +88,16 @@ describe('driver mode', () => {
   })
 
   it('says the year, then the song', () => {
-    expect(yearAnnouncement(song(1984, 'Take on Me'))).toBe('1984. Take on Me, by Artist and Friend.')
+    expect(yearAnnouncement(song(1984, 'Take on Me'))).toBe('19 84. Take on Me, by Artist and Friend.')
+  })
+
+  it('says years before 2000 in two halves, like people do', () => {
+    expect(spokenYear(1976)).toBe('19 76')
+    expect(spokenYear(1999)).toBe('19 99')
+    expect(spokenYear(1905)).toBe('19 oh 5')
+    expect(spokenYear(1900)).toBe('19 hundred')
+    expect(spokenYear(2000)).toBe('2000')
+    expect(spokenYear(2008)).toBe('2008')
+    expect(spokenYear(2020)).toBe('2020')
   })
 })

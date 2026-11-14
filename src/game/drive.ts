@@ -66,5 +66,20 @@ export function songNumber(state: GameState): number {
 
 /** What's said out loud when a song ends: the year, then the song. */
 export function yearAnnouncement(song: Song): string {
-  return `${song.year}. ${song.title}, by ${song.artists.join(' and ')}.`
+  return `${spokenYear(song.year)}. ${song.title}, by ${song.artists.join(' and ')}.`
+}
+
+/**
+ * A year the way people say it: speech engines read 1976 as "one thousand
+ * nine hundred seventy-six", so years before 2000 go in two halves ("19 76",
+ * said "nineteen seventy-six"; 1900 is "19 hundred", 1905 "19 oh 5"). From
+ * 2000 on the plain number already sounds right ("two thousand five").
+ */
+export function spokenYear(year: number): string {
+  if (year < 1000 || year >= 2000) return String(year)
+  const century = Math.floor(year / 100)
+  const rest = year % 100
+  if (rest === 0) return `${century} hundred`
+  if (rest < 10) return `${century} oh ${rest}`
+  return `${century} ${rest}`
 }
