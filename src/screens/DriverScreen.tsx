@@ -9,6 +9,8 @@ import { KEYS, load, save } from '../storage'
 import { say, stopSpeaking, unlockSpeech } from '../speech'
 import { useWakeLock } from '../wakeLock'
 import { DevicePicker } from '../components/DevicePicker'
+import { DriveLikeButton } from '../components/DriveLikeButton'
+import { hasAllScopes, login } from '../spotify/auth'
 import { Artwork, Button, CardTitle, IconButton, Muted, SkipIcon, Switch, Toast } from '../components/ui'
 import { cx } from '../components/classes'
 import { cachedOriginalYear } from './useTurnSession'
@@ -209,6 +211,7 @@ export function DriverScreen({ game, onChange, onQuit }: Props) {
           <div className="truncate font-bold">{game.settings.playlistName}</div>
           <Muted>{finished ? `${game.played?.length ?? 0} songs` : `Song ${songNumber(game)}`}</Muted>
         </div>
+        {!finished && <DriveLikeButton uri={turn?.song.uri} onError={setError} />}
         <IconButton aria-label={sayYear ? 'Stop saying the year' : 'Say the year out loud'} onClick={toggleSayYear}>
           {sayYear ? '🔊' : '🔇'}
         </IconButton>
@@ -337,6 +340,11 @@ export function DriverScreen({ game, onChange, onQuit }: Props) {
               checked={sayYear}
               onChange={toggleSayYear}
             />
+            {!hasAllScopes() && (
+              <Button variant="spotify" onClick={() => login()}>
+                Log in to Spotify again (to like songs)
+              </Button>
+            )}
             <Button
               variant="danger"
               onClick={() => {
