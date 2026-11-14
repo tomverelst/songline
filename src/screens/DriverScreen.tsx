@@ -211,7 +211,6 @@ export function DriverScreen({ game, onChange, onQuit }: Props) {
           <div className="truncate font-bold">{game.settings.playlistName}</div>
           <Muted>{finished ? `${game.played?.length ?? 0} songs` : `Song ${songNumber(game)}`}</Muted>
         </div>
-        {!finished && <DriveLikeButton uri={turn?.song.uri} onError={setError} />}
         <IconButton aria-label={sayYear ? 'Stop saying the year' : 'Say the year out loud'} onClick={toggleSayYear}>
           {sayYear ? '🔊' : '🔇'}
         </IconButton>
@@ -280,30 +279,38 @@ export function DriverScreen({ game, onChange, onQuit }: Props) {
         </div>
       )}
 
-      <footer className={cx('grid shrink-0 gap-3 short:gap-2', !finished && !revealed ? 'grid-cols-[1fr_1fr_1.3fr]' : 'grid-cols-2')}>
+      {/* Every button down here is big, the like button too: nothing small to look for while driving. */}
+      <footer
+        className={cx(
+          'grid shrink-0 gap-3 short:gap-2 narrow:gap-2',
+          finished ? 'grid-cols-2' : revealed ? 'grid-cols-[1fr_1fr_1.4fr]' : 'grid-cols-[1fr_1fr_1fr_1.4fr]',
+        )}
+      >
         {finished ? (
           <Button variant="primary" className={cx('col-span-2', BIG)} onClick={quit}>
             Done
           </Button>
         ) : revealed ? (
           <>
-            <Button className={BIG} onClick={() => setHeld(!held)}>
-              {held ? '▶ Keep going' : '❚❚ Wait'}
+            <Button className={ICON} aria-label={held ? 'Keep going' : 'Wait'} onClick={() => setHeld(!held)}>
+              {held ? '▶' : '❚❚'} <span className="narrow:sr-only">{held ? 'Go on' : 'Wait'}</span>
             </Button>
+            <DriveLikeButton uri={turn?.song.uri} onError={setError} className={ICON} />
             <Button variant="primary" className={BIG} onClick={next}>
               Next song <SkipIcon />
             </Button>
           </>
         ) : (
           <>
-            <Button className={BIG} disabled={!turn} onClick={togglePause}>
-              {playing ? '❚❚ Pause' : '▶ Play'}
+            <Button className={ICON} aria-label={playing ? 'Pause' : 'Play'} disabled={!turn} onClick={togglePause}>
+              {playing ? '❚❚' : '▶'} <span className="narrow:sr-only">{playing ? 'Pause' : 'Play'}</span>
             </Button>
             {/* Skip: on to the next song without showing this one's year. */}
-            <Button className={BIG} disabled={!turn} onClick={next}>
-              Skip <SkipIcon />
+            <Button className={ICON} aria-label="Skip" disabled={!turn} onClick={next}>
+              <span className="narrow:sr-only">Skip</span> <SkipIcon />
             </Button>
-            <Button variant="primary" className={BIG} disabled={!turn} onClick={() => showYear(true)}>
+            <DriveLikeButton uri={turn?.song.uri} onError={setError} className={ICON} />
+            <Button variant="primary" className={cx(BIG, 'leading-tight')} disabled={!turn} onClick={() => showYear(true)}>
               Show year
             </Button>
           </>
@@ -361,7 +368,9 @@ export function DriverScreen({ game, onChange, onQuit }: Props) {
 }
 
 /** The footer buttons: big enough to hit while driving, a bit smaller in a short window. */
-const BIG = 'min-h-20 text-xl short:min-h-14 short:text-lg'
+const BIG = 'min-h-20 text-xl short:min-h-14 short:text-lg narrow:px-2'
+/** The same, for the buttons that are just an icon in a narrow window: a bigger icon. */
+const ICON = `${BIG} narrow:text-[1.75rem]`
 
 /** How often the player is asked how the song is getting on. */
 const POLL_MS = 1000

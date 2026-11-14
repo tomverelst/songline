@@ -8,13 +8,15 @@ interface Props {
   uri?: string
   /** Tells why a like didn't go through. */
   onError: (message: string) => void
+  /** Sizes it like the buttons next to it. */
+  className?: string
 }
 
 /**
  * Driver mode's like button: one tap puts the song in Liked Songs, nothing
  * to pick or confirm. A second tap takes it out again, for a tap by mistake.
  */
-export function DriveLikeButton({ uri, onError }: Props) {
+export function DriveLikeButton({ uri, onError, className }: Props) {
   const allowed = hasAllScopes()
   const [liked, setLikedState] = useState<{ uri: string; liked: boolean } | null>(null)
   const on = !!uri && liked?.uri === uri && liked.liked
@@ -50,12 +52,13 @@ export function DriveLikeButton({ uri, onError }: Props) {
       aria-pressed={on}
       disabled={!uri}
       className={cx(
-        'grid size-14 flex-none place-items-center rounded-full border transition-transform active:scale-90 disabled:opacity-45 short:size-12',
-        on ? 'border-[#1ed760]/50 bg-[#1ed760]/15 text-[#1ed760]' : 'border-line bg-surface-2 text-muted',
+        'inline-flex items-center justify-center gap-1.5 rounded-full border font-semibold transition-transform active:scale-95 disabled:opacity-45',
+        on ? 'border-[#1ed760]/50 bg-[#1ed760]/15 text-[#1ed760]' : 'border-line bg-surface-2',
+        className,
       )}
       onClick={tap}
     >
-      <svg key={String(on)} viewBox="0 0 24 24" className={cx('size-7 short:size-6', on && 'animate-pop')} aria-hidden>
+      <svg key={String(on)} viewBox="0 0 24 24" className={cx('size-[1.3em] flex-none', on && 'animate-pop')} aria-hidden>
         <path
           d="M12 20.5s-7.5-4.6-9.2-9.4C1.6 7.6 3.9 4.5 7.2 4.5c2 0 3.6 1.1 4.8 2.8 1.2-1.7 2.8-2.8 4.8-2.8 3.3 0 5.6 3.1 4.4 6.6-1.7 4.8-9.2 9.4-9.2 9.4z"
           fill={on ? 'currentColor' : 'none'}
@@ -64,6 +67,7 @@ export function DriveLikeButton({ uri, onError }: Props) {
           strokeLinejoin="round"
         />
       </svg>
+      <span className="narrow:sr-only">{on ? 'Liked' : 'Like'}</span>
     </button>
   )
 }
